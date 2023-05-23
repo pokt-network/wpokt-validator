@@ -6,7 +6,9 @@ type MongoConfig struct {
 }
 
 type PocketConfig struct {
-	RPCURL string `yaml:"rpc_url"`
+	RPCURL              string `yaml:"rpc_url"`
+	StartHeight         int64  `yaml:"start_height"`
+	MonitorIntervalSecs int64  `yaml:"monitor_interval_secs"`
 }
 
 type EthereumConfig struct {

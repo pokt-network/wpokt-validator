@@ -147,10 +147,10 @@ func QueryRPC(path string, jsonArgs []byte) (string, error) {
 		}
 		return string(bz), nil
 	}
-	return "", fmt.Errorf("the http status code was not okay: %d, and the status was: %s, with a response of %v", resp.StatusCode, resp)
+	return "", fmt.Errorf("the http status code was not okay: %d, with a response of %+v", resp.StatusCode, resp)
 }
 
-func Height() (*HeightResponse, error) {
+func GetHeight() (*HeightResponse, error) {
 	res, err := QueryRPC(GetHeightPath, []byte{})
 	if err != nil {
 		return nil, err
@@ -160,15 +160,14 @@ func Height() (*HeightResponse, error) {
 	return &obj, err
 }
 
-func AccountTxs() (*AccountTxsResponse, error) {
+func getAccountTxsPerPage(page uint32) (*AccountTxsResponse, error) {
 	params := rpc.PaginateAddrParams{
 		Address:  app.Config.Copper.VaultAddress,
-		Page:     1,
+		Page:     int(page),
 		PerPage:  1000,
 		Received: true,
 		Prove:    true,
-		Sort:     "desc",
-		Height:   0,
+		Sort:     "asc",
 	}
 	j, err := json.Marshal(params)
 	if err != nil {
@@ -181,4 +180,28 @@ func AccountTxs() (*AccountTxsResponse, error) {
 	var obj AccountTxsResponse
 	err = json.Unmarshal([]byte(res), &obj)
 	return &obj, err
+}
+
+func GetAccountTransferTxs(height int64) ([]*ResultTx, error) {
+	var txs []*ResultTx
+	var page uint32 = 1
+	for {
+		res, err := getAccountTxsPerPage(page)
+		if err != nil {
+			return nil, err
+		}
+		lastHeight := res.Txs[len(res.Txs)-1].Height
+		// filter only type pos/Send
+		for _, tx := range res.Txs {
+			if tx.StdTx.Msg.Type == "pos/Send" && tx.Height >= height {
+				txs = append(txs, tx)
+			}
+		}
+		if len(txs) >= int(res.TotalTxs) || lastHeight < height || len(res.Txs) == 0 {
+			break
+		}
+		page++
+	}
+
+	return txs, nil
 }

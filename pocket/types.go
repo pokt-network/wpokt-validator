@@ -33,16 +33,16 @@ type TxFee struct {
 
 type TxParams struct {
 	Memo      string      `json:"memo"`
-	Entropy   uint64      `json:"entropy"`
+	Entropy   int64       `json:"entropy"`
 	Fee       []*TxFee    `json:"fee"`
-	Msg       TxMsg       `json:"msg`
+	Msg       TxMsg       `json:"msg"`
 	Signature TxSignature `json:"signature"`
 }
 
 type ResultTx struct {
 	Hash     bytes.HexBytes         `json:"hash"`
 	Height   int64                  `json:"height"`
-	Index    uint32                 `json:"index"`
+	Index    int64                  `json:"index"`
 	TxResult abci.ResponseDeliverTx `json:"tx_result"`
 	Tx       types.Tx               `json:"tx"`
 	Proof    types.TxProof          `json:"proof,omitempty"`
