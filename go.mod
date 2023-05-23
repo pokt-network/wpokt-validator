@@ -6,7 +6,12 @@ replace github.com/tendermint/tendermint => github.com/pokt-network/tendermint v
 
 replace github.com/tendermint/tm-db => github.com/pokt-network/tm-db v0.5.2-0.20220118210553-9b2300f289ba
 
-require github.com/pokt-network/pocket-core v0.0.0-20230517195228-60cf936bf536
+require (
+	github.com/pokt-network/pocket-core v0.0.0-20230517195228-60cf936bf536
+	github.com/sirupsen/logrus v1.9.2
+	github.com/tendermint/tendermint v0.33.7
+	gopkg.in/yaml.v2 v2.4.0
+)
 
 require (
 	github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d // indirect
@@ -51,7 +56,6 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tendermint/go-amino v0.15.1 // indirect
-	github.com/tendermint/tendermint v0.33.7 // indirect
 	github.com/tendermint/tm-db v0.5.1 // indirect
 	github.com/willf/bitset v1.1.10 // indirect
 	github.com/willf/bloom v2.0.3+incompatible // indirect
@@ -64,6 +68,5 @@ require (
 	google.golang.org/genproto v0.0.0-20210917145530-b395a37504d4 // indirect
 	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
