@@ -1,0 +1,12 @@
+mongodb:
+  uri: ""
+  databasse: ""
+
+pocket:
+  rpc_url: ""
+
+copper:
+  vault_address: ""
+
+mainnet:
+  rpc_url: ""

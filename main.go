@@ -2,11 +2,23 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 
+	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/pocket"
 )
 
 func main() {
+
+	if len(os.Args) < 2 {
+		log.Fatal("Please provide config file as parameter")
+	}
+	absConfigPath, _ := filepath.Abs(os.Args[1])
+
+	app.InitConfig(absConfigPath)
+
 	{
 		res, err := pocket.Height()
 		if err != nil {

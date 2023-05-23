@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/pokt-network/pocket-core/app/cmd/rpc"
 )
 
@@ -109,13 +110,8 @@ func init() {
 	}
 }
 
-const RemoteCLIURL string = "https://node2.testnet.pokt.network"
-
-// const RemoteCLIURL string = "https://mainnet.gateway.pokt.network/v1/lb/e81ff8d231bc754d1e7e5cd8"
-
 func QueryRPC(path string, jsonArgs []byte) (string, error) {
-	cliURL := RemoteCLIURL + path
-	// fmt.Println(cliURL)
+	cliURL := app.Config.Pocket.RPCURL + path
 
 	req, err := http.NewRequest("POST", cliURL, bytes.NewBuffer(jsonArgs))
 	if err != nil {
@@ -164,11 +160,9 @@ func Height() (*HeightResponse, error) {
 	return &obj, err
 }
 
-const VaultAddress = "0bee0822d5252eaebf7ae37cf9a6e197202230e5"
-
 func AccountTxs() (*AccountTxsResponse, error) {
 	params := rpc.PaginateAddrParams{
-		Address:  VaultAddress,
+		Address:  app.Config.Copper.VaultAddress,
 		Page:     1,
 		PerPage:  1000,
 		Received: true,

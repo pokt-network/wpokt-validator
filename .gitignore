@@ -20,3 +20,5 @@ go.work
 # vim files
 *.sw[a-z]
 
+# config
+config.yml
