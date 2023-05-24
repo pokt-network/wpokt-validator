@@ -21,6 +21,7 @@ type WPOKTMintMonitor struct {
 }
 
 func (m *WPOKTMintMonitor) Cancel() {
+	log.Debug("Cancelling mint monitor")
 	m.stop <- true
 }
 
@@ -42,8 +43,8 @@ func (m *WPOKTMintMonitor) syncTxs() {
 	}
 	fmt.Printf("TotalTxs: %d\n", len(txs))
 	fmt.Println("Txs:")
-	for _, tx := range txs {
-		fmt.Printf("[%d]\tHash: %s\n", tx.Index, tx.Hash)
+	for i, tx := range txs {
+		fmt.Printf("[%d]\tHash: %s\n", i, tx.Hash)
 		fmt.Printf("\tHeight: %d\n", tx.Height)
 		fmt.Printf("\tType: %s\n", tx.StdTx.Msg.Type)
 		fmt.Printf("\tFrom: %s\n", tx.StdTx.Msg.Value.FromAddress)

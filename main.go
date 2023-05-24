@@ -27,7 +27,7 @@ func main() {
 
 	m := pocket.NewMintMonitor()
 
-	m.Start()
+	go m.Start()
 
 	// Gracefully shut down server
 	gracefulStop := make(chan os.Signal, 1)
@@ -35,13 +35,12 @@ func main() {
 	signal.Notify(gracefulStop, syscall.SIGINT, syscall.SIGTERM)
 	go waitForExitSignals(gracefulStop, done)
 	<-done
-	log.Info("Server shutting down")
 	m.Cancel()
+	log.Info("Shutting down server")
 }
 
 func waitForExitSignals(gracefulStop chan os.Signal, done chan bool) {
 	sig := <-gracefulStop
 	log.Debug("Got signal:", sig)
-	log.Debug("Sending done signal to main")
 	done <- true
 }
