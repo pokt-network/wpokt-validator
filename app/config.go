@@ -2,7 +2,8 @@ package app
 
 import (
 	"io/ioutil"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dan13ram/wpokt-backend/models"
 	"gopkg.in/yaml.v2"

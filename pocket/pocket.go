@@ -1,6 +1,8 @@
 package pocket
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -150,6 +152,16 @@ func QueryRPC(path string, jsonArgs []byte) (string, error) {
 	return "", fmt.Errorf("the http status code was not okay: %d, with a response of %+v", resp.StatusCode, resp)
 }
 
+func GetBlock() (*BlockResponse, error) {
+	res, err := QueryRPC(GetBlockPath, []byte{})
+	if err != nil {
+		return nil, err
+	}
+	var obj BlockResponse
+	err = json.Unmarshal([]byte(res), &obj)
+	return &obj, err
+}
+
 func GetHeight() (*HeightResponse, error) {
 	res, err := QueryRPC(GetHeightPath, []byte{})
 	if err != nil {
@@ -204,4 +216,17 @@ func GetAccountTransferTxs(height int64) ([]*ResultTx, error) {
 	}
 
 	return txs, nil
+}
+
+// check block chain id is valid and panic if invalid
+func ValidateNetwork() {
+	res, err := GetBlock()
+	if err != nil {
+		panic(err)
+	}
+
+	if res.Block.Header.ChainID != app.Config.Pocket.ChainId {
+		panic("invalid pocket chain id")
+	}
+	log.Info("Validated pocket network")
 }

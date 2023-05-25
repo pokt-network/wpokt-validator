@@ -24,6 +24,9 @@ func main() {
 
 	app.InitConfig(absConfigPath)
 	app.InitLogger()
+	app.InitDB()
+
+	pocket.ValidateNetwork()
 
 	m := pocket.NewMintMonitor()
 

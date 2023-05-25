@@ -31,7 +31,7 @@ type TxFee struct {
 	Denom  string `json:"denom"`
 }
 
-type TxParams struct {
+type StdTxParams struct {
 	Memo      string      `json:"memo"`
 	Entropy   int64       `json:"entropy"`
 	Fee       []*TxFee    `json:"fee"`
@@ -46,11 +46,24 @@ type ResultTx struct {
 	TxResult abci.ResponseDeliverTx `json:"tx_result"`
 	Tx       types.Tx               `json:"tx"`
 	Proof    types.TxProof          `json:"proof,omitempty"`
-	StdTx    TxParams               `json:"stdTx"`
+	StdTx    StdTxParams            `json:"stdTx"`
 }
 
 type AccountTxsResponse struct {
 	PageCount uint32      `json:"page_count"`
 	TotalTxs  uint32      `json:"total_txs"`
 	Txs       []*ResultTx `json:"txs"`
+}
+
+type Header struct {
+	ChainID string `json:"chain_id"`
+}
+
+type Block struct {
+	Header Header `json:"header"`
+}
+
+type BlockResponse struct {
+	Block Block `json:"block"`
+	// Block     types.Block     `json:"block"`
 }

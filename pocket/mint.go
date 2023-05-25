@@ -1,11 +1,14 @@
 package pocket
 
 import (
-	"fmt"
+	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
+	"github.com/dan13ram/wpokt-backend/models"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type MintMonitor interface {
@@ -21,7 +24,7 @@ type WPOKTMintMonitor struct {
 }
 
 func (m *WPOKTMintMonitor) Cancel() {
-	log.Debug("Cancelling mint monitor")
+	log.Info("Cancelling mint monitor")
 	m.stop <- true
 }
 
@@ -31,8 +34,85 @@ func (m *WPOKTMintMonitor) updateCurrentHeight() {
 		log.Error(err)
 		return
 	}
-	log.Debug("Updated current pokt height: ", res.Height)
+	log.Info("Updated current pokt height: ", res.Height)
 	m.currentHeight = res.Height
+}
+
+func (m *WPOKTMintMonitor) handleInvalidMint(tx *ResultTx) {
+	doc := models.InvalidMint{
+		Height:          tx.Height,
+		TransactionHash: tx.Hash.String(),
+		SenderAddress:   tx.StdTx.Msg.Value.FromAddress,
+		SenderChainId:   app.Config.Pocket.ChainId,
+		Amount:          tx.StdTx.Msg.Value.Amount,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		Status:          models.MintStatusPending,
+		Signers:         []string{},
+	}
+
+	log.Debug("Storing invalid mint tx: ", tx.Hash, " in db")
+
+	col := app.DB.GetCollection(app.CollectionInvalidMints)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	_, err := col.InsertOne(ctx, doc)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			log.Debug("Found duplicate invalid mint tx: ", tx.Hash, " in db")
+			return
+		}
+		log.Error("Error storing invalid mint tx: ", tx.Hash, " in db: ", err)
+		return
+	}
+
+	log.Debug("Stored invalid mint tx: ", tx.Hash, " in db")
+}
+
+func (m *WPOKTMintMonitor) handleValidMint(tx *ResultTx, memo models.MintMemo) {
+	doc := models.Mint{
+		Height:           tx.Height,
+		TransactionHash:  tx.Hash.String(),
+		SenderAddress:    tx.StdTx.Msg.Value.FromAddress,
+		SenderChainId:    app.Config.Pocket.ChainId,
+		RecipientAddress: memo.Address,
+		RecipientChainId: memo.ChainId,
+		Amount:           tx.StdTx.Msg.Value.Amount,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+		Status:           models.MintStatusPending,
+		Signers:          []string{},
+	}
+
+	log.Debug("Storing mint tx: ", tx.Hash, " in db")
+
+	col := app.DB.GetCollection(app.CollectionMints)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	_, err := col.InsertOne(ctx, doc)
+	if err != nil {
+		log.Error("Error storing mint tx: ", tx.Hash, " in db: ", err)
+		return
+	}
+
+	log.Debug("Stored mint tx: ", tx.Hash, " in db")
+}
+
+func (m *WPOKTMintMonitor) handleTx(tx *ResultTx) {
+	var memo models.MintMemo
+
+	err := json.Unmarshal([]byte(tx.StdTx.Memo), &memo)
+
+	if err != nil || memo.ChainId != app.Config.Ethereum.ChainId {
+		log.Debug("Found invalid memo in tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
+		m.handleInvalidMint(tx)
+		return
+	}
+	log.Info("Found valid mint tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
+	m.handleValidMint(tx, memo)
+
 }
 
 func (m *WPOKTMintMonitor) syncTxs() {
@@ -41,22 +121,14 @@ func (m *WPOKTMintMonitor) syncTxs() {
 	if err != nil {
 		log.Error(err)
 	}
-	fmt.Printf("TotalTxs: %d\n", len(txs))
-	fmt.Println("Txs:")
-	for i, tx := range txs {
-		fmt.Printf("[%d]\tHash: %s\n", i, tx.Hash)
-		fmt.Printf("\tHeight: %d\n", tx.Height)
-		fmt.Printf("\tType: %s\n", tx.StdTx.Msg.Type)
-		fmt.Printf("\tFrom: %s\n", tx.StdTx.Msg.Value.FromAddress)
-		fmt.Printf("\tTo: %s\n", tx.StdTx.Msg.Value.ToAddress)
-		fmt.Printf("\tAmount: %s\n", tx.StdTx.Msg.Value.Amount)
-		fmt.Printf("\tMemo: %s\n", tx.StdTx.Memo)
-		fmt.Printf("\tFee: %s %s\n", tx.StdTx.Fee[0].Amount, tx.StdTx.Fee[0].Denom)
+	log.Debug("Found ", len(txs), " txs")
+	for _, tx := range txs {
+		m.handleTx(tx)
 	}
 }
 
 func (m *WPOKTMintMonitor) Start() {
-	log.Debug("Starting mint monitor")
+	log.Info("Starting mint monitor")
 	stop := false
 	for !stop {
 		// Start
@@ -70,7 +142,7 @@ func (m *WPOKTMintMonitor) Start() {
 		select {
 		case <-m.stop:
 			stop = true
-			log.Debug("Stopping mint monitor")
+			log.Info("Stopping mint monitor")
 		case <-time.After(m.monitorInterval):
 		}
 	}
