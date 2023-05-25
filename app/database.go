@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/dan13ram/wpokt-backend/models"
 	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,17 +12,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 )
 
-// database collection names
-const (
-	CollectionMints        = "mints"
-	CollectionInvalidMints = "invalid_mints"
-)
-
 // Database is a wrapper around the mongo database
 type Database struct {
-	db     *mongo.Database
-	ctx    context.Context
-	cancel context.CancelFunc
+	db *mongo.Database
 }
 
 var (
@@ -30,9 +23,9 @@ var (
 )
 
 // Connect connects to the database
-func (d *Database) Connect() error {
+func (d *Database) Connect(ctx context.Context) error {
 	log.Info("Connecting to database")
-	client, err := mongo.Connect(d.ctx, options.Client().ApplyURI(Config.MongoDB.URI).SetWriteConcern(writeconcern.New(writeconcern.WMajority())))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(Config.MongoDB.URI).SetWriteConcern(writeconcern.New(writeconcern.WMajority())))
 	if err != nil {
 		return err
 	}
@@ -44,8 +37,10 @@ func (d *Database) Connect() error {
 func (d *Database) SetupIndexes() error {
 	log.Info("Setting up indexes")
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
 	// setup unique index for mints
-	_, err := d.db.Collection(CollectionMints).Indexes().CreateOne(d.ctx, mongo.IndexModel{
+	_, err := d.db.Collection(models.CollectionMints).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    map[string]interface{}{"transaction_hash": 1},
 		Options: options.Index().SetUnique(true),
 	})
@@ -54,8 +49,10 @@ func (d *Database) SetupIndexes() error {
 
 	}
 
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
 	// setup unique index for invalid mints
-	_, err = d.db.Collection(CollectionInvalidMints).Indexes().CreateOne(d.ctx, mongo.IndexModel{
+	_, err = d.db.Collection(models.CollectionInvalidMints).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    map[string]interface{}{"transaction_hash": 1},
 		Options: options.Index().SetUnique(true),
 	})
@@ -67,8 +64,9 @@ func (d *Database) SetupIndexes() error {
 // Disconnect disconnects from the database
 func (d *Database) Disconnect() error {
 	log.Info("Disconnecting from database")
-	err := d.db.Client().Disconnect(d.ctx)
-	d.cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	err := d.db.Client().Disconnect(ctx)
 	return err
 }
 
@@ -78,12 +76,8 @@ func (d *Database) GetCollection(name string) *mongo.Collection {
 }
 
 // NewDatabase creates a new database wrapper
-func InitDB() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	DB = &Database{
-		ctx:    ctx,
-		cancel: cancel,
-	}
-	DB.Connect()
+func InitDB(ctx context.Context) {
+	DB = &Database{}
+	DB.Connect(ctx)
 	DB.SetupIndexes()
 }

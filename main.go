@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/pocket"
@@ -24,7 +26,10 @@ func main() {
 
 	app.InitConfig(absConfigPath)
 	app.InitLogger()
-	app.InitDB()
+
+	dbCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	app.InitDB(dbCtx)
 
 	pocket.ValidateNetwork()
 
@@ -39,6 +44,7 @@ func main() {
 	go waitForExitSignals(gracefulStop, done)
 	<-done
 	m.Cancel()
+	app.DB.Disconnect()
 	log.Info("Shutting down server")
 }
 

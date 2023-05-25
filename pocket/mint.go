@@ -47,13 +47,13 @@ func (m *WPOKTMintMonitor) handleInvalidMint(tx *ResultTx) {
 		Amount:          tx.StdTx.Msg.Value.Amount,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
-		Status:          models.MintStatusPending,
+		Status:          models.StatusPending,
 		Signers:         []string{},
 	}
 
 	log.Debug("Storing invalid mint tx: ", tx.Hash, " in db")
 
-	col := app.DB.GetCollection(app.CollectionInvalidMints)
+	col := app.DB.GetCollection(models.CollectionInvalidMints)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
@@ -81,13 +81,13 @@ func (m *WPOKTMintMonitor) handleValidMint(tx *ResultTx, memo models.MintMemo) {
 		Amount:           tx.StdTx.Msg.Value.Amount,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
-		Status:           models.MintStatusPending,
+		Status:           models.StatusPending,
 		Signers:          []string{},
 	}
 
 	log.Debug("Storing mint tx: ", tx.Hash, " in db")
 
-	col := app.DB.GetCollection(app.CollectionMints)
+	col := app.DB.GetCollection(models.CollectionMints)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
