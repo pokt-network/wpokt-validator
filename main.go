@@ -27,7 +27,7 @@ func main() {
 	app.InitConfig(absConfigPath)
 	app.InitLogger()
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	dbCtx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	app.InitDB(dbCtx)
 

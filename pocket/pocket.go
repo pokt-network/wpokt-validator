@@ -122,7 +122,7 @@ func QueryRPC(path string, jsonArgs []byte) (string, error) {
 
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: time.Second * time.Duration(app.Config.Pocket.RPCTimeOutSecs),
 	}
 
 	resp, err := client.Do(req)

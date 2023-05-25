@@ -1,20 +1,23 @@
 package models
 
 type MongoConfig struct {
-	URI      string `yaml:"uri"`
-	Database string `yaml:"database"`
+	URI         string `yaml:"uri"`
+	Database    string `yaml:"database"`
+	TimeOutSecs int64  `yaml:"timeout_secs"`
 }
 
 type PocketConfig struct {
 	RPCURL              string `yaml:"rpc_url"`
+	RPCTimeOutSecs      int64  `yaml:"rpc_timeout_secs"`
 	ChainId             string `yaml:"chain_id"`
 	StartHeight         int64  `yaml:"start_height"`
 	MonitorIntervalSecs int64  `yaml:"monitor_interval_secs"`
 }
 
 type EthereumConfig struct {
-	RPCURL  string `yaml:"rpc_url"`
-	ChainId int64  `yaml:"chain_id"`
+	RPCURL         string `yaml:"rpc_url"`
+	RPCTimeOutSecs int64  `yaml:"rpc_timeout_secs"`
+	ChainId        int64  `yaml:"chain_id"`
 }
 
 type CopperConfig struct {

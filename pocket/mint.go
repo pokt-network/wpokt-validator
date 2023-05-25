@@ -54,7 +54,7 @@ func (m *WPOKTMintMonitor) handleInvalidMint(tx *ResultTx) {
 	log.Debug("Storing invalid mint tx: ", tx.Hash, " in db")
 
 	col := app.DB.GetCollection(models.CollectionInvalidMints)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.Pocket.MonitorIntervalSecs))
 	defer cancel()
 
 	_, err := col.InsertOne(ctx, doc)
@@ -88,7 +88,7 @@ func (m *WPOKTMintMonitor) handleValidMint(tx *ResultTx, memo models.MintMemo) {
 	log.Debug("Storing mint tx: ", tx.Hash, " in db")
 
 	col := app.DB.GetCollection(models.CollectionMints)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.Pocket.MonitorIntervalSecs))
 	defer cancel()
 
 	_, err := col.InsertOne(ctx, doc)
