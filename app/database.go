@@ -24,7 +24,7 @@ var (
 
 // Connect connects to the database
 func (d *Database) Connect(ctx context.Context) error {
-	log.Info("Connecting to database")
+	log.Debug("Connecting to database")
 
 	wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Duration(Config.MongoDB.TimeOutSecs)*time.Second))
 
@@ -33,43 +33,46 @@ func (d *Database) Connect(ctx context.Context) error {
 		return err
 	}
 	d.db = client.Database(Config.MongoDB.Database)
+
+	log.Debug("Connected to database")
 	return nil
 }
 
 // Setup Indexes
 func (d *Database) SetupIndexes() error {
-	log.Info("Setting up indexes")
+	log.Debug("Setting up indexes")
 
+	// setup unique index for mints
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
-	// setup unique index for mints
 	_, err := d.db.Collection(models.CollectionMints).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    map[string]interface{}{"transaction_hash": 1},
-		Options: options.Index().SetUnique(true),
+		Options: options.Index().SetUnique(true).SetBackground(true),
 	})
 	if err != nil {
 		return err
-
 	}
 
+	// setup unique index for invalid mints
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
-	// setup unique index for invalid mints
 	_, err = d.db.Collection(models.CollectionInvalidMints).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    map[string]interface{}{"transaction_hash": 1},
-		Options: options.Index().SetUnique(true),
+		Options: options.Index().SetUnique(true).SetBackground(true),
 	})
 
-	// create multiple indexes in one call
+	log.Debug("Indexes created")
+
 	return nil
 }
 
 // Disconnect disconnects from the database
 func (d *Database) Disconnect() error {
-	log.Info("Disconnecting from database")
+	log.Debug("Disconnecting from database")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	err := d.db.Client().Disconnect(ctx)
+	log.Debug("Disconnected from database")
 	return err
 }
 

@@ -43,9 +43,11 @@ func main() {
 	signal.Notify(gracefulStop, syscall.SIGINT, syscall.SIGTERM)
 	go waitForExitSignals(gracefulStop, done)
 	<-done
-	m.Cancel()
+
+	log.Debug("Gracefully shutting down server...")
+	m.Stop()
 	app.DB.Disconnect()
-	log.Info("Shutting down server")
+	log.Debug("Server gracefully stopped")
 }
 
 func waitForExitSignals(gracefulStop chan os.Signal, done chan bool) {

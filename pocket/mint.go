@@ -12,7 +12,7 @@ import (
 )
 
 type MintMonitor interface {
-	Cancel()
+	Stop()
 	Start()
 }
 
@@ -23,8 +23,8 @@ type WPOKTMintMonitor struct {
 	currentHeight   int64
 }
 
-func (m *WPOKTMintMonitor) Cancel() {
-	log.Info("Cancelling mint monitor")
+func (m *WPOKTMintMonitor) Stop() {
+	log.Debug("Stopping mint monitor")
 	m.stop <- true
 }
 
@@ -128,7 +128,7 @@ func (m *WPOKTMintMonitor) syncTxs() {
 }
 
 func (m *WPOKTMintMonitor) Start() {
-	log.Info("Starting mint monitor")
+	log.Debug("Starting mint monitor")
 	stop := false
 	for !stop {
 		// Start
@@ -142,7 +142,7 @@ func (m *WPOKTMintMonitor) Start() {
 		select {
 		case <-m.stop:
 			stop = true
-			log.Info("Stopping mint monitor")
+			log.Debug("Stopped mint monitor")
 		case <-time.After(m.monitorInterval):
 		}
 	}

@@ -228,5 +228,5 @@ func ValidateNetwork() {
 	if res.Block.Header.ChainID != app.Config.Pocket.ChainId {
 		panic("invalid pocket chain id")
 	}
-	log.Info("Validated pocket network")
+	log.Debug("Validated pocket network")
 }
