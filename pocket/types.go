@@ -57,6 +57,7 @@ type AccountTxsResponse struct {
 
 type Header struct {
 	ChainID string `json:"chain_id"`
+	Height  string `json:"height"`
 }
 
 type Block struct {
@@ -65,5 +66,4 @@ type Block struct {
 
 type BlockResponse struct {
 	Block Block `json:"block"`
-	// Block     types.Block     `json:"block"`
 }

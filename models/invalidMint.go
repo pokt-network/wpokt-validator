@@ -13,7 +13,7 @@ const (
 type InvalidMint struct {
 	Id              *primitive.ObjectID `bson:"_id,omitempty"`
 	TransactionHash string              `bson:"transaction_hash"`
-	Height          int64               `bson:"height"`
+	Height          uint64              `bson:"height"`
 	SenderAddress   string              `bson:"sender_address"`
 	SenderChainId   string              `bson:"sender_chain_id"`
 	Amount          string              `bson:"amount"`

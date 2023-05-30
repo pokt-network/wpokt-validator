@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
+	"github.com/dan13ram/wpokt-backend/ethereum"
 	"github.com/dan13ram/wpokt-backend/pocket"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,10 +33,13 @@ func main() {
 	app.InitDB(dbCtx)
 
 	pocket.ValidateNetwork()
+	ethereum.ValidateNetwork()
 
 	m := pocket.NewMintMonitor()
+	b := ethereum.NewBurnMonitor()
 
 	go m.Start()
+	go b.Start()
 
 	// Gracefully shut down server
 	gracefulStop := make(chan os.Signal, 1)
@@ -45,6 +49,7 @@ func main() {
 	<-done
 
 	log.Debug("Gracefully shutting down server...")
+	b.Stop()
 	m.Stop()
 	app.DB.Disconnect()
 	log.Debug("Server gracefully stopped")

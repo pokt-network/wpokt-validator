@@ -19,8 +19,8 @@ type MintMonitor interface {
 type WPOKTMintMonitor struct {
 	stop            chan bool
 	monitorInterval time.Duration
-	lastHeight      int64
-	currentHeight   int64
+	startHeight     uint64
+	currentHeight   uint64
 }
 
 func (m *WPOKTMintMonitor) Stop() {
@@ -34,13 +34,13 @@ func (m *WPOKTMintMonitor) updateCurrentHeight() {
 		log.Error(err)
 		return
 	}
-	log.Info("Updated current pokt height: ", res.Height)
-	m.currentHeight = res.Height
+	log.Debug("Updated current pokt height: ", res.Height)
+	m.currentHeight = uint64(res.Height)
 }
 
 func (m *WPOKTMintMonitor) handleInvalidMint(tx *ResultTx) {
 	doc := models.InvalidMint{
-		Height:          tx.Height,
+		Height:          uint64(tx.Height),
 		TransactionHash: tx.Hash.String(),
 		SenderAddress:   tx.StdTx.Msg.Value.FromAddress,
 		SenderChainId:   app.Config.Pocket.ChainId,
@@ -72,7 +72,7 @@ func (m *WPOKTMintMonitor) handleInvalidMint(tx *ResultTx) {
 
 func (m *WPOKTMintMonitor) handleValidMint(tx *ResultTx, memo models.MintMemo) {
 	doc := models.Mint{
-		Height:           tx.Height,
+		Height:           uint64(tx.Height),
 		TransactionHash:  tx.Hash.String(),
 		SenderAddress:    tx.StdTx.Msg.Value.FromAddress,
 		SenderChainId:    app.Config.Pocket.ChainId,
@@ -106,22 +106,21 @@ func (m *WPOKTMintMonitor) handleTx(tx *ResultTx) {
 	err := json.Unmarshal([]byte(tx.StdTx.Memo), &memo)
 
 	if err != nil || memo.ChainId != app.Config.Ethereum.ChainId {
-		log.Debug("Found invalid memo in tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
+		log.Debug("Found invalid memo in mint tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
 		m.handleInvalidMint(tx)
 		return
 	}
-	log.Info("Found valid mint tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
+	log.Debug("Found valid mint tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
 	m.handleValidMint(tx, memo)
 
 }
 
 func (m *WPOKTMintMonitor) syncTxs() {
-	log.Debug("Syncing txs from height: ", m.lastHeight, " to height: ", m.currentHeight)
-	txs, err := GetAccountTransferTxs(m.lastHeight)
+	txs, err := GetAccountTransferTxs(int64(m.startHeight))
 	if err != nil {
 		log.Error(err)
 	}
-	log.Debug("Found ", len(txs), " txs")
+	log.Debug("Found ", len(txs), " mint txs")
 	for _, tx := range txs {
 		m.handleTx(tx)
 	}
@@ -131,14 +130,25 @@ func (m *WPOKTMintMonitor) Start() {
 	log.Debug("Starting mint monitor")
 	stop := false
 	for !stop {
-		// Start
+		log.Debug("Starting mint sync")
+
 		m.updateCurrentHeight()
-		if (m.currentHeight - m.lastHeight) > 0 {
-			// Search for mint txs & store in db
-			m.syncTxs()
-			m.lastHeight = m.currentHeight
+
+		if m.startHeight == 0 {
+			m.startHeight = m.currentHeight
 		}
-		// End
+
+		if (m.currentHeight - m.startHeight) > 0 {
+			log.Debug("Syncing mint txs from height: ", m.startHeight, " to height: ", m.currentHeight)
+			m.syncTxs()
+			m.startHeight = m.currentHeight
+		} else {
+			log.Debug("Already synced up to height: ", m.currentHeight)
+		}
+
+		log.Debug("Finished mint sync")
+		log.Debug("Next mint sync will start at: ", time.Now().Add(m.monitorInterval))
+
 		select {
 		case <-m.stop:
 			stop = true
@@ -151,7 +161,7 @@ func (m *WPOKTMintMonitor) Start() {
 func NewMintMonitor() MintMonitor {
 	return &WPOKTMintMonitor{
 		monitorInterval: time.Duration(app.Config.Pocket.MonitorIntervalSecs) * time.Second,
-		lastHeight:      app.Config.Pocket.StartHeight,
+		startHeight:     app.Config.Pocket.StartHeight,
 		currentHeight:   0,
 		stop:            make(chan bool),
 	}

@@ -218,15 +218,17 @@ func GetAccountTransferTxs(height int64) ([]*ResultTx, error) {
 	return txs, nil
 }
 
-// check block chain id is valid and panic if invalid
 func ValidateNetwork() {
+	log.Debugln("Connecting to pocket network", "url", app.Config.Pocket.RPCURL)
 	res, err := GetBlock()
 	if err != nil {
 		panic(err)
 	}
+	log.Debugln("Connected to pocket network", "height", res.Block.Header.Height)
 
 	if res.Block.Header.ChainID != app.Config.Pocket.ChainId {
-		panic("invalid pocket chain id")
+		log.Debugln("pocket chainId mismatch", "expected", app.Config.Pocket.ChainId, "got", res.Block.Header.ChainID)
+		panic("pocket chain id mismatch")
 	}
-	log.Debug("Validated pocket network")
+	log.Debugln("Connected to pocket network", "chainId", app.Config.Pocket.ChainId)
 }
