@@ -12,12 +12,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var client *ethclient.Client
+var Client *ethclient.Client
 
 func ValidateNetwork() {
 	var err error
 	log.Debugln("Connecting to Ethereum node", "url", app.Config.Ethereum.RPCURL)
-	client, err = ethclient.Dial(app.Config.Ethereum.RPCURL)
+	Client, err = ethclient.Dial(app.Config.Ethereum.RPCURL)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +44,7 @@ func GetBlockNumber() (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 	defer cancel()
 
-	blockNumber, err := client.BlockNumber(ctx)
+	blockNumber, err := Client.BlockNumber(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -56,7 +56,7 @@ func GetChainId() (*big.Int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 	defer cancel()
 
-	chainId, err := client.ChainID(ctx)
+	chainId, err := Client.ChainID(ctx)
 	if err != nil {
 		return nil, err
 	}

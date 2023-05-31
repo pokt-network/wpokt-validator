@@ -38,7 +38,7 @@ func (m *WPOKTMintMonitor) updateCurrentHeight() {
 	m.currentHeight = uint64(res.Height)
 }
 
-func (m *WPOKTMintMonitor) handleInvalidMint(tx *ResultTx) {
+func (m *WPOKTMintMonitor) handleInvalidMint(tx *ResultTx) bool {
 	doc := models.InvalidMint{
 		Height:          uint64(tx.Height),
 		TransactionHash: tx.Hash.String(),
@@ -61,16 +61,17 @@ func (m *WPOKTMintMonitor) handleInvalidMint(tx *ResultTx) {
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Debug("Found duplicate invalid mint tx: ", tx.Hash, " in db")
-			return
+			return true
 		}
 		log.Error("Error storing invalid mint tx: ", tx.Hash, " in db: ", err)
-		return
+		return false
 	}
 
 	log.Debug("Stored invalid mint tx: ", tx.Hash, " in db")
+	return true
 }
 
-func (m *WPOKTMintMonitor) handleValidMint(tx *ResultTx, memo models.MintMemo) {
+func (m *WPOKTMintMonitor) handleValidMint(tx *ResultTx, memo models.MintMemo) bool {
 	doc := models.Mint{
 		Height:           uint64(tx.Height),
 		TransactionHash:  tx.Hash.String(),
@@ -85,7 +86,7 @@ func (m *WPOKTMintMonitor) handleValidMint(tx *ResultTx, memo models.MintMemo) {
 		Signers:          []string{},
 	}
 
-	log.Debug("Storing mint tx: ", tx.Hash, " in db")
+	log.Debug("Storing mint tx in db: ", tx.Hash)
 
 	col := app.DB.GetCollection(models.CollectionMints)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.Pocket.MonitorIntervalSecs))
@@ -93,37 +94,44 @@ func (m *WPOKTMintMonitor) handleValidMint(tx *ResultTx, memo models.MintMemo) {
 
 	_, err := col.InsertOne(ctx, doc)
 	if err != nil {
-		log.Error("Error storing mint tx: ", tx.Hash, " in db: ", err)
-		return
+		if mongo.IsDuplicateKeyError(err) {
+			log.Debug("Found duplicate mint tx in db: ", tx.Hash)
+			return true
+		}
+		log.Error("Error storing mint tx in db: ", err)
+		return false
 	}
 
-	log.Debug("Stored mint tx: ", tx.Hash, " in db")
+	log.Debug("Stored mint tx in db: ", tx.Hash)
+	return true
 }
 
-func (m *WPOKTMintMonitor) handleTx(tx *ResultTx) {
+func (m *WPOKTMintMonitor) handleTx(tx *ResultTx) bool {
 	var memo models.MintMemo
 
 	err := json.Unmarshal([]byte(tx.StdTx.Memo), &memo)
 
 	if err != nil || memo.ChainId != app.Config.Ethereum.ChainId {
 		log.Debug("Found invalid memo in mint tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
-		m.handleInvalidMint(tx)
-		return
+		return m.handleInvalidMint(tx)
 	}
 	log.Debug("Found valid mint tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
-	m.handleValidMint(tx, memo)
+	return m.handleValidMint(tx, memo)
 
 }
 
-func (m *WPOKTMintMonitor) syncTxs() {
+func (m *WPOKTMintMonitor) syncTxs() bool {
 	txs, err := GetAccountTransferTxs(int64(m.startHeight))
 	if err != nil {
 		log.Error(err)
+		return false
 	}
 	log.Debug("Found ", len(txs), " mint txs")
+	var success bool = true
 	for _, tx := range txs {
-		m.handleTx(tx)
+		success = success && m.handleTx(tx)
 	}
+	return success
 }
 
 func (m *WPOKTMintMonitor) Start() {
@@ -134,14 +142,12 @@ func (m *WPOKTMintMonitor) Start() {
 
 		m.updateCurrentHeight()
 
-		if m.startHeight == 0 {
-			m.startHeight = m.currentHeight
-		}
-
 		if (m.currentHeight - m.startHeight) > 0 {
 			log.Debug("Syncing mint txs from height: ", m.startHeight, " to height: ", m.currentHeight)
-			m.syncTxs()
-			m.startHeight = m.currentHeight
+			success := m.syncTxs()
+			if success {
+				m.startHeight = m.currentHeight
+			}
 		} else {
 			log.Debug("Already synced up to height: ", m.currentHeight)
 		}
@@ -160,10 +166,17 @@ func (m *WPOKTMintMonitor) Start() {
 }
 
 func NewMintMonitor() MintMonitor {
-	return &WPOKTMintMonitor{
+	m := &WPOKTMintMonitor{
 		monitorInterval: time.Duration(app.Config.Pocket.MonitorIntervalSecs) * time.Second,
-		startHeight:     app.Config.Pocket.StartHeight,
+		startHeight:     0,
 		currentHeight:   0,
 		stop:            make(chan bool),
 	}
+	if app.Config.Pocket.StartHeight < 0 {
+		m.updateCurrentHeight()
+		m.startHeight = m.currentHeight
+	} else {
+		m.startHeight = uint64(app.Config.Pocket.StartHeight)
+	}
+	return m
 }

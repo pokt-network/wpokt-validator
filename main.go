@@ -10,6 +10,7 @@ import (
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/ethereum"
+
 	"github.com/dan13ram/wpokt-backend/pocket"
 	log "github.com/sirupsen/logrus"
 )
