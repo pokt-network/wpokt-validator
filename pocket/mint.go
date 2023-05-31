@@ -147,6 +147,7 @@ func (m *WPOKTMintMonitor) Start() {
 		}
 
 		log.Debug("Finished mint sync")
+		log.Debug("Sleeping mint monitor for: ", m.monitorInterval)
 		log.Debug("Next mint sync will start at: ", time.Now().Add(m.monitorInterval))
 
 		select {

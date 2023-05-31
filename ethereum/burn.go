@@ -28,15 +28,6 @@ func (m *WPOKTBurnMonitor) Stop() {
 	m.stop <- true
 }
 
-func NewBurnMonitor() BurnMonitor {
-	return &WPOKTBurnMonitor{
-		stop:               make(chan bool),
-		startBlockNumber:   app.Config.Ethereum.StartBlockNumber,
-		currentBlockNumber: 0,
-		monitorInterval:    time.Duration(app.Config.Pocket.MonitorIntervalSecs) * time.Second,
-	}
-}
-
 func (m *WPOKTBurnMonitor) updateCurrentBlockNumber() {
 	res, err := GetBlockNumber()
 	if err != nil {
@@ -140,19 +131,38 @@ func (m *WPOKTBurnMonitor) Start() {
 	log.Debug("Starting burn monitor")
 	stop := false
 	for !stop {
-		// Start
+		log.Debug("Starting burn sync")
+
 		m.updateCurrentBlockNumber()
+
+		if m.startBlockNumber == 0 {
+			m.startBlockNumber = m.currentBlockNumber
+		}
+
 		if (m.currentBlockNumber - m.startBlockNumber) > 0 {
-			// Search for burn txs & store in db
+			log.Debug("Syncing burn txs from blockNumber: ", m.startBlockNumber, " to blockNumber: ", m.currentBlockNumber)
 			m.syncTxs()
 			m.startBlockNumber = m.currentBlockNumber
 		}
-		// End
+
+		log.Debug("Finished burn sync")
+		log.Debug("Sleeping for ", m.monitorInterval)
+		log.Debug("Next burn sync at: ", time.Now().Add(m.monitorInterval))
+
 		select {
 		case <-m.stop:
 			stop = true
 			log.Debug("Stopped burn monitor")
 		case <-time.After(m.monitorInterval):
 		}
+	}
+}
+
+func NewBurnMonitor() BurnMonitor {
+	return &WPOKTBurnMonitor{
+		stop:               make(chan bool),
+		startBlockNumber:   app.Config.Ethereum.StartBlockNumber,
+		currentBlockNumber: 0,
+		monitorInterval:    time.Duration(app.Config.Pocket.MonitorIntervalSecs) * time.Second,
 	}
 }
