@@ -36,8 +36,8 @@ func (b *WPOKTBurnMonitor) Stop() {
 	b.stop <- true
 }
 
-func (b *WPOKTBurnMonitor) updateCurrentBlockNumber() {
-	res, err := GetBlockNumber()
+func (b *WPOKTBurnMonitor) UpdateCurrentBlockNumber() {
+	res, err := Client.GetBlockNumber()
 	if err != nil {
 		log.Error(err)
 		return
@@ -46,7 +46,7 @@ func (b *WPOKTBurnMonitor) updateCurrentBlockNumber() {
 	b.currentBlockNumber = res
 }
 
-func (b *WPOKTBurnMonitor) handleBurnEvent(event *WrappedPocketBurnAndBridge) bool {
+func (b *WPOKTBurnMonitor) HandleBurnEvent(event *WrappedPocketBurnAndBridge) bool {
 	doc := models.Burn{
 		BlockNumber:      event.Raw.BlockNumber,
 		TransactionHash:  event.Raw.TxHash.String(),
@@ -83,7 +83,7 @@ func (b *WPOKTBurnMonitor) handleBurnEvent(event *WrappedPocketBurnAndBridge) bo
 	return true
 }
 
-func (b *WPOKTBurnMonitor) syncTxs() bool {
+func (b *WPOKTBurnMonitor) SyncTxs() bool {
 	filter, err := b.wpoktContract.WrappedPocketFilterer.FilterBurnAndBridge(&bind.FilterOpts{
 		Start:   b.startBlockNumber,
 		End:     &b.currentBlockNumber,
@@ -98,7 +98,7 @@ func (b *WPOKTBurnMonitor) syncTxs() bool {
 	var success bool = true
 	for filter.Next() {
 		log.Debug("Found burn event: ", filter.Event.Raw.TxHash, " ", filter.Event.Raw.Index)
-		success = success && b.handleBurnEvent(filter.Event)
+		success = success && b.HandleBurnEvent(filter.Event)
 	}
 	return success
 }
@@ -107,23 +107,23 @@ func (b *WPOKTBurnMonitor) Start() {
 	log.Debug("Starting burn monitor")
 	stop := false
 	for !stop {
-		log.Debug("Starting burn sync")
+		log.Debug("Starting burn Sync")
 
-		b.updateCurrentBlockNumber()
+		b.UpdateCurrentBlockNumber()
 
 		if (b.currentBlockNumber - b.startBlockNumber) > 0 {
 			log.Debug("Syncing burn txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
-			success := b.syncTxs()
+			success := b.SyncTxs()
 			if success {
 				b.startBlockNumber = b.currentBlockNumber
 			}
 		} else {
-			log.Debug("Already synced up to blockNumber: ", b.currentBlockNumber)
+			log.Debug("Already Synced up to blockNumber: ", b.currentBlockNumber)
 		}
 
-		log.Debug("Finished burn sync")
+		log.Debug("Finished burn Sync")
 		log.Debug("Sleeping for ", b.monitorInterval)
-		log.Debug("Next burn sync at: ", time.Now().Add(b.monitorInterval))
+		log.Debug("Next burn Sync at: ", time.Now().Add(b.monitorInterval))
 
 		select {
 		case <-b.stop:
@@ -136,7 +136,7 @@ func (b *WPOKTBurnMonitor) Start() {
 
 func NewBurnMonitor() BurnMonitor {
 	log.Debug("Connecting to Wrapped Pocket contract at: ", app.Config.Ethereum.WPOKTContractAddress)
-	contract, err := NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), Client)
+	contract, err := NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), Client.GetClient())
 	if err != nil {
 		log.Error("Error connecting to Wrapped Pocket contract: ", err)
 		panic(err)
@@ -152,7 +152,7 @@ func NewBurnMonitor() BurnMonitor {
 	}
 
 	if app.Config.Ethereum.StartBlockNumber < 0 {
-		b.updateCurrentBlockNumber()
+		b.UpdateCurrentBlockNumber()
 		b.startBlockNumber = b.currentBlockNumber
 	} else {
 		b.startBlockNumber = uint64(app.Config.Ethereum.StartBlockNumber)

@@ -33,8 +33,8 @@ func main() {
 	defer cancel()
 	app.InitDB(dbCtx)
 
-	pocket.ValidateNetwork()
-	ethereum.ValidateNetwork()
+	pocket.Client.ValidateNetwork()
+	ethereum.Client.ValidateNetwork()
 
 	m := pocket.NewMintMonitor()
 	b := ethereum.NewBurnMonitor()

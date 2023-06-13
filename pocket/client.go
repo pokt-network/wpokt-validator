@@ -15,35 +15,48 @@ import (
 	"github.com/pokt-network/pocket-core/app/cmd/rpc"
 )
 
+type PocketClient interface {
+	GetBlock() (*BlockResponse, error)
+	GetHeight() (*HeightResponse, error)
+	GetAccountTxsByHeight(height int64) ([]*ResultTx, error)
+	ValidateNetwork()
+}
+
+type pocketClient struct{}
+
 var (
-	SendRawTxPath,
-	GetNodePath,
-	GetACLPath,
-	GetUpgradePath,
-	GetDAOOwnerPath,
-	GetHeightPath,
-	GetAccountPath,
-	GetAppPath,
-	GetTxPath,
-	GetBlockPath,
-	GetSupportedChainsPath,
-	GetBalancePath,
-	GetAccountTxsPath,
-	GetNodeParamsPath,
-	GetNodesPath,
-	GetSigningInfoPath,
-	GetAppsPath,
-	GetAppParamsPath,
-	GetPocketParamsPath,
-	GetNodeClaimsPath,
-	GetNodeClaimPath,
-	GetBlockTxsPath,
-	GetSupplyPath,
-	GetAllParamsPath,
-	GetParamPath,
-	GetStopPath,
-	GetQueryChains,
-	GetAccountsPath string
+	Client PocketClient = &pocketClient{}
+)
+
+var (
+	sendRawTxPath,
+	getNodePath,
+	getACLPath,
+	getUpgradePath,
+	getDAOOwnerPath,
+	getHeightPath,
+	getAccountPath,
+	getAppPath,
+	getTxPath,
+	getBlockPath,
+	getSupportedChainsPath,
+	getBalancePath,
+	getAccountTxsPath,
+	getNodeParamsPath,
+	getNodesPath,
+	getSigningInfoPath,
+	getAppsPath,
+	getAppParamsPath,
+	getPocketParamsPath,
+	getNodeClaimsPath,
+	getNodeClaimPath,
+	getBlockTxsPath,
+	getSupplyPath,
+	getAllParamsPath,
+	getParamPath,
+	getStopPath,
+	getQueryChains,
+	getAccountsPath string
 )
 
 func init() {
@@ -51,68 +64,68 @@ func init() {
 	for _, route := range routes {
 		switch route.Name {
 		case "SendRawTx":
-			SendRawTxPath = route.Path
+			sendRawTxPath = route.Path
 		case "QueryNode":
-			GetNodePath = route.Path
+			getNodePath = route.Path
 		case "QueryACL":
-			GetACLPath = route.Path
+			getACLPath = route.Path
 		case "QueryUpgrade":
-			GetUpgradePath = route.Path
+			getUpgradePath = route.Path
 		case "QueryDAOOwner":
-			GetDAOOwnerPath = route.Path
+			getDAOOwnerPath = route.Path
 		case "QueryHeight":
-			GetHeightPath = route.Path
+			getHeightPath = route.Path
 		case "QueryAccount":
-			GetAccountPath = route.Path
+			getAccountPath = route.Path
 		case "QueryAccounts":
-			GetAccountsPath = route.Path
+			getAccountsPath = route.Path
 		case "QueryApp":
-			GetAppPath = route.Path
+			getAppPath = route.Path
 		case "QueryTX":
-			GetTxPath = route.Path
+			getTxPath = route.Path
 		case "QueryBlock":
-			GetBlockPath = route.Path
+			getBlockPath = route.Path
 		case "QuerySupportedChains":
-			GetSupportedChainsPath = route.Path
+			getSupportedChainsPath = route.Path
 		case "QueryBalance":
-			GetBalancePath = route.Path
+			getBalancePath = route.Path
 		case "QueryAccountTxs":
-			GetAccountTxsPath = route.Path
+			getAccountTxsPath = route.Path
 		case "QueryNodeParams":
-			GetNodeParamsPath = route.Path
+			getNodeParamsPath = route.Path
 		case "QueryNodes":
-			GetNodesPath = route.Path
+			getNodesPath = route.Path
 		case "QuerySigningInfo":
-			GetSigningInfoPath = route.Path
+			getSigningInfoPath = route.Path
 		case "QueryApps":
-			GetAppsPath = route.Path
+			getAppsPath = route.Path
 		case "QueryAppParams":
-			GetAppParamsPath = route.Path
+			getAppParamsPath = route.Path
 		case "QueryPocketParams":
-			GetPocketParamsPath = route.Path
+			getPocketParamsPath = route.Path
 		case "QueryBlockTxs":
-			GetBlockTxsPath = route.Path
+			getBlockTxsPath = route.Path
 		case "QuerySupply":
-			GetSupplyPath = route.Path
+			getSupplyPath = route.Path
 		case "QueryNodeClaim":
-			GetNodeClaimPath = route.Path
+			getNodeClaimPath = route.Path
 		case "QueryNodeClaims":
-			GetNodeClaimsPath = route.Path
+			getNodeClaimsPath = route.Path
 		case "QueryAllParams":
-			GetAllParamsPath = route.Path
+			getAllParamsPath = route.Path
 		case "QueryParam":
-			GetParamPath = route.Path
+			getParamPath = route.Path
 		case "Stop":
-			GetStopPath = route.Path
+			getStopPath = route.Path
 		case "QueryChains":
-			GetQueryChains = route.Path
+			getQueryChains = route.Path
 		default:
 			continue
 		}
 	}
 }
 
-func QueryRPC(path string, jsonArgs []byte) (string, error) {
+func queryRPC(path string, jsonArgs []byte) (string, error) {
 	cliURL := app.Config.Pocket.RPCURL + path
 
 	req, err := http.NewRequest("POST", cliURL, bytes.NewBuffer(jsonArgs))
@@ -152,8 +165,8 @@ func QueryRPC(path string, jsonArgs []byte) (string, error) {
 	return "", fmt.Errorf("the http status code was not okay: %d, with a response of %+v", resp.StatusCode, resp)
 }
 
-func GetBlock() (*BlockResponse, error) {
-	res, err := QueryRPC(GetBlockPath, []byte{})
+func (c *pocketClient) GetBlock() (*BlockResponse, error) {
+	res, err := queryRPC(getBlockPath, []byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -162,8 +175,8 @@ func GetBlock() (*BlockResponse, error) {
 	return &obj, err
 }
 
-func GetHeight() (*HeightResponse, error) {
-	res, err := QueryRPC(GetHeightPath, []byte{})
+func (c *pocketClient) GetHeight() (*HeightResponse, error) {
+	res, err := queryRPC(getHeightPath, []byte{})
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +185,7 @@ func GetHeight() (*HeightResponse, error) {
 	return &obj, err
 }
 
-func getAccountTxsPerPage(page uint32) (*AccountTxsResponse, error) {
+func (c *pocketClient) getAccountTxsPerPage(page uint32) (*AccountTxsResponse, error) {
 	params := rpc.PaginateAddrParams{
 		Address:  app.Config.Copper.VaultAddress,
 		Page:     int(page),
@@ -185,7 +198,7 @@ func getAccountTxsPerPage(page uint32) (*AccountTxsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := QueryRPC(GetAccountTxsPath, j)
+	res, err := queryRPC(getAccountTxsPath, j)
 	if err != nil {
 		return nil, err
 	}
@@ -194,11 +207,11 @@ func getAccountTxsPerPage(page uint32) (*AccountTxsResponse, error) {
 	return &obj, err
 }
 
-func GetAccountTransferTxs(height int64) ([]*ResultTx, error) {
+func (c *pocketClient) GetAccountTxsByHeight(height int64) ([]*ResultTx, error) {
 	var txs []*ResultTx
 	var page uint32 = 1
 	for {
-		res, err := getAccountTxsPerPage(page)
+		res, err := c.getAccountTxsPerPage(page)
 		if err != nil {
 			return nil, err
 		}
@@ -218,9 +231,9 @@ func GetAccountTransferTxs(height int64) ([]*ResultTx, error) {
 	return txs, nil
 }
 
-func ValidateNetwork() {
+func (c *pocketClient) ValidateNetwork() {
 	log.Debugln("Connecting to pocket network", "url", app.Config.Pocket.RPCURL)
-	res, err := GetBlock()
+	res, err := c.GetBlock()
 	if err != nil {
 		panic(err)
 	}

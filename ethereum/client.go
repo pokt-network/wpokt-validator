@@ -12,23 +12,38 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var Client *ethclient.Client
+type EthereumClient interface {
+	ValidateNetwork()
+	GetBlockNumber() (uint64, error)
+	GetChainId() (*big.Int, error)
+	GetClient() *ethclient.Client
+}
 
-func ValidateNetwork() {
-	var err error
+type ethereumClient struct {
+	client *ethclient.Client
+}
+
+var Client EthereumClient = &ethereumClient{}
+
+func (c *ethereumClient) GetClient() *ethclient.Client {
+	return c.client
+}
+
+func (c *ethereumClient) ValidateNetwork() {
 	log.Debugln("Connecting to Ethereum node", "url", app.Config.Ethereum.RPCURL)
-	Client, err = ethclient.Dial(app.Config.Ethereum.RPCURL)
+	client, err := ethclient.Dial(app.Config.Ethereum.RPCURL)
 	if err != nil {
 		panic(err)
 	}
+	c.client = client
 
-	blockNumber, err := GetBlockNumber()
+	blockNumber, err := c.GetBlockNumber()
 	if err != nil {
 		panic(err)
 	}
 	log.Debugln("Connected to Ethereum node", "blockNumber", blockNumber)
 
-	chainId, err := GetChainId()
+	chainId, err := c.GetChainId()
 	if err != nil {
 		panic(err)
 	}
@@ -40,11 +55,11 @@ func ValidateNetwork() {
 	log.Debugln("Connected to Ethereum node", "chainId", chainId.String())
 }
 
-func GetBlockNumber() (uint64, error) {
+func (c *ethereumClient) GetBlockNumber() (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 	defer cancel()
 
-	blockNumber, err := Client.BlockNumber(ctx)
+	blockNumber, err := c.client.BlockNumber(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -52,11 +67,11 @@ func GetBlockNumber() (uint64, error) {
 	return blockNumber, nil
 }
 
-func GetChainId() (*big.Int, error) {
+func (c *ethereumClient) GetChainId() (*big.Int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 	defer cancel()
 
-	chainId, err := Client.ChainID(ctx)
+	chainId, err := c.client.ChainID(ctx)
 	if err != nil {
 		return nil, err
 	}

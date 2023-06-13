@@ -13,18 +13,24 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 )
 
-// Database is a wrapper around the mongo database
-type Database struct {
+type Database interface {
+	Connect(ctx context.Context) error
+	SetupIndexes() error
+	Disconnect() error
+	GetCollection(name string) *mongo.Collection
+}
+
+// mongoDatabase is a wrapper around the mongo database
+type mongoDatabase struct {
 	db *mongo.Database
 }
 
 var (
-	// DB is the global database wrapper
-	DB *Database
+	DB Database
 )
 
 // Connect connects to the database
-func (d *Database) Connect(ctx context.Context) error {
+func (d *mongoDatabase) Connect(ctx context.Context) error {
 	log.Debug("Connecting to database")
 
 	wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Duration(Config.MongoDB.TimeOutSecs)*time.Second))
@@ -40,7 +46,7 @@ func (d *Database) Connect(ctx context.Context) error {
 }
 
 // Setup Indexes
-func (d *Database) SetupIndexes() error {
+func (d *mongoDatabase) SetupIndexes() error {
 	log.Debug("Setting up indexes")
 
 	// setup unique index for mints
@@ -85,7 +91,7 @@ func (d *Database) SetupIndexes() error {
 }
 
 // Disconnect disconnects from the database
-func (d *Database) Disconnect() error {
+func (d *mongoDatabase) Disconnect() error {
 	log.Debug("Disconnecting from database")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
@@ -95,13 +101,13 @@ func (d *Database) Disconnect() error {
 }
 
 // GetCollection gets a collection from the database
-func (d *Database) GetCollection(name string) *mongo.Collection {
+func (d *mongoDatabase) GetCollection(name string) *mongo.Collection {
 	return d.db.Collection(name)
 }
 
-// NewDatabase creates a new database wrapper
+// InitDB creates a new database wrapper
 func InitDB(ctx context.Context) {
-	DB = &Database{}
+	DB = &mongoDatabase{}
 	err := DB.Connect(ctx)
 	if err != nil {
 		log.Fatal(err)
