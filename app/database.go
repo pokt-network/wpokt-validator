@@ -17,7 +17,7 @@ type Database interface {
 	Connect(ctx context.Context) error
 	SetupIndexes() error
 	Disconnect() error
-	GetCollection(name string) *mongo.Collection
+	InsertOne(collection string, data interface{}) error
 }
 
 // mongoDatabase is a wrapper around the mongo database
@@ -100,11 +100,6 @@ func (d *mongoDatabase) Disconnect() error {
 	return err
 }
 
-// GetCollection gets a collection from the database
-func (d *mongoDatabase) GetCollection(name string) *mongo.Collection {
-	return d.db.Collection(name)
-}
-
 // InitDB creates a new database wrapper
 func InitDB(ctx context.Context) {
 	DB = &mongoDatabase{}
@@ -116,4 +111,12 @@ func InitDB(ctx context.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// method for insert single value in a colelction
+func (d *mongoDatabase) InsertOne(collection string, data interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	defer cancel()
+	_, err := d.db.Collection(collection).InsertOne(ctx, data)
+	return err
 }

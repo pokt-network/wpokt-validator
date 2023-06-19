@@ -1,7 +1,6 @@
 package pocket
 
 import (
-	"context"
 	"encoding/json"
 	"time"
 
@@ -41,7 +40,7 @@ func (m *WPOKTMintMonitor) UpdateCurrentHeight() {
 func (m *WPOKTMintMonitor) HandleInvalidMint(tx *ResultTx) bool {
 	doc := models.InvalidMint{
 		Height:          uint64(tx.Height),
-		TransactionHash: tx.Hash.String(),
+		TransactionHash: tx.Hash,
 		SenderAddress:   tx.StdTx.Msg.Value.FromAddress,
 		SenderChainId:   app.Config.Pocket.ChainId,
 		Amount:          tx.StdTx.Msg.Value.Amount,
@@ -53,11 +52,7 @@ func (m *WPOKTMintMonitor) HandleInvalidMint(tx *ResultTx) bool {
 
 	log.Debug("Storing invalid mint tx: ", tx.Hash, " in db")
 
-	col := app.DB.GetCollection(models.CollectionInvalidMints)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.Pocket.MonitorIntervalSecs))
-	defer cancel()
-
-	_, err := col.InsertOne(ctx, doc)
+	err := app.DB.InsertOne(models.CollectionInvalidMints, doc)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Debug("Found duplicate invalid mint tx: ", tx.Hash, " in db")
@@ -74,7 +69,7 @@ func (m *WPOKTMintMonitor) HandleInvalidMint(tx *ResultTx) bool {
 func (m *WPOKTMintMonitor) HandleValidMint(tx *ResultTx, memo models.MintMemo) bool {
 	doc := models.Mint{
 		Height:           uint64(tx.Height),
-		TransactionHash:  tx.Hash.String(),
+		TransactionHash:  tx.Hash,
 		SenderAddress:    tx.StdTx.Msg.Value.FromAddress,
 		SenderChainId:    app.Config.Pocket.ChainId,
 		RecipientAddress: memo.Address,
@@ -88,11 +83,7 @@ func (m *WPOKTMintMonitor) HandleValidMint(tx *ResultTx, memo models.MintMemo) b
 
 	log.Debug("Storing mint tx in db: ", tx.Hash)
 
-	col := app.DB.GetCollection(models.CollectionMints)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.Pocket.MonitorIntervalSecs))
-	defer cancel()
-
-	_, err := col.InsertOne(ctx, doc)
+	err := app.DB.InsertOne(models.CollectionMints, doc)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Debug("Found duplicate mint tx in db: ", tx.Hash)

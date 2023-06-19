@@ -65,11 +65,7 @@ func (b *WPOKTBurnMonitor) HandleBurnEvent(event *WrappedPocketBurnAndBridge) bo
 	// each event is a combination of transaction hash and log index
 	log.Debug("Storing burn event in db: ", event.Raw.TxHash, " ", event.Raw.Index)
 
-	col := app.DB.GetCollection(models.CollectionBurns)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.Pocket.MonitorIntervalSecs))
-	defer cancel()
-
-	_, err := col.InsertOne(ctx, doc)
+	err := app.DB.InsertOne(models.CollectionBurns, doc)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Debug("Found duplicate burn event in db: ", event.Raw.TxHash, " ", event.Raw.Index)
@@ -83,10 +79,12 @@ func (b *WPOKTBurnMonitor) HandleBurnEvent(event *WrappedPocketBurnAndBridge) bo
 	return true
 }
 
-func (b *WPOKTBurnMonitor) SyncTxs() bool {
+const MAX_QUERY_BLOCKS uint64 = 100000
+
+func (b *WPOKTBurnMonitor) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
 	filter, err := b.wpoktContract.WrappedPocketFilterer.FilterBurnAndBridge(&bind.FilterOpts{
-		Start:   b.startBlockNumber,
-		End:     &b.currentBlockNumber,
+		Start:   startBlockNumber,
+		End:     &endBlockNumber,
 		Context: context.Background(),
 	}, []*big.Int{}, []common.Address{}, []common.Address{})
 
@@ -99,6 +97,25 @@ func (b *WPOKTBurnMonitor) SyncTxs() bool {
 	for filter.Next() {
 		log.Debug("Found burn event: ", filter.Event.Raw.TxHash, " ", filter.Event.Raw.Index)
 		success = success && b.HandleBurnEvent(filter.Event)
+	}
+	return success
+}
+
+func (b *WPOKTBurnMonitor) SyncTxs() bool {
+	var success bool = true
+	if (b.currentBlockNumber - b.startBlockNumber) > MAX_QUERY_BLOCKS {
+		log.Debug("Syncing burn txs in chunks")
+		for i := b.startBlockNumber; i < b.currentBlockNumber; i += MAX_QUERY_BLOCKS {
+			endBlockNumber := i + MAX_QUERY_BLOCKS
+			if endBlockNumber > b.currentBlockNumber {
+				endBlockNumber = b.currentBlockNumber
+			}
+			log.Debug("Syncing burn txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
+			success = success && b.SyncBlocks(i, endBlockNumber)
+		}
+	} else {
+		log.Debug("Syncing burn txs all at once")
+		success = success && b.SyncBlocks(b.startBlockNumber, b.currentBlockNumber)
 	}
 	return success
 }
