@@ -23,12 +23,42 @@ type BurnMonitor interface {
 	Stop()
 }
 
+type BurnAndBridgeIterator interface {
+	Next() bool
+	Event() *WrappedPocketBurnAndBridge
+}
+
+type BurnAndBridgeIteratorImpl struct {
+	*WrappedPocketBurnAndBridgeIterator
+}
+
+func (i *BurnAndBridgeIteratorImpl) Event() *WrappedPocketBurnAndBridge {
+	return i.WrappedPocketBurnAndBridgeIterator.Event
+}
+
+func (i *BurnAndBridgeIteratorImpl) Next() bool {
+	return i.WrappedPocketBurnAndBridgeIterator.Next()
+}
+
+type WrappedPocketContract interface {
+	FilterBurnAndBridge(opts *bind.FilterOpts, _amount []*big.Int, _from []common.Address, _poktAddress []common.Address) (BurnAndBridgeIterator, error)
+}
+
+type WrappedPocketContractImpl struct {
+	*WrappedPocket
+}
+
+func (c *WrappedPocketContractImpl) FilterBurnAndBridge(opts *bind.FilterOpts, _amount []*big.Int, _from []common.Address, _poktAddress []common.Address) (BurnAndBridgeIterator, error) {
+	iterator, err := c.WrappedPocket.FilterBurnAndBridge(opts, _amount, _from, _poktAddress)
+	return &BurnAndBridgeIteratorImpl{iterator}, err
+}
+
 type WPOKTBurnMonitor struct {
 	stop               chan bool
 	startBlockNumber   uint64
 	currentBlockNumber uint64
 	monitorInterval    time.Duration
-	wpoktContract      *WrappedPocket
+	wpoktContract      WrappedPocketContract
 }
 
 func (b *WPOKTBurnMonitor) Stop() {
@@ -42,7 +72,7 @@ func (b *WPOKTBurnMonitor) UpdateCurrentBlockNumber() {
 		log.Error(err)
 		return
 	}
-	log.Info("Updated current ethereum blockNumber: ", res)
+	log.Debug("Updated current ethereum blockNumber: ", res)
 	b.currentBlockNumber = res
 }
 
@@ -82,7 +112,7 @@ func (b *WPOKTBurnMonitor) HandleBurnEvent(event *WrappedPocketBurnAndBridge) bo
 const MAX_QUERY_BLOCKS uint64 = 100000
 
 func (b *WPOKTBurnMonitor) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
-	filter, err := b.wpoktContract.WrappedPocketFilterer.FilterBurnAndBridge(&bind.FilterOpts{
+	filter, err := b.wpoktContract.FilterBurnAndBridge(&bind.FilterOpts{
 		Start:   startBlockNumber,
 		End:     &endBlockNumber,
 		Context: context.Background(),
@@ -95,8 +125,9 @@ func (b *WPOKTBurnMonitor) SyncBlocks(startBlockNumber uint64, endBlockNumber ui
 
 	var success bool = true
 	for filter.Next() {
-		log.Debug("Found burn event: ", filter.Event.Raw.TxHash, " ", filter.Event.Raw.Index)
-		success = success && b.HandleBurnEvent(filter.Event)
+		event := filter.Event()
+		log.Debug("Found burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
+		success = success && b.HandleBurnEvent(event)
 	}
 	return success
 }
@@ -164,8 +195,8 @@ func NewBurnMonitor() BurnMonitor {
 		stop:               make(chan bool),
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
-		monitorInterval:    time.Duration(app.Config.Pocket.MonitorIntervalSecs) * time.Second,
-		wpoktContract:      contract,
+		monitorInterval:    time.Duration(app.Config.Ethereum.MonitorIntervalSecs) * time.Second,
+		wpoktContract:      &WrappedPocketContractImpl{contract},
 	}
 
 	if app.Config.Ethereum.StartBlockNumber < 0 {

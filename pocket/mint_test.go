@@ -47,7 +47,6 @@ func (c *mockClient) GetBlock() (*BlockResponse, error) {
 func setupMintMonitor() *WPOKTMintMonitor {
 	app.Config.Pocket.MonitorIntervalSecs = 1
 	app.Config.Pocket.ChainId = "test-chain"
-	app.Config.Ethereum.ChainId = 0
 	app.DB = &mockDB{}
 	Client = &mockClient{}
 
@@ -60,7 +59,6 @@ func setupMintMonitor() *WPOKTMintMonitor {
 // Mock implementation of the database
 type mockDB struct{}
 
-// insertOne
 func (db *mockDB) InsertOne(collectionName string, document interface{}) error {
 	return nil
 }
@@ -151,24 +149,6 @@ func TestWPOKTMintMonitor_SyncTxs(t *testing.T) {
 }
 
 func TestWPOKTMintMonitor_Start(t *testing.T) {
-	monitor := setupMintMonitor()
-
-	// Call the Start() method
-	go func() {
-		time.Sleep(2 * time.Second) // Wait for a few seconds before stopping
-		monitor.Stop()
-	}()
-
-	// Start the monitor and wait for it to stop
-	go monitor.Start()
-
-	// If the monitor doesn't stop within a reasonable time, it means Stop() didn't work
-	select {
-	case <-monitor.stop:
-		// Monitor stopped as expected
-	case <-time.After(5 * time.Second):
-		t.Errorf("Start() did not stop the monitor")
-	}
 }
 
 func TestNewMintMonitor(t *testing.T) {

@@ -20,6 +20,7 @@ type EthereumConfig struct {
 	ChainId              uint64 `yaml:"chain_id"`
 	StartBlockNumber     int64  `yaml:"start_block_number"`
 	WPOKTContractAddress string `yaml:"wpokt_contract_address"`
+	MonitorIntervalSecs  uint64 `yaml:"monitor_interval_secs"`
 }
 
 type CopperConfig struct {
