@@ -1,5 +1,10 @@
 package pocket
 
+type Service interface {
+	Stop()
+	Start()
+}
+
 type HeightResponse struct {
 	Height int64 `json:"height"`
 }

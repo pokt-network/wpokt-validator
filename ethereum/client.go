@@ -53,8 +53,8 @@ func (c *ethereumClient) GetChainId() (*big.Int, error) {
 }
 
 func (c *ethereumClient) ValidateNetwork() {
-	log.Debugln("[ETHEREUM", "Validating network")
-	log.Debugln("[ETHEREUM]", "URL", app.Config.Ethereum.RPCURL)
+	log.Debugln("[ETH", "Validating network")
+	log.Debugln("[ETH]", "URL", app.Config.Ethereum.RPCURL)
 	client, err := ethclient.Dial(app.Config.Ethereum.RPCURL)
 	if err != nil {
 		panic(err)
@@ -65,17 +65,17 @@ func (c *ethereumClient) ValidateNetwork() {
 	if err != nil {
 		panic(err)
 	}
-	log.Debugln("[ETHEREUM]", "Validating network", "blockNumber", blockNumber)
+	log.Debugln("[ETH]", "Validating network", "blockNumber", blockNumber)
 
 	chainId, err := c.GetChainId()
 	if err != nil {
 		panic(err)
 	}
-	log.Debugln("[ETHEREUM]", "Validating network", "chainId", chainId.Uint64())
+	log.Debugln("[ETH]", "Validating network", "chainId", chainId.Uint64())
 
 	if chainId.Uint64() != app.Config.Ethereum.ChainId {
-		log.Debugln("[ETHEREUM]", "Chain ID Mismatch", "expected", app.Config.Ethereum.ChainId, "got", chainId.Uint64())
-		panic("[ETHEREUM] Chain ID Mismatch")
+		log.Debugln("[ETH]", "Chain ID Mismatch", "expected", app.Config.Ethereum.ChainId, "got", chainId.Uint64())
+		panic("[ETH] Chain ID Mismatch")
 	}
-	log.Debugln("[ETHEREUM]", "Validated network")
+	log.Debugln("[ETH]", "Validated network")
 }

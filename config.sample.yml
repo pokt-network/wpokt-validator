@@ -1,0 +1,37 @@
+mongodb:
+  uri: "mongodb://mongodb0.example.com:27017,mongodb1.example.com:27017/?replicaSet=myRepl"
+  database: "wpokt-dev"
+  timeout_secs: 30
+
+pokt_monitor:
+  enabled: true
+  rpc_url: "https://node2.testnet.pokt.network"
+  rpc_timeout_secs: 30
+  chain_id: "testnet"
+  start_height: 104509
+  interval_secs: 120
+  multisig_address: "0ABCC770CD0C84E3033D47453FEAE17C42E68A6B"
+
+pokt_signer:
+  enabled: true
+  interval_secs: 120
+  private_key: ""
+  multisig_address: "0ABCC770CD0C84E3033D47453FEAE17C42E68A6B"
+  multisig_public_keys:
+    - "b051b20ad19432189aaea89642bf222af5c10b0c7730a374905953fd2d990715"
+    - "ad7a05bb00234484531c1f379e65c4ec7e2f0feeb5e27646e193578f0fb28bb6"
+
+ethereum:
+  enabled: true
+  rpc_url: "https://eth-goerli.gateway.pokt.network/v1/lb/e81ff8d231bc754d1e7e5cd8"
+  rpc_timeout_secs: 30
+  chain_id: 5
+  start_block_number: 9090835
+  wpokt_contract_address: "0xC336F4A1744e05a31876FF0C3caE02A867BC46b9"
+  mint_controller_address: "0x9742FC3ed4a14B556D11a64a2F9D4b72Df5f5a67"
+  private_key: ""
+  monitor_interval_secs: 120
+  signer_interval_secs: 120
+
+logger:
+  level: "debug"

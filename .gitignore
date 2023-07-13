@@ -21,6 +21,7 @@ go.work
 *.sw[a-z]
 
 # config
-config.yml
+*.yml
+!config.sample.yml
 
 keys/*

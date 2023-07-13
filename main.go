@@ -36,8 +36,8 @@ func main() {
 	pocket.Client.ValidateNetwork()
 	ethereum.Client.ValidateNetwork()
 
-	m := pocket.NewMintMonitor()
-	b := ethereum.NewBurnMonitor()
+	m := pocket.NewMonitor()
+	b := ethereum.NewMonitor()
 
 	go m.Start()
 	go b.Start()

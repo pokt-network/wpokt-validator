@@ -52,7 +52,7 @@ func (c *WrappedPocketContractImpl) FilterBurnAndBridge(opts *bind.FilterOpts, _
 	return &BurnAndBridgeIteratorImpl{iterator}, err
 }
 
-type BurnMonitorService struct {
+type WPoktMonitorService struct {
 	stop               chan bool
 	startBlockNumber   uint64
 	currentBlockNumber uint64
@@ -60,22 +60,22 @@ type BurnMonitorService struct {
 	wpoktContract      WrappedPocketContract
 }
 
-func (b *BurnMonitorService) Stop() {
+func (b *WPoktMonitorService) Stop() {
 	log.Debug("Stopping burn monitor")
 	b.stop <- true
 }
 
-func (b *BurnMonitorService) UpdateCurrentBlockNumber() {
+func (b *WPoktMonitorService) UpdateCurrentBlockNumber() {
 	res, err := Client.GetBlockNumber()
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	log.Debug("[BURN MONITOR] Current block number: ", res)
+	log.Debug("[WPOKT MONITOR] Current block number: ", res)
 	b.currentBlockNumber = res
 }
 
-func (b *BurnMonitorService) HandleBurnEvent(event *WrappedPocketBurnAndBridge) bool {
+func (b *WPoktMonitorService) HandleBurnEvent(event *WrappedPocketBurnAndBridge) bool {
 	doc := models.Burn{
 		BlockNumber:      strconv.FormatInt(int64(event.Raw.BlockNumber), 10),
 		TransactionHash:  event.Raw.TxHash.String(),
@@ -92,25 +92,25 @@ func (b *BurnMonitorService) HandleBurnEvent(event *WrappedPocketBurnAndBridge) 
 	}
 
 	// each event is a combination of transaction hash and log index
-	log.Debug("[BURN MONITOR] Handling burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
+	log.Debug("[WPOKT MONITOR] Handling burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
 
 	err := app.DB.InsertOne(models.CollectionBurns, doc)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			log.Debug("[BURN MONITOR] Found duplicate burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
+			log.Debug("[WPOKT MONITOR] Found duplicate burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
 			return true
 		}
-		log.Error("[BURN MONITOR] Error while storing burn event in db: ", err)
+		log.Error("[WPOKT MONITOR] Error while storing burn event in db: ", err)
 		return false
 	}
 
-	log.Debug("[BURN MONITOR] Stored burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
+	log.Debug("[WPOKT MONITOR] Stored burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
 	return true
 }
 
 const MAX_QUERY_BLOCKS uint64 = 100000
 
-func (b *BurnMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
+func (b *WPoktMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
 	filter, err := b.wpoktContract.FilterBurnAndBridge(&bind.FilterOpts{
 		Start:   startBlockNumber,
 		End:     &endBlockNumber,
@@ -118,7 +118,7 @@ func (b *BurnMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 	}, []*big.Int{}, []common.Address{}, []common.Address{})
 
 	if err != nil {
-		log.Errorln("[BURN MONITOR] Error while syncing burn events: ", err)
+		log.Errorln("[WPOKT MONITOR] Error while syncing burn events: ", err)
 		return false
 	}
 
@@ -130,30 +130,30 @@ func (b *BurnMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 	return success
 }
 
-func (b *BurnMonitorService) SyncTxs() bool {
+func (b *WPoktMonitorService) SyncTxs() bool {
 	var success bool = true
 	if (b.currentBlockNumber - b.startBlockNumber) > MAX_QUERY_BLOCKS {
-		log.Debug("[BURN MONITOR] Syncing burn txs in chunks")
+		log.Debug("[WPOKT MONITOR] Syncing burn txs in chunks")
 		for i := b.startBlockNumber; i < b.currentBlockNumber; i += MAX_QUERY_BLOCKS {
 			endBlockNumber := i + MAX_QUERY_BLOCKS
 			if endBlockNumber > b.currentBlockNumber {
 				endBlockNumber = b.currentBlockNumber
 			}
-			log.Debug("[BURN MONITOR] Syncing burn txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
+			log.Debug("[WPOKT MONITOR] Syncing burn txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
 			success = success && b.SyncBlocks(i, endBlockNumber)
 		}
 	} else {
-		log.Debug("[BURN MONITOR] Syncing burn txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
+		log.Debug("[WPOKT MONITOR] Syncing burn txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
 		success = success && b.SyncBlocks(b.startBlockNumber, b.currentBlockNumber)
 	}
 	return success
 }
 
-func (b *BurnMonitorService) Start() {
-	log.Debug("[BURN MONITOR] Starting burn monitor")
+func (b *WPoktMonitorService) Start() {
+	log.Debug("[WPOKT MONITOR] Starting burn monitor")
 	stop := false
 	for !stop {
-		log.Debug("[BURN MONITOR] Starting burn sync")
+		log.Debug("[WPOKT MONITOR] Starting burn sync")
 
 		b.UpdateCurrentBlockNumber()
 
@@ -163,32 +163,32 @@ func (b *BurnMonitorService) Start() {
 				b.startBlockNumber = b.currentBlockNumber
 			}
 		} else {
-			log.Debug("[BURN MONITOR] No new blocks to sync")
+			log.Debug("[WPOKT MONITOR] No new blocks to sync")
 		}
 
-		log.Debug("[BURN MONITOR] Finished burn sync")
-		log.Debug("[BURN MONITOR] Sleeping for ", b.monitorInterval)
+		log.Debug("[WPOKT MONITOR] Finished burn sync")
+		log.Debug("[WPOKT MONITOR] Sleeping for ", b.monitorInterval)
 
 		select {
 		case <-b.stop:
 			stop = true
-			log.Debug("[BURN MONITOR] Stopped burn monitor")
+			log.Debug("[WPOKT MONITOR] Stopped burn monitor")
 		case <-time.After(b.monitorInterval):
 		}
 	}
 }
 
-func NewBurnMonitor() Service {
-	log.Debug("[BURN MONITOR] Initializing burn monitor")
-	log.Debug("[BURN MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
+func NewMonitor() Service {
+	log.Debug("[WPOKT MONITOR] Initializing burn monitor")
+	log.Debug("[WPOKT MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
 	contract, err := NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), Client.GetClient())
 	if err != nil {
-		log.Error("[BURN MONITOR] Error initializing Wrapped Pocket contract", err)
+		log.Error("[WPOKT MONITOR] Error initializing Wrapped Pocket contract", err)
 		panic(err)
 	}
-	log.Debug("[BURN MONITOR] Connected to wpokt contract")
+	log.Debug("[WPOKT MONITOR] Connected to wpokt contract")
 
-	b := &BurnMonitorService{
+	b := &WPoktMonitorService{
 		stop:               make(chan bool),
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
@@ -200,12 +200,12 @@ func NewBurnMonitor() Service {
 	if app.Config.Ethereum.StartBlockNumber > 0 {
 		b.startBlockNumber = uint64(app.Config.Ethereum.StartBlockNumber)
 	} else {
-		log.Debug("[BURN MONITOR] Found invalid start block number, updating to current block number")
+		log.Debug("[WPOKT MONITOR] Found invalid start block number, updating to current block number")
 		b.startBlockNumber = b.currentBlockNumber
 	}
 
-	log.Debug("[BURN MONITOR] Start block number: ", b.startBlockNumber)
-	log.Debug("[BURN MONITOR] Initialized burn monitor")
+	log.Debug("[WPOKT MONITOR] Start block number: ", b.startBlockNumber)
+	log.Debug("[WPOKT MONITOR] Initialized burn monitor")
 
 	return b
 }

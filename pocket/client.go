@@ -232,18 +232,18 @@ func (c *pocketClient) GetAccountTxsByHeight(height int64) ([]*ResultTx, error) 
 }
 
 func (c *pocketClient) ValidateNetwork() {
-	log.Debugln("[POCKET] Validating network")
-	log.Debugln("[POCKET] URL", app.Config.Pocket.RPCURL)
+	log.Debugln("[POKT] Validating network")
+	log.Debugln("[POKT] URL", app.Config.Pocket.RPCURL)
 	res, err := c.GetBlock()
 	if err != nil {
-		log.Errorln("[POCKET] Error getting block", err)
+		log.Errorln("[POKT] Error getting block", err)
 		panic(err)
 	}
-	log.Debugln("[POCKET] Validating network", "chainId", res.Block.Header.ChainID)
-	log.Debugln("[POCKET] Validating network", "height", res.Block.Header.Height)
+	log.Debugln("[POKT] Validating network", "chainId", res.Block.Header.ChainID)
+	log.Debugln("[POKT] Validating network", "height", res.Block.Header.Height)
 	if res.Block.Header.ChainID != app.Config.Pocket.ChainId {
-		log.Debugln("[POCKET] Chain ID mismatch", "expected", app.Config.Pocket.ChainId, "got", res.Block.Header.ChainID)
-		panic("[POCKET] Chain ID mismatch")
+		log.Debugln("[POKT] Chain ID mismatch", "expected", app.Config.Pocket.ChainId, "got", res.Block.Header.ChainID)
+		panic("[POKT] Chain ID mismatch")
 	}
-	log.Debugln("[POCKET] Validated network")
+	log.Debugln("[POKT] Validated network")
 }
