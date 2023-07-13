@@ -28,33 +28,6 @@ var Client EthereumClient = &ethereumClient{}
 func (c *ethereumClient) GetClient() *ethclient.Client {
 	return c.client
 }
-
-func (c *ethereumClient) ValidateNetwork() {
-	log.Debugln("Connecting to Ethereum node", "url", app.Config.Ethereum.RPCURL)
-	client, err := ethclient.Dial(app.Config.Ethereum.RPCURL)
-	if err != nil {
-		panic(err)
-	}
-	c.client = client
-
-	blockNumber, err := c.GetBlockNumber()
-	if err != nil {
-		panic(err)
-	}
-	log.Debugln("Connected to Ethereum node", "blockNumber", blockNumber)
-
-	chainId, err := c.GetChainId()
-	if err != nil {
-		panic(err)
-	}
-
-	if chainId.Uint64() != app.Config.Ethereum.ChainId {
-		log.Debugln("ethereum chainId mismatch", "config", app.Config.Ethereum.ChainId, "node", chainId.Int64())
-		panic("ethereum chain id mismatch")
-	}
-	log.Debugln("Connected to Ethereum node", "chainId", chainId.String())
-}
-
 func (c *ethereumClient) GetBlockNumber() (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 	defer cancel()
@@ -77,4 +50,32 @@ func (c *ethereumClient) GetChainId() (*big.Int, error) {
 	}
 
 	return chainId, nil
+}
+
+func (c *ethereumClient) ValidateNetwork() {
+	log.Debugln("[ETHEREUM", "Validating network")
+	log.Debugln("[ETHEREUM]", "URL", app.Config.Ethereum.RPCURL)
+	client, err := ethclient.Dial(app.Config.Ethereum.RPCURL)
+	if err != nil {
+		panic(err)
+	}
+	c.client = client
+
+	blockNumber, err := c.GetBlockNumber()
+	if err != nil {
+		panic(err)
+	}
+	log.Debugln("[ETHEREUM]", "Validating network", "blockNumber", blockNumber)
+
+	chainId, err := c.GetChainId()
+	if err != nil {
+		panic(err)
+	}
+	log.Debugln("[ETHEREUM]", "Validating network", "chainId", chainId.Uint64())
+
+	if chainId.Uint64() != app.Config.Ethereum.ChainId {
+		log.Debugln("[ETHEREUM]", "Chain ID Mismatch", "expected", app.Config.Ethereum.ChainId, "got", chainId.Uint64())
+		panic("[ETHEREUM] Chain ID Mismatch")
+	}
+	log.Debugln("[ETHEREUM]", "Validated network")
 }

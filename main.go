@@ -22,7 +22,7 @@ func main() {
 	})
 
 	if len(os.Args) < 2 {
-		log.Fatal("Please provide config file as parameter")
+		log.Fatal("[MAIN] Missing config file path argument")
 	}
 	absConfigPath, _ := filepath.Abs(os.Args[1])
 
@@ -49,15 +49,15 @@ func main() {
 	go waitForExitSignals(gracefulStop, done)
 	<-done
 
-	log.Debug("Gracefully shutting down server...")
+	log.Debug("[MAIN] Stopping server gracefully")
 	b.Stop()
 	m.Stop()
 	app.DB.Disconnect()
-	log.Debug("Server gracefully stopped")
+	log.Debug("[MAIN] Server stopped")
 }
 
 func waitForExitSignals(gracefulStop chan os.Signal, done chan bool) {
 	sig := <-gracefulStop
-	log.Debug("Got signal:", sig)
+	log.Debug("[MAIN] Caught signal: ", sig)
 	done <- true
 }

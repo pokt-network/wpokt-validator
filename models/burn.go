@@ -13,10 +13,10 @@ const (
 type Burn struct {
 	Id               *primitive.ObjectID `bson:"_id,omitempty"`
 	TransactionHash  string              `bson:"transaction_hash"`
-	LogIndex         uint64              `bson:"log_index"`
-	BlockNumber      uint64              `bson:"block_number"`
+	LogIndex         string              `bson:"log_index"`
+	BlockNumber      string              `bson:"block_number"`
 	SenderAddress    string              `bson:"sender_address"`
-	SenderChainId    uint64              `bson:"sender_chain_id"`
+	SenderChainId    string              `bson:"sender_chain_id"`
 	RecipientAddress string              `bson:"recipient_address"`
 	RecipientChainId string              `bson:"recipient_chain_id"`
 	Amount           string              `bson:"amount"`

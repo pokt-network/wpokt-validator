@@ -31,8 +31,7 @@ var (
 
 // Connect connects to the database
 func (d *mongoDatabase) Connect(ctx context.Context) error {
-	log.Debug("Connecting to database")
-
+	log.Debug("[DB] Connecting to database")
 	wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Duration(Config.MongoDB.TimeOutSecs)*time.Second))
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(Config.MongoDB.URI).SetWriteConcern(wcMajority))
@@ -41,16 +40,16 @@ func (d *mongoDatabase) Connect(ctx context.Context) error {
 	}
 	d.db = client.Database(Config.MongoDB.Database)
 
-	log.Debug("Connected to database")
+	log.Debug("[DB] Connected to mongo database: ", Config.MongoDB.Database)
 	return nil
 }
 
 // Setup Indexes
 func (d *mongoDatabase) SetupIndexes() error {
-	log.Debug("Setting up indexes")
+	log.Debug("[DB] Setting up indexes")
 
 	// setup unique index for mints
-	log.Debug("Setting up indexes for mints")
+	log.Debug("[DB] Setting up indexes for mints")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	_, err := d.db.Collection(models.CollectionMints).Indexes().CreateOne(ctx, mongo.IndexModel{
@@ -62,7 +61,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 	}
 
 	// setup unique index for invalid mints
-	log.Debug("Setting up indexes for invalid mints")
+	log.Debug("[DB] Setting up indexes for invalid mints")
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	_, err = d.db.Collection(models.CollectionInvalidMints).Indexes().CreateOne(ctx, mongo.IndexModel{
@@ -74,7 +73,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 	}
 
 	// setup unique index for burns
-	log.Debug("Setting up indexes for burns")
+	log.Debug("[DB] Setting up indexes for burns")
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	_, err = d.db.Collection(models.CollectionBurns).Indexes().CreateOne(ctx, mongo.IndexModel{
@@ -85,18 +84,18 @@ func (d *mongoDatabase) SetupIndexes() error {
 		return err
 	}
 
-	log.Debug("Set up indexes")
+	log.Debug("[DB] Indexes setup")
 
 	return nil
 }
 
 // Disconnect disconnects from the database
 func (d *mongoDatabase) Disconnect() error {
-	log.Debug("Disconnecting from database")
+	log.Debug("[DB] Disconnecting from database")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	err := d.db.Client().Disconnect(ctx)
-	log.Debug("Disconnected from database")
+	log.Debug("[DB] Disconnected from database")
 	return err
 }
 

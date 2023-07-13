@@ -12,6 +12,7 @@ type PocketConfig struct {
 	ChainId             string `yaml:"chain_id"`
 	StartHeight         int64  `yaml:"start_height"`
 	MonitorIntervalSecs uint64 `yaml:"monitor_interval_secs"`
+	VaultAddress        string `yaml:"vault_address"`
 }
 
 type EthereumConfig struct {
@@ -23,19 +24,13 @@ type EthereumConfig struct {
 	MonitorIntervalSecs  uint64 `yaml:"monitor_interval_secs"`
 }
 
-type CopperConfig struct {
-	VaultAddress string `yaml:"vault_address"`
-}
-
 type LoggerConfig struct {
 	Level string `yaml:"level"`
 }
 
-//Config model
 type Config struct {
 	MongoDB  MongoConfig    `yaml:"mongodb"`
 	Pocket   PocketConfig   `yaml:"pocket"`
 	Ethereum EthereumConfig `yaml:"ethereum"`
-	Copper   CopperConfig   `yaml:"copper"`
 	Logger   LoggerConfig   `yaml:"logger"`
 }

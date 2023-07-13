@@ -187,7 +187,7 @@ func (c *pocketClient) GetHeight() (*HeightResponse, error) {
 
 func (c *pocketClient) getAccountTxsPerPage(page uint32) (*AccountTxsResponse, error) {
 	params := rpc.PaginateAddrParams{
-		Address:  app.Config.Copper.VaultAddress,
+		Address:  app.Config.Pocket.VaultAddress,
 		Page:     int(page),
 		PerPage:  1000,
 		Received: true,
@@ -232,16 +232,18 @@ func (c *pocketClient) GetAccountTxsByHeight(height int64) ([]*ResultTx, error) 
 }
 
 func (c *pocketClient) ValidateNetwork() {
-	log.Debugln("Connecting to pocket network", "url", app.Config.Pocket.RPCURL)
+	log.Debugln("[POCKET] Validating network")
+	log.Debugln("[POCKET] URL", app.Config.Pocket.RPCURL)
 	res, err := c.GetBlock()
 	if err != nil {
+		log.Errorln("[POCKET] Error getting block", err)
 		panic(err)
 	}
-	log.Debugln("Connected to pocket network", "height", res.Block.Header.Height)
-
+	log.Debugln("[POCKET] Validating network", "chainId", res.Block.Header.ChainID)
+	log.Debugln("[POCKET] Validating network", "height", res.Block.Header.Height)
 	if res.Block.Header.ChainID != app.Config.Pocket.ChainId {
-		log.Debugln("pocket chainId mismatch", "expected", app.Config.Pocket.ChainId, "got", res.Block.Header.ChainID)
-		panic("pocket chain id mismatch")
+		log.Debugln("[POCKET] Chain ID mismatch", "expected", app.Config.Pocket.ChainId, "got", res.Block.Header.ChainID)
+		panic("[POCKET] Chain ID mismatch")
 	}
-	log.Debugln("Connected to pocket network", "chainId", app.Config.Pocket.ChainId)
+	log.Debugln("[POCKET] Validated network")
 }
