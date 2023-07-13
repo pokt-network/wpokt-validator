@@ -4,6 +4,7 @@ type Config struct {
 	Logger      LoggerConfig      `yaml:"logger"`
 	MongoDB     MongoConfig       `yaml:"mongodb"`
 	Ethereum    EthereumConfig    `yaml:"ethereum"`
+	Pocket      PocketConfig      `yaml:"pocket"`
 	PoktMonitor PoktMonitorConfig `yaml:"pokt_monitor"`
 	PoktSigner  PoktSignerConfig  `yaml:"pokt_signer"`
 }
@@ -19,6 +20,7 @@ type MongoConfig struct {
 }
 
 type EthereumConfig struct {
+	Enabled              bool   `yaml:"enabled"`
 	RPCURL               string `yaml:"rpc_url"`
 	RPCTimeOutSecs       uint64 `yaml:"rpc_timeout_secs"`
 	ChainId              uint64 `yaml:"chain_id"`
@@ -28,13 +30,17 @@ type EthereumConfig struct {
 	SignerIntervalSecs   uint64 `yaml:"signer_interval_secs"`
 }
 
+type PocketConfig struct {
+	RPCURL         string `yaml:"rpc_url"`
+	RPCTimeOutSecs uint64 `yaml:"rpc_timeout_secs"`
+	ChainId        string `yaml:"chain_id"`
+	Fees           int64  `yaml:"fees"`
+}
+
 type PoktMonitorConfig struct {
 	Enabled         bool   `yaml:"enabled"`
-	RPCURL          string `yaml:"rpc_url"`
-	RPCTimeOutSecs  uint64 `yaml:"rpc_timeout_secs"`
-	ChainId         string `yaml:"chain_id"`
 	StartHeight     int64  `yaml:"start_height"`
-	IntervalSecs    uint64 `yaml:"monitor_interval_secs"`
+	IntervalSecs    uint64 `yaml:"interval_secs"`
 	MultisigAddress string `yaml:"multisig_address"`
 }
 

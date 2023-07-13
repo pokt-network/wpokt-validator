@@ -36,10 +36,12 @@ func main() {
 	pocket.Client.ValidateNetwork()
 	ethereum.Client.ValidateNetwork()
 
-	m := pocket.NewMonitor()
+	poktMonitor := pocket.NewMonitor()
+	poktSigner := pocket.NewSigner()
 	b := ethereum.NewMonitor()
 
-	go m.Start()
+	go poktMonitor.Start()
+	go poktSigner.Start()
 	go b.Start()
 
 	// Gracefully shut down server
@@ -51,7 +53,8 @@ func main() {
 
 	log.Debug("[MAIN] Stopping server gracefully")
 	b.Stop()
-	m.Stop()
+	poktMonitor.Stop()
+	poktSigner.Stop()
 	app.DB.Disconnect()
 	log.Debug("[MAIN] Server stopped")
 }

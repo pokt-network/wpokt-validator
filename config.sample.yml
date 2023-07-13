@@ -3,11 +3,14 @@ mongodb:
   database: "wpokt-dev"
   timeout_secs: 30
 
-pokt_monitor:
-  enabled: true
+pocket:
   rpc_url: "https://node2.testnet.pokt.network"
   rpc_timeout_secs: 30
   chain_id: "testnet"
+  fees: 10000
+
+pokt_monitor:
+  enabled: true
   start_height: 104509
   interval_secs: 120
   multisig_address: "0ABCC770CD0C84E3033D47453FEAE17C42E68A6B"

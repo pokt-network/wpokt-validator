@@ -17,11 +17,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Service interface {
-	Start()
-	Stop()
-}
-
 type BurnAndBridgeIterator interface {
 	Next() bool
 	Event() *WrappedPocketBurnAndBridge
@@ -61,7 +56,7 @@ type WPoktMonitorService struct {
 }
 
 func (b *WPoktMonitorService) Stop() {
-	log.Debug("Stopping burn monitor")
+	log.Debug("[WPOKT MONITOR] Stopping wpokt monitor")
 	b.stop <- true
 }
 
@@ -71,8 +66,8 @@ func (b *WPoktMonitorService) UpdateCurrentBlockNumber() {
 		log.Error(err)
 		return
 	}
-	log.Debug("[WPOKT MONITOR] Current block number: ", res)
 	b.currentBlockNumber = res
+	log.Debug("[WPOKT MONITOR] Current block number: ", b.currentBlockNumber)
 }
 
 func (b *WPoktMonitorService) HandleBurnEvent(event *WrappedPocketBurnAndBridge) bool {
@@ -150,7 +145,7 @@ func (b *WPoktMonitorService) SyncTxs() bool {
 }
 
 func (b *WPoktMonitorService) Start() {
-	log.Debug("[WPOKT MONITOR] Starting burn monitor")
+	log.Debug("[WPOKT MONITOR] Starting wpokt monitor")
 	stop := false
 	for !stop {
 		log.Debug("[WPOKT MONITOR] Starting burn sync")
@@ -172,19 +167,23 @@ func (b *WPoktMonitorService) Start() {
 		select {
 		case <-b.stop:
 			stop = true
-			log.Debug("[WPOKT MONITOR] Stopped burn monitor")
+			log.Debug("[WPOKT MONITOR] Stopped wpokt monitor")
 		case <-time.After(b.monitorInterval):
 		}
 	}
 }
 
-func NewMonitor() Service {
-	log.Debug("[WPOKT MONITOR] Initializing burn monitor")
+func NewMonitor() models.Service {
+	if app.Config.Ethereum.Enabled == false {
+		log.Debug("[WPOKT MONITOR] Ethereum is disabled, not starting wpokt monitor")
+		return models.NewEmptyService()
+	}
+
+	log.Debug("[WPOKT MONITOR] Initializing wpokt monitor")
 	log.Debug("[WPOKT MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
 	contract, err := NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), Client.GetClient())
 	if err != nil {
-		log.Error("[WPOKT MONITOR] Error initializing Wrapped Pocket contract", err)
-		panic(err)
+		log.Fatal("[WPOKT MONITOR] Error initializing Wrapped Pocket contract", err)
 	}
 	log.Debug("[WPOKT MONITOR] Connected to wpokt contract")
 
@@ -205,7 +204,7 @@ func NewMonitor() Service {
 	}
 
 	log.Debug("[WPOKT MONITOR] Start block number: ", b.startBlockNumber)
-	log.Debug("[WPOKT MONITOR] Initialized burn monitor")
+	log.Debug("[WPOKT MONITOR] Initialized wpokt monitor")
 
 	return b
 }

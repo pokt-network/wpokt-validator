@@ -13,6 +13,7 @@ import (
 
 type PoktMonitorService struct {
 	stop          chan bool
+	vaultAddress  string
 	interval      time.Duration
 	startHeight   uint64
 	currentHeight uint64
@@ -62,8 +63,8 @@ func (m *PoktMonitorService) UpdateCurrentHeight() {
 		}
 		return
 	}
-	log.Debug("[POKT MONITOR] Current height: ", m.currentHeight)
 	m.currentHeight = uint64(res.Height)
+	log.Debug("[POKT MONITOR] Current height: ", m.currentHeight)
 }
 
 func (m *PoktMonitorService) HandleInvalidMint(tx *ResultTx) bool {
@@ -71,12 +72,14 @@ func (m *PoktMonitorService) HandleInvalidMint(tx *ResultTx) bool {
 		Height:          strconv.FormatInt(tx.Height, 10),
 		TransactionHash: tx.Hash,
 		SenderAddress:   tx.StdTx.Msg.Value.FromAddress,
-		SenderChainId:   app.Config.PoktMonitor.ChainId,
+		SenderChainId:   app.Config.Pocket.ChainId,
 		Amount:          tx.StdTx.Msg.Value.Amount,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 		Status:          models.StatusPending,
 		Signers:         []string{},
+		ReturnTx:        "",
+		ReturnTxHash:    "",
 	}
 
 	log.Debug("[POKT MONITOR] Storing invalid mint tx: ", tx.Hash, " in db")
@@ -100,7 +103,7 @@ func (m *PoktMonitorService) HandleValidMint(tx *ResultTx, memo models.MintMemo)
 		Height:           strconv.FormatInt(tx.Height, 10),
 		TransactionHash:  tx.Hash,
 		SenderAddress:    tx.StdTx.Msg.Value.FromAddress,
-		SenderChainId:    app.Config.PoktMonitor.ChainId,
+		SenderChainId:    app.Config.Pocket.ChainId,
 		RecipientAddress: memo.Address,
 		RecipientChainId: strconv.FormatInt(int64(memo.ChainId), 10),
 		Amount:           tx.StdTx.Msg.Value.Amount,
@@ -141,7 +144,7 @@ func (m *PoktMonitorService) HandleTx(tx *ResultTx) bool {
 }
 
 func (m *PoktMonitorService) SyncTxs() bool {
-	txs, err := Client.GetAccountTxsByHeight(int64(m.startHeight))
+	txs, err := Client.GetAccountTxsByHeight(m.vaultAddress, int64(m.startHeight))
 	if err != nil {
 		log.Error(err)
 		return false
@@ -154,15 +157,16 @@ func (m *PoktMonitorService) SyncTxs() bool {
 	return success
 }
 
-func NewMonitor() Service {
+func NewMonitor() models.Service {
 	if !app.Config.PoktMonitor.Enabled {
 		log.Debug("[POKT MONITOR] Pokt monitor disabled")
-		return nil
+		return models.NewEmptyService()
 	}
 
 	log.Debug("[POKT MONITOR] Initializing pokt monitor")
 	m := &PoktMonitorService{
 		interval:      time.Duration(app.Config.PoktMonitor.IntervalSecs) * time.Second,
+		vaultAddress:  app.Config.PoktMonitor.MultisigAddress,
 		startHeight:   0,
 		currentHeight: 0,
 		stop:          make(chan bool),

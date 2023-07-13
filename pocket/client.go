@@ -18,7 +18,7 @@ import (
 type PocketClient interface {
 	GetBlock() (*BlockResponse, error)
 	GetHeight() (*HeightResponse, error)
-	GetAccountTxsByHeight(height int64) ([]*ResultTx, error)
+	GetAccountTxsByHeight(address string, height int64) ([]*ResultTx, error)
 	ValidateNetwork()
 }
 
@@ -185,9 +185,10 @@ func (c *pocketClient) GetHeight() (*HeightResponse, error) {
 	return &obj, err
 }
 
-func (c *pocketClient) getAccountTxsPerPage(page uint32) (*AccountTxsResponse, error) {
+func (c *pocketClient) getAccountTxsPerPage(address string, page uint32) (*AccountTxsResponse, error) {
+	// filter by received transactions
 	params := rpc.PaginateAddrParams{
-		Address:  app.Config.Pocket.VaultAddress,
+		Address:  address,
 		Page:     int(page),
 		PerPage:  1000,
 		Received: true,
@@ -207,11 +208,11 @@ func (c *pocketClient) getAccountTxsPerPage(page uint32) (*AccountTxsResponse, e
 	return &obj, err
 }
 
-func (c *pocketClient) GetAccountTxsByHeight(height int64) ([]*ResultTx, error) {
+func (c *pocketClient) GetAccountTxsByHeight(address string, height int64) ([]*ResultTx, error) {
 	var txs []*ResultTx
 	var page uint32 = 1
 	for {
-		res, err := c.getAccountTxsPerPage(page)
+		res, err := c.getAccountTxsPerPage(address, page)
 		if err != nil {
 			return nil, err
 		}
@@ -239,11 +240,27 @@ func (c *pocketClient) ValidateNetwork() {
 		log.Errorln("[POKT] Error getting block", err)
 		panic(err)
 	}
+	height, err := c.GetHeight()
+	if err != nil {
+		log.Errorln("[POKT] Error getting height", err)
+		panic(err)
+	}
 	log.Debugln("[POKT] Validating network", "chainId", res.Block.Header.ChainID)
-	log.Debugln("[POKT] Validating network", "height", res.Block.Header.Height)
+
 	if res.Block.Header.ChainID != app.Config.Pocket.ChainId {
 		log.Debugln("[POKT] Chain ID mismatch", "expected", app.Config.Pocket.ChainId, "got", res.Block.Header.ChainID)
 		panic("[POKT] Chain ID mismatch")
+	}
+
+	log.Debugln("[POKT] Validating network", "height", res.Block.Header.Height)
+	blockHeight, err := strconv.Atoi(res.Block.Header.Height)
+	if err != nil {
+		log.Errorln("[POKT] Error parsing height", err)
+		panic(err)
+	}
+	if height.Height-int64(blockHeight) > 3 {
+		log.Debugln("[POKT] Height mismatch", "expected", height.Height, "got", res.Block.Header.Height)
+		panic("[POKT] Height mismatch")
 	}
 	log.Debugln("[POKT] Validated network")
 }

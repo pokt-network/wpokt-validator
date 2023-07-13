@@ -18,6 +18,9 @@ type Database interface {
 	SetupIndexes() error
 	Disconnect() error
 	InsertOne(collection string, data interface{}) error
+	FindOne(collection string, filter interface{}, result interface{}) error
+	FindMany(collection string, filter interface{}, result interface{}) error
+	UpdateOne(collection string, filter interface{}, update interface{}) error
 }
 
 // mongoDatabase is a wrapper around the mongo database
@@ -112,10 +115,38 @@ func InitDB(ctx context.Context) {
 	}
 }
 
-// method for insert single value in a colelction
+// method for insert single value in a collection
 func (d *mongoDatabase) InsertOne(collection string, data interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	_, err := d.db.Collection(collection).InsertOne(ctx, data)
+	return err
+}
+
+// method for find single value in a collection
+func (d *mongoDatabase) FindOne(collection string, filter interface{}, result interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	defer cancel()
+	err := d.db.Collection(collection).FindOne(ctx, filter).Decode(result)
+	return err
+}
+
+// method for find multiple values in a collection
+func (d *mongoDatabase) FindMany(collection string, filter interface{}, result interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	defer cancel()
+	cursor, err := d.db.Collection(collection).Find(ctx, filter)
+	if err != nil {
+		return err
+	}
+	err = cursor.All(ctx, result)
+	return err
+}
+
+//method for update single value in a collection
+func (d *mongoDatabase) UpdateOne(collection string, filter interface{}, update interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	defer cancel()
+	_, err := d.db.Collection(collection).UpdateOne(ctx, filter, update)
 	return err
 }

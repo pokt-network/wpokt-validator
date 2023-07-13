@@ -1,9 +1,9 @@
 package models
 
 const (
-	StatusPending = "pending"
-	StatusSigning = "signing"
-	StatusSent    = "sent"
-	StatusSuccess = "success"
-	StatusFailed  = "failed"
+	StatusPending   = "pending"
+	StatusSigned    = "signed"
+	StatusSubmitted = "submitted"
+	StatusSuccess   = "success"
+	StatusFailed    = "failed"
 )
