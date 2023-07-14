@@ -7,6 +7,7 @@ replace github.com/tendermint/tendermint => github.com/pokt-network/tendermint v
 replace github.com/tendermint/tm-db => github.com/pokt-network/tm-db v0.5.2-0.20220118210553-9b2300f289ba
 
 require (
+	github.com/dchest/uniuri v1.2.0
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/pokt-network/pocket-core v0.0.0-20230517195228-60cf936bf536
 	github.com/sirupsen/logrus v1.9.2

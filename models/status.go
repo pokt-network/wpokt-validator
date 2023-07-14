@@ -4,6 +4,6 @@ const (
 	StatusPending   = "pending"
 	StatusSigned    = "signed"
 	StatusSubmitted = "submitted"
-	StatusSuccess   = "success"
+	StatusExecuted  = "executed"
 	StatusFailed    = "failed"
 )

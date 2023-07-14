@@ -3,13 +3,19 @@ package pocket
 import (
 	"encoding/hex"
 
+	"github.com/dchest/uniuri"
 	pokt "github.com/pokt-network/pocket-core/app"
 	"github.com/pokt-network/pocket-core/crypto"
 	"github.com/pokt-network/pocket-core/crypto/keys"
 	sdk "github.com/pokt-network/pocket-core/types"
 	"github.com/pokt-network/pocket-core/x/auth"
 	nodeTypes "github.com/pokt-network/pocket-core/x/nodes/types"
+	log "github.com/sirupsen/logrus"
 )
+
+const legacyCodec bool = false
+
+var passphrase string = uniuri.NewLen(32)
 
 func BuildMultiSigTxAndSign(
 	signerAddr string,
@@ -42,14 +48,13 @@ func BuildMultiSigTxAndSign(
 		Amount:      sdk.NewInt(amount),
 	}
 
-	passphrase := "PASSPHRASE"
-	legacyCodec := false
+	log.Debug("protoMsg", protoMsg)
 
 	txBuilder := auth.NewTxBuilder(
 		auth.DefaultTxEncoder(pokt.Codec()),
 		auth.DefaultTxDecoder(pokt.Codec()),
 		chainID,
-		memo,
+		"",
 		nil).WithKeybase(kb)
 
 	return txBuilder.BuildAndSignMultisigTransaction(sa, pk, &protoMsg, passphrase, fees, legacyCodec)
@@ -71,9 +76,6 @@ func SignMultisigTx(
 	if err != nil {
 		return nil, err
 	}
-
-	passphrase := "PASSPHRASE"
-	legacyCodec := false
 
 	txBuilder := auth.NewTxBuilder(
 		auth.DefaultTxEncoder(pokt.Codec()),
