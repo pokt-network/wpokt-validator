@@ -152,7 +152,7 @@ func (m *PoktMonitorService) SyncTxs() bool {
 	log.Debug("[POKT MONITOR] Found ", len(txs), " txs to sync")
 	var success bool = true
 	for _, tx := range txs {
-		success = success && m.HandleTx(tx)
+		success = m.HandleTx(tx) && success
 	}
 	return success
 }

@@ -19,9 +19,7 @@ type PoktSignerService struct {
 	stop           chan bool
 	interval       time.Duration
 	privateKey     crypto.PrivateKey
-	signerAddress  string
 	multisigPubKey crypto.PublicKeyMultiSig
-	kb             keys.Keybase
 	numSigners     int
 }
 
@@ -61,23 +59,23 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 	}
 
 	if returnTx == "" {
-		log.Debug("[POKT SIGNER] Creating returnTx for invalid mint: ", doc.TransactionHash)
+
+		log.Debug("[POKT SIGNER] Creating returnTx for invalid mint")
 		amountWithFees, err := strconv.ParseInt(doc.Amount, 10, 64)
 		if err != nil {
 			log.Error("[POKT SIGNER] Error parsing amount for invalid mint: ", err)
 			return false
 		}
 		amount := amountWithFees - app.Config.Pocket.Fees
+		memo := doc.TransactionHash
 
-		memo := fmt.Sprintf(`{"txHash":"%s","msg":"returning pokt for invalid memo"}`, doc.TransactionHash)
 		returnTxBytes, err := BuildMultiSigTxAndSign(
-			m.signerAddress,
 			doc.SenderAddress,
 			memo,
 			app.Config.Pocket.ChainId,
 			amount,
 			app.Config.Pocket.Fees,
-			m.kb,
+			m.privateKey,
 			m.multisigPubKey,
 		)
 		if err != nil {
@@ -85,23 +83,16 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 			return false
 		}
 		returnTx = hex.EncodeToString(returnTxBytes)
-		log.Debug("[POKT SIGNER] Created tx for invalid mint: ", returnTx)
+		log.Debug("[POKT SIGNER] Created tx for invalid mint")
 
 	} else {
-		for _, element := range signers {
-			if element == m.privateKey.PublicKey().RawString() {
-				log.Debug("[POKT SIGNER] Invalid mint already signed: ", doc.TransactionHash)
-				return true
-			}
-		}
 
-		log.Debug("[POKT SIGNER] Signing tx for invalid mint: ", doc.TransactionHash)
+		log.Debug("[POKT SIGNER] Signing tx for invalid mint")
 
 		returnTxBytes, err := SignMultisigTx(
-			m.signerAddress,
 			returnTx,
 			app.Config.Pocket.ChainId,
-			m.kb,
+			m.privateKey,
 			m.multisigPubKey,
 		)
 		if err != nil {
@@ -109,7 +100,7 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 			return false
 		}
 		returnTx = hex.EncodeToString(returnTxBytes)
-		log.Debug("[POKT SIGNER] Signed tx for invalid mint: ", returnTx)
+		log.Debug("[POKT SIGNER] Signed tx for invalid mint")
 
 	}
 
@@ -118,10 +109,10 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 	status := models.StatusPending
 	if len(signers) == m.numSigners {
 		status = models.StatusSigned
-		log.Debug("[POKT SIGNER] Invalid mint fully signed: ", doc.TransactionHash)
+		log.Debug("[POKT SIGNER] Invalid mint fully signed")
 	}
 
-	// update the invalid mint
+	filter := bson.M{"_id": doc.Id}
 	update := bson.M{
 		"$set": bson.M{
 			"return_tx": returnTx,
@@ -129,12 +120,12 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 			"status":    status,
 		},
 	}
-	err := app.DB.UpdateOne(models.CollectionInvalidMints, bson.M{"_id": doc.Id}, update)
+	err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 	if err != nil {
 		log.Error("[POKT SIGNER] Error updating invalid mint: ", err)
 		return false
 	}
-	log.Debug("[POKT SIGNER] Updated invalid mint: ", doc.TransactionHash)
+	log.Debug("[POKT SIGNER] Updated invalid mint")
 	return true
 }
 
@@ -155,9 +146,9 @@ func (m *PoktSignerService) SyncTxs() bool {
 	}
 	log.Debug("[POKT SIGNER] Found invalid mints: ", len(invalidMints))
 
-	var success bool
+	var success bool = true
 	for _, doc := range invalidMints {
-		success = success && m.HandleInvalidMint(doc)
+		success = m.HandleInvalidMint(doc) && success
 	}
 
 	return success
@@ -206,8 +197,6 @@ func NewSigner() models.Service {
 		interval:       time.Duration(app.Config.PoktSigner.IntervalSecs) * time.Second,
 		stop:           make(chan bool),
 		privateKey:     pk,
-		signerAddress:  pk.PublicKey().Address().String(),
-		kb:             keybase,
 		multisigPubKey: multisigPk,
 		numSigners:     len(pks),
 	}
