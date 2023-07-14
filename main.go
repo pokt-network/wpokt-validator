@@ -39,12 +39,16 @@ func main() {
 	poktMonitor := pocket.NewMonitor()
 	poktSigner := pocket.NewSigner()
 	poktExecutor := pocket.NewExecutor()
-	b := ethereum.NewMonitor()
+
+	wpoktMonitor := ethereum.NewMonitor()
+	wpoktSigner := ethereum.NewSigner()
 
 	go poktMonitor.Start()
 	go poktSigner.Start()
 	go poktExecutor.Start()
-	go b.Start()
+
+	go wpoktMonitor.Start()
+	go wpoktSigner.Start()
 
 	// Gracefully shut down server
 	gracefulStop := make(chan os.Signal, 1)
@@ -54,10 +58,14 @@ func main() {
 	<-done
 
 	log.Debug("[MAIN] Stopping server gracefully")
-	b.Stop()
+
+	wpoktSigner.Stop()
+	wpoktMonitor.Stop()
+
 	poktMonitor.Stop()
 	poktSigner.Stop()
 	poktExecutor.Stop()
+
 	app.DB.Disconnect()
 	log.Debug("[MAIN] Server stopped")
 }

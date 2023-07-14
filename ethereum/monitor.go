@@ -1,7 +1,5 @@
 package ethereum
 
-// listen to events from the blockchain
-
 import (
 	"context"
 	"math/big"
@@ -10,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
+	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
 	"github.com/dan13ram/wpokt-backend/models"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,41 +16,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type BurnAndBridgeIterator interface {
-	Next() bool
-	Event() *WrappedPocketBurnAndBridge
-}
-
-type BurnAndBridgeIteratorImpl struct {
-	*WrappedPocketBurnAndBridgeIterator
-}
-
-func (i *BurnAndBridgeIteratorImpl) Event() *WrappedPocketBurnAndBridge {
-	return i.WrappedPocketBurnAndBridgeIterator.Event
-}
-
-func (i *BurnAndBridgeIteratorImpl) Next() bool {
-	return i.WrappedPocketBurnAndBridgeIterator.Next()
-}
-
-type WrappedPocketContract interface {
-	FilterBurnAndBridge(opts *bind.FilterOpts, _amount []*big.Int, _from []common.Address, _poktAddress []common.Address) (BurnAndBridgeIterator, error)
-}
-
-type WrappedPocketContractImpl struct {
-	*WrappedPocket
-}
-
-func (c *WrappedPocketContractImpl) FilterBurnAndBridge(opts *bind.FilterOpts, _amount []*big.Int, _from []common.Address, _poktAddress []common.Address) (BurnAndBridgeIterator, error) {
-	iterator, err := c.WrappedPocket.FilterBurnAndBridge(opts, _amount, _from, _poktAddress)
-	return &BurnAndBridgeIteratorImpl{iterator}, err
-}
-
 type WPoktMonitorService struct {
 	stop               chan bool
 	startBlockNumber   uint64
 	currentBlockNumber uint64
-	monitorInterval    time.Duration
+	interval           time.Duration
 	wpoktContract      WrappedPocketContract
 }
 
@@ -70,13 +39,13 @@ func (b *WPoktMonitorService) UpdateCurrentBlockNumber() {
 	log.Debug("[WPOKT MONITOR] Current block number: ", b.currentBlockNumber)
 }
 
-func (b *WPoktMonitorService) HandleBurnEvent(event *WrappedPocketBurnAndBridge) bool {
+func (b *WPoktMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAndBridge) bool {
 	doc := models.Burn{
 		BlockNumber:      strconv.FormatInt(int64(event.Raw.BlockNumber), 10),
 		TransactionHash:  event.Raw.TxHash.String(),
 		LogIndex:         strconv.FormatInt(int64(event.Raw.Index), 10),
 		SenderAddress:    event.From.String(),
-		SenderChainId:    strconv.FormatInt(int64(app.Config.Ethereum.ChainId), 10),
+		SenderChainId:    app.Config.Ethereum.ChainId,
 		RecipientAddress: strings.Split(event.PoktAddress.String(), "0x")[1],
 		RecipientChainId: app.Config.Pocket.ChainId,
 		Amount:           event.Amount.String(),
@@ -162,26 +131,26 @@ func (b *WPoktMonitorService) Start() {
 		}
 
 		log.Debug("[WPOKT MONITOR] Finished burn sync")
-		log.Debug("[WPOKT MONITOR] Sleeping for ", b.monitorInterval)
+		log.Debug("[WPOKT MONITOR] Sleeping for ", b.interval)
 
 		select {
 		case <-b.stop:
 			stop = true
 			log.Debug("[WPOKT MONITOR] Stopped wpokt monitor")
-		case <-time.After(b.monitorInterval):
+		case <-time.After(b.interval):
 		}
 	}
 }
 
 func NewMonitor() models.Service {
-	if app.Config.Ethereum.Enabled == false {
-		log.Debug("[WPOKT MONITOR] Ethereum is disabled, not starting wpokt monitor")
+	if app.Config.WPOKTMonitor.Enabled == false {
+		log.Debug("[WPOKT MONITOR] WPOKT monitor disabled")
 		return models.NewEmptyService()
 	}
 
 	log.Debug("[WPOKT MONITOR] Initializing wpokt monitor")
 	log.Debug("[WPOKT MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
-	contract, err := NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), Client.GetClient())
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), Client.GetClient())
 	if err != nil {
 		log.Fatal("[WPOKT MONITOR] Error initializing Wrapped Pocket contract", err)
 	}
@@ -191,13 +160,13 @@ func NewMonitor() models.Service {
 		stop:               make(chan bool),
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
-		monitorInterval:    time.Duration(app.Config.Ethereum.MonitorIntervalSecs) * time.Second,
+		interval:           time.Duration(app.Config.WPOKTMonitor.IntervalSecs) * time.Second,
 		wpoktContract:      &WrappedPocketContractImpl{contract},
 	}
 
 	b.UpdateCurrentBlockNumber()
-	if app.Config.Ethereum.StartBlockNumber > 0 {
-		b.startBlockNumber = uint64(app.Config.Ethereum.StartBlockNumber)
+	if app.Config.WPOKTMonitor.StartBlockNumber > 0 {
+		b.startBlockNumber = uint64(app.Config.WPOKTMonitor.StartBlockNumber)
 	} else {
 		log.Debug("[WPOKT MONITOR] Found invalid start block number, updating to current block number")
 		b.startBlockNumber = b.currentBlockNumber

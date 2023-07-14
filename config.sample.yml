@@ -24,17 +24,29 @@ pokt_signer:
   interval_secs: 120
   private_key: ""
 
-ethereum:
+pokt_executor:
   enabled: true
+  interval_secs: 120
+
+ethereum:
   rpc_url: "https://eth-goerli.gateway.pokt.network/v1/lb/e81ff8d231bc754d1e7e5cd8"
   rpc_timeout_secs: 30
   chain_id: 5
-  start_block_number: 9090835
   wpokt_contract_address: "0xC336F4A1744e05a31876FF0C3caE02A867BC46b9"
   mint_controller_address: "0x9742FC3ed4a14B556D11a64a2F9D4b72Df5f5a67"
+  validator_addresses:
+    - "0x2CE62AAF07FCE166A329D89d76588f494e39A298"
+    - "0x162eFFA5a7aD26b9E1E8E70236007433270C059f"
+
+wpokt_monitor:
+  enabled: true
+  start_block_number: 9090835
+  interval_secs: 120
+
+wpokt_signer:
+  enabled: true
   private_key: ""
-  monitor_interval_secs: 120
-  signer_interval_secs: 120
+  interval_secs: 120
 
 logger:
   level: "debug"

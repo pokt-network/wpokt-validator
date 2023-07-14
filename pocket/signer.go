@@ -131,6 +131,7 @@ func (m *PoktSignerService) HandleBurn(mint models.Burn) bool {
 }
 
 func (m *PoktSignerService) SyncTxs() bool {
+	// TODO: handle confirmations
 	filter := bson.M{
 		"status":  models.StatusPending,
 		"signers": bson.M{"$nin": []string{m.privateKey.PublicKey().RawString()}},

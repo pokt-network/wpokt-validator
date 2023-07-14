@@ -4,6 +4,8 @@ type Config struct {
 	Logger       LoggerConfig       `yaml:"logger"`
 	MongoDB      MongoConfig        `yaml:"mongodb"`
 	Ethereum     EthereumConfig     `yaml:"ethereum"`
+	WPOKTMonitor WPOKTMonitorConfig `yaml:"wpokt_monitor"`
+	WPOKTSigner  WPOKTSignerConfig  `yaml:"wpokt_signer"`
 	Pocket       PocketConfig       `yaml:"pocket"`
 	PoktMonitor  PoktMonitorConfig  `yaml:"pokt_monitor"`
 	PoktSigner   PoktSignerConfig   `yaml:"pokt_signer"`
@@ -21,14 +23,24 @@ type MongoConfig struct {
 }
 
 type EthereumConfig struct {
-	Enabled              bool   `yaml:"enabled"`
-	RPCURL               string `yaml:"rpc_url"`
-	RPCTimeOutSecs       uint64 `yaml:"rpc_timeout_secs"`
-	ChainId              uint64 `yaml:"chain_id"`
-	StartBlockNumber     int64  `yaml:"start_block_number"`
-	WPOKTContractAddress string `yaml:"wpokt_contract_address"`
-	MonitorIntervalSecs  uint64 `yaml:"monitor_interval_secs"`
-	SignerIntervalSecs   uint64 `yaml:"signer_interval_secs"`
+	RPCURL                string   `yaml:"rpc_url"`
+	RPCTimeOutSecs        uint64   `yaml:"rpc_timeout_secs"`
+	ChainId               string   `yaml:"chain_id"`
+	WPOKTContractAddress  string   `yaml:"wpokt_contract_address"`
+	MintControllerAddress string   `yaml:"mint_controller_address"`
+	ValidatorAddresses    []string `yaml:"validator_addresses"`
+}
+
+type WPOKTMonitorConfig struct {
+	Enabled          bool   `yaml:"enabled"`
+	StartBlockNumber int64  `yaml:"start_block_number"`
+	IntervalSecs     uint64 `yaml:"interval_secs"`
+}
+
+type WPOKTSignerConfig struct {
+	Enabled      bool   `yaml:"enabled"`
+	IntervalSecs uint64 `yaml:"interval_secs"`
+	PrivateKey   string `yaml:"private_key"`
 }
 
 type PocketConfig struct {

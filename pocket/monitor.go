@@ -7,6 +7,7 @@ import (
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -106,27 +107,29 @@ func (m *PoktMonitorService) HandleValidMint(tx *TxResponse, memo models.MintMem
 		SenderAddress:    tx.StdTx.Msg.Value.FromAddress,
 		SenderChainId:    app.Config.Pocket.ChainId,
 		RecipientAddress: memo.Address,
-		RecipientChainId: strconv.FormatInt(int64(memo.ChainId), 10),
+		RecipientChainId: memo.ChainId,
 		Amount:           tx.StdTx.Msg.Value.Amount,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 		Status:           models.StatusPending,
+		TypedData:        "",
 		Signers:          []string{},
+		Signatures:       []string{},
 	}
 
-	log.Debug("[POKT MONITOR] Storing mint tx: ", tx.Hash, " in db")
+	log.Debug("[POKT MONITOR] Storing mint tx")
 
 	err := app.DB.InsertOne(models.CollectionMints, doc)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			log.Debug("[POKT MONITOR] Found duplicate mint tx: ", tx.Hash, " in db")
+			log.Debug("[POKT MONITOR] Found duplicate mint tx")
 			return true
 		}
 		log.Error("[POKT MONITOR] Error storing mint tx: ", err)
 		return false
 	}
 
-	log.Debug("[POKT MONITOR] Stored mint tx: ", tx.Hash, " in db")
+	log.Debug("[POKT MONITOR] Stored mint tx")
 	return true
 }
 
@@ -135,7 +138,9 @@ func (m *PoktMonitorService) HandleTx(tx *TxResponse) bool {
 
 	err := json.Unmarshal([]byte(tx.StdTx.Memo), &memo)
 
-	if err != nil || memo.ChainId != app.Config.Ethereum.ChainId {
+	address := common.HexToAddress(memo.Address)
+
+	if err != nil || memo.ChainId != app.Config.Ethereum.ChainId || address.Hex() != memo.Address {
 		log.Debug("[POKT MONITOR] Found invalid mint tx: ", tx.Hash, " with memo: ", "\""+tx.StdTx.Memo+"\"")
 		return m.HandleInvalidMint(tx)
 	}

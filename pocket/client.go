@@ -197,7 +197,6 @@ func (c *pocketClient) GetTx(hash string) (*TxResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("GetTx", "res", res)
 	var obj TxResponse
 	err = json.Unmarshal([]byte(res), &obj)
 	return &obj, err

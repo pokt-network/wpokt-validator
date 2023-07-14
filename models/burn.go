@@ -23,6 +23,7 @@ type Burn struct {
 	CreatedAt        time.Time           `bson:"created_at"`
 	UpdatedAt        time.Time           `bson:"updated_at"`
 	Status           string              `bson:"status"`
+	ReturnTx         string              `bson:"return_tx"`
 	Signers          []string            `bson:"signers"`
-	Order            *Order              `bson:"order"`
+	ReturnTxHash     string              `bson:"return_tx_hash"`
 }

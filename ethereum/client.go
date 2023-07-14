@@ -73,7 +73,7 @@ func (c *ethereumClient) ValidateNetwork() {
 	}
 	log.Debugln("[ETH]", "Validating network", "chainId", chainId.Uint64())
 
-	if chainId.Uint64() != app.Config.Ethereum.ChainId {
+	if chainId.String() != app.Config.Ethereum.ChainId {
 		log.Debugln("[ETH]", "Chain ID Mismatch", "expected", app.Config.Ethereum.ChainId, "got", chainId.Uint64())
 		panic("[ETH] Chain ID Mismatch")
 	}
