@@ -53,7 +53,7 @@ func (c *ethereumClient) GetChainId() (*big.Int, error) {
 }
 
 func (c *ethereumClient) ValidateNetwork() {
-	log.Debugln("[ETH", "Validating network")
+	log.Debugln("[ETH]", "Validating network")
 	log.Debugln("[ETH]", "URL", app.Config.Ethereum.RPCURL)
 	client, err := ethclient.Dial(app.Config.Ethereum.RPCURL)
 	if err != nil {
