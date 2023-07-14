@@ -38,10 +38,12 @@ func main() {
 
 	poktMonitor := pocket.NewMonitor()
 	poktSigner := pocket.NewSigner()
+	poktExecutor := pocket.NewExecutor()
 	b := ethereum.NewMonitor()
 
 	go poktMonitor.Start()
 	go poktSigner.Start()
+	go poktExecutor.Start()
 	go b.Start()
 
 	// Gracefully shut down server
@@ -55,6 +57,7 @@ func main() {
 	b.Stop()
 	poktMonitor.Stop()
 	poktSigner.Stop()
+	poktExecutor.Stop()
 	app.DB.Disconnect()
 	log.Debug("[MAIN] Server stopped")
 }

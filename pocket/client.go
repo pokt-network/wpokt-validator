@@ -18,7 +18,9 @@ import (
 type PocketClient interface {
 	GetBlock() (*BlockResponse, error)
 	GetHeight() (*HeightResponse, error)
-	GetAccountTxsByHeight(address string, height int64) ([]*ResultTx, error)
+	SubmitRawTx(params rpc.SendRawTxParams) (*SubmitRawTxResponse, error)
+	GetTx(hash string) (*TxResponse, error)
+	GetAccountTxsByHeight(address string, height int64) ([]*TxResponse, error)
 	ValidateNetwork()
 }
 
@@ -185,6 +187,36 @@ func (c *pocketClient) GetHeight() (*HeightResponse, error) {
 	return &obj, err
 }
 
+func (c *pocketClient) GetTx(hash string) (*TxResponse, error) {
+	params := rpc.HashAndProveParams{Hash: hash, Prove: false}
+	j, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	res, err := queryRPC(getTxPath, j)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("GetTx", "res", res)
+	var obj TxResponse
+	err = json.Unmarshal([]byte(res), &obj)
+	return &obj, err
+}
+
+func (c *pocketClient) SubmitRawTx(params rpc.SendRawTxParams) (*SubmitRawTxResponse, error) {
+	j, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	res, err := queryRPC(sendRawTxPath, j)
+	if err != nil {
+		return nil, err
+	}
+	var obj SubmitRawTxResponse
+	err = json.Unmarshal([]byte(res), &obj)
+	return &obj, err
+}
+
 func (c *pocketClient) getAccountTxsPerPage(address string, page uint32) (*AccountTxsResponse, error) {
 	// filter by received transactions
 	params := rpc.PaginateAddrParams{
@@ -208,8 +240,8 @@ func (c *pocketClient) getAccountTxsPerPage(address string, page uint32) (*Accou
 	return &obj, err
 }
 
-func (c *pocketClient) GetAccountTxsByHeight(address string, height int64) ([]*ResultTx, error) {
-	var txs []*ResultTx
+func (c *pocketClient) GetAccountTxsByHeight(address string, height int64) ([]*TxResponse, error) {
+	var txs []*TxResponse
 	var page uint32 = 1
 	for {
 		res, err := c.getAccountTxsPerPage(address, page)

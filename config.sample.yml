@@ -8,22 +8,21 @@ pocket:
   rpc_timeout_secs: 30
   chain_id: "testnet"
   fees: 10000
-
-pokt_monitor:
-  enabled: true
-  start_height: 104509
-  interval_secs: 120
-  multisig_address: "7FB0A18CEB4E803F22911F5B85E2727BB3BDF04B"
-
-pokt_signer:
-  enabled: true
-  interval_secs: 120
-  private_key: ""
   multisig_address: "7FB0A18CEB4E803F22911F5B85E2727BB3BDF04B"
   multisig_public_keys:
     - "b051b20ad19432189aaea89642bf222af5c10b0c7730a374905953fd2d990715"
     - "ad7a05bb00234484531c1f379e65c4ec7e2f0feeb5e27646e193578f0fb28bb6"
     - "4294fd92033ab62cff7e49190413aa47fcb653dbfa4404fae940980bbc89227b"
+
+pokt_monitor:
+  enabled: true
+  start_height: 104509
+  interval_secs: 120
+
+pokt_signer:
+  enabled: true
+  interval_secs: 120
+  private_key: ""
 
 ethereum:
   enabled: true

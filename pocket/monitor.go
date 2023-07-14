@@ -7,6 +7,7 @@ import (
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -67,7 +68,7 @@ func (m *PoktMonitorService) UpdateCurrentHeight() {
 	log.Debug("[POKT MONITOR] Current height: ", m.currentHeight)
 }
 
-func (m *PoktMonitorService) HandleInvalidMint(tx *ResultTx) bool {
+func (m *PoktMonitorService) HandleInvalidMint(tx *TxResponse) bool {
 	doc := models.InvalidMint{
 		Height:          strconv.FormatInt(tx.Height, 10),
 		TransactionHash: tx.Hash,
@@ -82,23 +83,23 @@ func (m *PoktMonitorService) HandleInvalidMint(tx *ResultTx) bool {
 		ReturnTxHash:    "",
 	}
 
-	log.Debug("[POKT MONITOR] Storing invalid mint tx: ", tx.Hash, " in db")
+	log.Debug("[POKT MONITOR] Storing invalid mint tx")
 
 	err := app.DB.InsertOne(models.CollectionInvalidMints, doc)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			log.Debug("[POKT MONITOR] Found duplicate invalid mint tx: ", tx.Hash, " in db")
+			log.Debug("[POKT MONITOR] Found duplicate invalid mint tx")
 			return true
 		}
 		log.Error("[POKT MONITOR] Error storing invalid mint tx: ", err)
 		return false
 	}
 
-	log.Debug("[POKT MONITOR] Stored invalid mint tx: ", tx.Hash, " in db")
+	log.Debug("[POKT MONITOR] Stored invalid mint tx")
 	return true
 }
 
-func (m *PoktMonitorService) HandleValidMint(tx *ResultTx, memo models.MintMemo) bool {
+func (m *PoktMonitorService) HandleValidMint(tx *TxResponse, memo models.MintMemo) bool {
 	doc := models.Mint{
 		Height:           strconv.FormatInt(tx.Height, 10),
 		TransactionHash:  tx.Hash,
@@ -129,7 +130,7 @@ func (m *PoktMonitorService) HandleValidMint(tx *ResultTx, memo models.MintMemo)
 	return true
 }
 
-func (m *PoktMonitorService) HandleTx(tx *ResultTx) bool {
+func (m *PoktMonitorService) HandleTx(tx *TxResponse) bool {
 	var memo models.MintMemo
 
 	err := json.Unmarshal([]byte(tx.StdTx.Memo), &memo)
@@ -164,9 +165,24 @@ func NewMonitor() models.Service {
 	}
 
 	log.Debug("[POKT MONITOR] Initializing pokt monitor")
+
+	var pks []crypto.PublicKey
+	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
+		p, err := crypto.NewPublicKey(pk)
+		if err != nil {
+			log.Error("[POKT MONITOR] Error parsing multisig public key: ", err)
+			continue
+		}
+		pks = append(pks, p)
+	}
+
+	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
+	multisigAddress := multisigPk.Address().String()
+	log.Debug("[POKT EXECUTOR] Multisig address: ", multisigAddress)
+
 	m := &PoktMonitorService{
 		interval:      time.Duration(app.Config.PoktMonitor.IntervalSecs) * time.Second,
-		vaultAddress:  app.Config.PoktMonitor.MultisigAddress,
+		vaultAddress:  multisigAddress,
 		startHeight:   0,
 		currentHeight: 0,
 		stop:          make(chan bool),

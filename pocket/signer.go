@@ -2,15 +2,12 @@ package pocket
 
 import (
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/models"
 	"github.com/pokt-network/pocket-core/crypto"
-	"github.com/pokt-network/pocket-core/crypto/keys"
-	"github.com/pokt-network/pocket-core/crypto/keys/mintkey"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -31,7 +28,7 @@ func (m *PoktSignerService) Start() {
 
 		m.SyncTxs()
 
-		log.Debug("[POKT SIGNER] Finished mint sync")
+		log.Debug("[POKT SIGNER] Finished pokt signer sync")
 		log.Debug("[POKT SIGNER] Sleeping for ", m.interval)
 
 		select {
@@ -171,27 +168,17 @@ func NewSigner() models.Service {
 	log.Debug("[POKT SIGNER] Pokt signer address: ", pk.PublicKey().Address().String())
 
 	var pks []crypto.PublicKey
-	for _, pk := range app.Config.PoktSigner.MultisigPublicKeys {
+	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			fmt.Println(fmt.Errorf("error creating the public key: %v", err))
+			log.Debug("[POKT SIGNER] Error parsing multisig public key: ", err)
 			continue
 		}
 		pks = append(pks, p)
 	}
 
 	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	log.Debug("[POKT SIGNER] Initialized pokt signer multisig address: ", multisigPk.Address().String())
-
-	keybase := keys.NewInMemory()
-	armorred, err := mintkey.EncryptArmorPrivKey(pk, passphrase, passphrase)
-	if err != nil {
-		log.Fatal("[POKT SIGNER] Error encrypting private key: ", err)
-	}
-	_, err = keybase.ImportPrivKey(armorred, passphrase, passphrase)
-	if err != nil {
-		log.Fatal("[POKT SIGNER] Error importing private key: ", err)
-	}
+	log.Debug("[POKT SIGNER] Multisig address: ", multisigPk.Address().String())
 
 	m := &PoktSignerService{
 		interval:       time.Duration(app.Config.PoktSigner.IntervalSecs) * time.Second,

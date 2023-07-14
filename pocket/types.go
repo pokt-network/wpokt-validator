@@ -4,6 +4,10 @@ type HeightResponse struct {
 	Height int64 `json:"height"`
 }
 
+type SubmitRawTxResponse struct {
+	TransactionHash string `json:"txhash"`
+}
+
 type TxMsgValue struct {
 	FromAddress string `json:"from_address"`
 	ToAddress   string `json:"to_address"`
@@ -20,7 +24,7 @@ type StdTxParams struct {
 	Msg  TxMsg  `json:"msg"`
 }
 
-type ResultTx struct {
+type TxResponse struct {
 	Hash   string      `json:"hash"`
 	Height int64       `json:"height"`
 	Index  int64       `json:"index"`
@@ -28,9 +32,9 @@ type ResultTx struct {
 }
 
 type AccountTxsResponse struct {
-	PageCount uint32      `json:"page_count"`
-	TotalTxs  uint32      `json:"total_txs"`
-	Txs       []*ResultTx `json:"txs"`
+	PageCount uint32        `json:"page_count"`
+	TotalTxs  uint32        `json:"total_txs"`
+	Txs       []*TxResponse `json:"txs"`
 }
 
 type Header struct {
