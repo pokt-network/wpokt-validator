@@ -2,6 +2,7 @@ package app
 
 import (
 	"crypto/ecdsa"
+	"os"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/models"
@@ -14,6 +15,7 @@ type HealthService struct {
 	stop          chan bool
 	poktPublicKey string
 	ethAddress    string
+	hostname      string
 	interval      time.Duration
 }
 
@@ -27,6 +29,7 @@ func (b *HealthService) PostHealth() bool {
 	health := models.Health{
 		PoktPublicKey: b.poktPublicKey,
 		EthAddress:    b.ethAddress,
+		Hostname:      b.hostname,
 		CreatedAt:     time.Now(),
 	}
 
@@ -82,11 +85,17 @@ func NewHealthCheck() models.Service {
 	}
 	address := ethCrypto.PubkeyToAddress(*publicKeyECDSA).Hex()
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal("[HEALTH] Error getting hostname: ", err)
+	}
+
 	b := &HealthService{
 		stop:          make(chan bool),
 		interval:      time.Duration(Config.Health.IntervalSecs) * time.Second,
 		poktPublicKey: pk.PublicKey().RawString(),
 		ethAddress:    address,
+		hostname:      hostname,
 	}
 
 	log.Debug("[HEALTH] Initialized health")
