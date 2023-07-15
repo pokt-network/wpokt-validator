@@ -56,3 +56,6 @@ wpokt_executor:
 
 logger:
   level: "debug"
+
+health:
+  interval_secs: 1800

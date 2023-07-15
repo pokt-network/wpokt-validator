@@ -40,6 +40,8 @@ func main() {
 	pocket.Client.ValidateNetwork()
 	ethereum.Client.ValidateNetwork()
 
+	healthcheck := app.NewHealthCheck()
+
 	poktMonitor := pocket.NewMonitor()
 	poktSigner := pocket.NewSigner()
 	poktExecutor := pocket.NewExecutor()
@@ -47,6 +49,8 @@ func main() {
 	wpoktMonitor := ethereum.NewMonitor()
 	wpoktSigner := ethereum.NewSigner()
 	wpoktExecutor := ethereum.NewExecutor()
+
+	go healthcheck.Start()
 
 	go poktMonitor.Start()
 	go poktSigner.Start()
@@ -72,6 +76,8 @@ func main() {
 	poktMonitor.Stop()
 	poktSigner.Stop()
 	poktExecutor.Stop()
+
+	healthcheck.Stop()
 
 	app.DB.Disconnect()
 	log.Info("[MAIN] Server stopped")

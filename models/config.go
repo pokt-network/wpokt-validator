@@ -1,6 +1,7 @@
 package models
 
 type Config struct {
+	Health        HealthConfig        `yaml:"health"`
 	Logger        LoggerConfig        `yaml:"logger"`
 	MongoDB       MongoConfig         `yaml:"mongodb"`
 	Ethereum      EthereumConfig      `yaml:"ethereum"`
@@ -11,6 +12,10 @@ type Config struct {
 	PoktMonitor   PoktMonitorConfig   `yaml:"pokt_monitor"`
 	PoktSigner    PoktSignerConfig    `yaml:"pokt_signer"`
 	PoktExecutor  PoktExecutorConfig  `yaml:"pokt_executor"`
+}
+
+type HealthConfig struct {
+	IntervalSecs uint64 `yaml:"interval_secs"`
 }
 
 type LoggerConfig struct {
