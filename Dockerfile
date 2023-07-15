@@ -1,4 +1,4 @@
-FROM golang:1.19
+FROM golang:1.19 as base
 
 WORKDIR /app
 
@@ -10,16 +10,14 @@ RUN go mod download
 COPY app ./app
 COPY ethereum ./ethereum
 COPY pocket ./pocket
+COPY models ./models
 COPY main.go ./
 COPY config.testnet.yml ./
-COPY scripts ./scripts
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /validator-service
 
-# Install python3
-RUN apt-get update && apt-get install -y python3 python3-pip python3-setuptools
-
+# Set environment variables
 ENV ETH_PRIVATE_KEY ${ETH_PRIVATE_KEY}
 ENV ETH_RPC_URL ${ETH_RPC_URL}
 ENV ETH_CHAIN_ID ${ETH_CHAIN_ID}
@@ -31,8 +29,5 @@ ENV POKT_CHAIN_ID ${POKT_CHAIN_ID}
 ENV MONGODB_URI ${MONGODB_URI}
 ENV MONGODB_DATABASE ${MONGODB_DATABASE}
 
-# Setup Config file using python script
-RUN python3 scripts/setup_config.py config.testnet.yml config.yml
-
 # Run
-CMD ["/validator-service", "config.yml"]
+CMD ["/validator-service", "/app/config.testnet.yml"]

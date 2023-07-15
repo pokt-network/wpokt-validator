@@ -39,6 +39,7 @@ func (d *mongoDatabase) Connect(ctx context.Context) error {
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(Config.MongoDB.URI).SetWriteConcern(wcMajority))
 	if err != nil {
+		log.Debug("[DB] URI: ", Config.MongoDB.URI)
 		return err
 	}
 	d.db = client.Database(Config.MongoDB.Database)

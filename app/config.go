@@ -2,6 +2,7 @@ package app
 
 import (
 	"io/ioutil"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -21,5 +22,33 @@ func InitConfig(configFile string) {
 	err = yaml.Unmarshal(yamlFile, &Config)
 	if err != nil {
 		log.Fatalf("Error unmarshalling config file %q: %s\n", configFile, err.Error())
+	}
+	readConfigFromEnv()
+}
+
+func readConfigFromEnv() {
+	if Config.MongoDB.URI == "" {
+		Config.MongoDB.URI = os.Getenv("MONGODB_URI")
+	}
+	if Config.MongoDB.Database == "" {
+		Config.MongoDB.Database = os.Getenv("MONGODB_DATABASE")
+	}
+	if Config.Ethereum.RPCURL == "" {
+		Config.Ethereum.RPCURL = os.Getenv("ETH_RPC_URL")
+	}
+	if Config.Ethereum.ChainId == "" {
+		Config.Ethereum.ChainId = os.Getenv("ETH_CHAIN_ID")
+	}
+	if Config.WPOKTSigner.PrivateKey == "" {
+		Config.WPOKTSigner.PrivateKey = os.Getenv("ETH_PRIVATE_KEY")
+	}
+	if Config.Pocket.RPCURL == "" {
+		Config.Pocket.RPCURL = os.Getenv("POKT_RPC_URL")
+	}
+	if Config.Pocket.ChainId == "" {
+		Config.Pocket.ChainId = os.Getenv("POKT_CHAIN_ID")
+	}
+	if Config.PoktSigner.PrivateKey == "" {
+		Config.PoktSigner.PrivateKey = os.Getenv("POKT_PRIVATE_KEY")
 	}
 }

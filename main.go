@@ -17,6 +17,7 @@ import (
 
 func main() {
 
+	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
@@ -26,8 +27,11 @@ func main() {
 	}
 	absConfigPath, _ := filepath.Abs(os.Args[1])
 
+	log.Info("[MAIN] Starting server")
 	app.InitConfig(absConfigPath)
+	log.Info("[MAIN] Config loaded from: ", absConfigPath)
 	app.InitLogger()
+	log.Info("[MAIN] Logger initialized")
 
 	dbCtx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.MongoDB.TimeOutSecs))
 	defer cancel()
@@ -59,7 +63,7 @@ func main() {
 	go waitForExitSignals(gracefulStop, done)
 	<-done
 
-	log.Debug("[MAIN] Stopping server gracefully")
+	log.Info("[MAIN] Stopping server gracefully")
 
 	wpoktExecutor.Stop()
 	wpoktSigner.Stop()
@@ -70,11 +74,11 @@ func main() {
 	poktExecutor.Stop()
 
 	app.DB.Disconnect()
-	log.Debug("[MAIN] Server stopped")
+	log.Info("[MAIN] Server stopped")
 }
 
 func waitForExitSignals(gracefulStop chan os.Signal, done chan bool) {
 	sig := <-gracefulStop
-	log.Debug("[MAIN] Caught signal: ", sig)
+	log.Info("[MAIN] Caught signal: ", sig)
 	done <- true
 }

@@ -1,12 +1,12 @@
 mongodb:
-  uri: "{{MONGODB_URI}}"
-  database: "{{MONGODB_DATABASE}}"
+  uri: ""
+  database: ""
   timeout_secs: 30
 
 pocket:
-  rpc_url: "{{POKT_RPC_URL}}"
+  rpc_url: ""
+  chain_id: ""
   rpc_timeout_secs: 30
-  chain_id: "{{POKT_CHAIN_ID}}"
   fees: 10000
   multisig_address: "7FB0A18CEB4E803F22911F5B85E2727BB3BDF04B"
   multisig_public_keys:
@@ -22,16 +22,16 @@ pokt_monitor:
 pokt_signer:
   enabled: true
   interval_secs: 120
-  private_key: "{{POKT_PRIVATE_KEY}}"
+  private_key: ""
 
 pokt_executor:
   enabled: true
   interval_secs: 120
 
 ethereum:
-  rpc_url: "{{ETH_RPC_URL}}"
+  rpc_url: ""
+  chain_id: ""
   rpc_timeout_secs: 30
-  chain_id: "{{ETH_CHAIN_ID}}"
   wpokt_contract_address: "0x8E7ed40A3eF5c75485682f4f1618f079e9bd8A4E"
   mint_controller_address: "0xC2D18e34F34a9e143D8Da6F0c649a495b0D2BBd7"
   validator_addresses:
@@ -46,11 +46,11 @@ wpokt_monitor:
 
 wpokt_signer:
   enabled: true
-  private_key: "{{ETH_PRIVATE_KEY}}"
   interval_secs: 120
+  private_key: ""
 
 wpokt_executor:
-  enabled: false
+  enabled: true
   start_block_number: 9348824
   interval_secs: 120
 
