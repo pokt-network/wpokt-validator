@@ -1,10 +1,9 @@
-import os
 import sys
 import yaml
-
+from dotenv import dotenv_values
 
 def get_env_var(key):
-    value = os.environ.get(key)
+    value = env_vars.get(key)
     if value is None:
         print(f"Error: Environment variable {key} is not set.")
         sys.exit(1)
@@ -32,12 +31,16 @@ def fill_template(template_path, output_path):
         yaml.dump(template, f)
 
 # Check if the correct number of arguments is provided
-if len(sys.argv) != 3:
-    print("Usage: python fill_template.py <template_file> <output_file>")
+if len(sys.argv) != 4:
+    print("Usage: python fill_template.py <env_file> <template_file> <output_file>")
 else:
     # Get the input and output file paths from command-line arguments
-    template_file = sys.argv[1]
-    output_file = sys.argv[2]
+    env_file = sys.argv[1]
+    template_file = sys.argv[2]
+    output_file = sys.argv[3]
+
+    # Load the environment variables
+    env_vars = dotenv_values(env_file)
 
     # Call the function to fill the template
     fill_template(template_file, output_file)
