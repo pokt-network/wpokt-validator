@@ -1,12 +1,12 @@
 mongodb:
-  uri: "mongodb://mongodb0.example.com:27017,mongodb1.example.com:27017/?replicaSet=myRepl"
-  database: "wpokt-dev"
+  uri: "{{MONGODB_URI}}"
+  database: "{{MONGODB_DATABASE}}"
   timeout_secs: 30
 
 pocket:
-  rpc_url: "https://node2.testnet.pokt.network"
+  rpc_url: "{{POKT_RPC_URL}}"
   rpc_timeout_secs: 30
-  chain_id: "testnet"
+  chain_id: "{{POKT_CHAIN_ID}}"
   fees: 10000
   multisig_address: "7FB0A18CEB4E803F22911F5B85E2727BB3BDF04B"
   multisig_public_keys:
@@ -22,16 +22,16 @@ pokt_monitor:
 pokt_signer:
   enabled: true
   interval_secs: 120
-  private_key: ""
+  private_key: "{{POKT_PRIVATE_KEY}}"
 
 pokt_executor:
   enabled: true
   interval_secs: 120
 
 ethereum:
-  rpc_url: "https://eth-goerli.gateway.pokt.network/v1/lb/e81ff8d231bc754d1e7e5cd8"
+  rpc_url: "{{ETH_RPC_URL}}"
   rpc_timeout_secs: 30
-  chain_id: 5
+  chain_id: "{{ETH_CHAIN_ID}}"
   wpokt_contract_address: "0x8E7ed40A3eF5c75485682f4f1618f079e9bd8A4E"
   mint_controller_address: "0xC2D18e34F34a9e143D8Da6F0c649a495b0D2BBd7"
   validator_addresses:
@@ -46,7 +46,7 @@ wpokt_monitor:
 
 wpokt_signer:
   enabled: true
-  private_key: ""
+  private_key: "{{ETH_PRIVATE_KEY}}"
   interval_secs: 120
 
 wpokt_executor:

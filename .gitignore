@@ -22,6 +22,6 @@ go.work
 
 # config
 *.yml
-!config.sample.yml
+!config.testnet.yml
 
 keys/*
