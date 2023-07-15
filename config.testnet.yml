@@ -16,7 +16,7 @@ pocket:
 
 pokt_monitor:
   enabled: true
-  start_height: 104509
+  start_height: 111400
   interval_secs: 120
 
 pokt_signer:

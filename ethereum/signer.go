@@ -51,6 +51,7 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 			log.Error("[WPOKT SIGNER] Error fetching nonce: ", err)
 			return false
 		}
+		// TODO: check db for pending mints with nonce then add 1 to it for this mint
 
 		nonce = currentNonce.Add(currentNonce, big.NewInt(1))
 	} else {
