@@ -112,7 +112,7 @@ func (m *PoktMonitorService) HandleValidMint(tx *TxResponse, memo models.MintMem
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 		Status:           models.StatusPending,
-		TypedData:        "",
+		Data:             nil,
 		Signers:          []string{},
 		Signatures:       []string{},
 	}

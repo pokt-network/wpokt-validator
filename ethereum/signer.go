@@ -4,70 +4,27 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"math/big"
+	"sort"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
 	"github.com/dan13ram/wpokt-backend/models"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
-	beeCrypto "github.com/ethersphere/bee/pkg/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-var typesStandard = apitypes.Types{
-	"EIP712Domain": {
-		{
-			Name: "name",
-			Type: "string",
-		},
-		{
-			Name: "version",
-			Type: "string",
-		},
-		{
-			Name: "chainId",
-			Type: "uint256",
-		},
-		{
-			Name: "verifyingContract",
-			Type: "address",
-		},
-	},
-	"MintControllerMintData": {
-		{
-			Name: "recipient",
-			Type: "address",
-		},
-		{
-			Name: "amount",
-			Type: "uint256",
-		},
-		{
-			Name: "nonce",
-			Type: "uint256",
-		},
-	},
-}
-
-var domainStandard = apitypes.TypedDataDomain{
-	Name:              "MintController",
-	Version:           "1",
-	ChainId:           math.NewHexOrDecimal256(5),
-	VerifyingContract: "0x9742FC3ed4a14B556D11a64a2F9D4b72Df5f5a67",
-}
-
-const primaryType = "MintControllerMintData"
-
 type WPoktSignerService struct {
-	stop          chan bool
-	address       string
-	signer        beeCrypto.Signer
-	interval      time.Duration
-	wpoktContract *autogen.WrappedPocket
+	stop                   chan bool
+	address                string
+	privateKey             *ecdsa.PrivateKey
+	interval               time.Duration
+	wpoktContract          *autogen.WrappedPocket
+	mintControllerContract *autogen.MintController
+	validators             []string
+	domain                 DomainData
 }
 
 func (b *WPoktSignerService) Stop() {
@@ -84,10 +41,24 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		log.Error("[WPOKT SIGNER] Error converting decimal to big int")
 		return false
 	}
-	nonce, err := b.wpoktContract.GetUserNonce(nil, address)
-	if err != nil {
-		log.Error("[WPOKT SIGNER] Error fetching nonce: ", err)
-		return false
+
+	var nonce *big.Int
+
+	if mint.Data == nil {
+		log.Debug("[WPOKT SIGNER] Mint data not set, fetching from contract")
+		currentNonce, err := b.wpoktContract.GetUserNonce(nil, address)
+		if err != nil {
+			log.Error("[WPOKT SIGNER] Error fetching nonce: ", err)
+			return false
+		}
+
+		nonce = currentNonce.Add(currentNonce, big.NewInt(1))
+	} else {
+		nonce, ok = new(big.Int).SetString(mint.Data.Nonce, 10)
+		if !ok {
+			log.Error("[WPOKT SIGNER] Error converting decimal to big int")
+			return false
+		}
 	}
 
 	data := autogen.MintControllerMintData{
@@ -96,30 +67,63 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		Nonce:     nonce,
 	}
 
-	message := apitypes.TypedDataMessage{
-		"recipient": mint.RecipientAddress,
-		"amount":    mint.Amount,
-		"nonce":     nonce.String(),
-	}
-
-	typedData := apitypes.TypedData{
-		Types:       typesStandard,
-		PrimaryType: primaryType,
-		Domain:      domainStandard,
-		Message:     message,
-	}
-
-	signature, err := b.signer.SignTypedData(&typedData)
-
+	signature, err := SignTypedData(b.domain, data, b.privateKey)
 	if err != nil {
 		log.Error("[WPOKT SIGNER] Error signing typed data: ", err)
 		return false
 	}
 
-	signatureEncoded := hex.EncodeToString(signature)
+	log.Debug("[WPOKT SIGNER] Mint signed")
 
-	log.Debug("[WPOKT SIGNER] Data: ", data)
-	log.Debug("[WPOKT SIGNER] Signature: ", signatureEncoded)
+	signatureEncoded := "0x" + hex.EncodeToString(signature)
+	signatures := append(mint.Signatures, signatureEncoded)
+	signers := append(mint.Signers, b.address)
+	sortedSigners := sortAddresses(signers)
+
+	sortedSignatures := make([]string, len(signatures))
+
+	for i, signature := range signatures {
+		signer := signers[i]
+		index := -1
+		for j, validator := range sortedSigners {
+			if validator == signer {
+				index = j
+				break
+			}
+		}
+		sortedSignatures[index] = signature
+	}
+
+	status := models.StatusPending // TODO confirmations
+
+	if len(sortedSignatures) == len(b.validators) {
+		log.Debug("[WPOKT SIGNER] Mint fully signed")
+		status = models.StatusSigned
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"data": models.MintData{
+				Recipient: data.Recipient.Hex(),
+				Amount:    data.Amount.String(),
+				Nonce:     data.Nonce.String(),
+			},
+			"signatures": sortedSignatures,
+			"signers":    sortedSigners,
+			"status":     status,
+		},
+	}
+
+	filter := bson.M{
+		"_id": mint.Id,
+	}
+
+	err = app.DB.UpdateOne(models.CollectionMints, filter, update)
+	if err != nil {
+		log.Error("[WPOKT SIGNER] Error updating mint: ", err)
+		return false
+	}
+	log.Debug("[WPOKT SIGNER] Mint updated with signature")
 
 	return true
 }
@@ -194,8 +198,6 @@ func NewSigner() models.Service {
 		log.Fatal("[WPOKT SIGNER] Error loading private key: ", err)
 	}
 
-	signer := beeCrypto.NewDefaultSigner(privateKey)
-
 	address := privateKeyToAddress(privateKey)
 	log.Debug("[WPOKT SIGNER] Loaded private key for address: ", address)
 
@@ -206,15 +208,42 @@ func NewSigner() models.Service {
 	}
 	log.Debug("[WPOKT SIGNER] Connected to wpokt contract")
 
+	log.Debug("[WPOKT SIGNER] Connecting to mint controller contract at: ", app.Config.Ethereum.MintControllerAddress)
+	mintControllerContract, err := autogen.NewMintController(common.HexToAddress(app.Config.Ethereum.MintControllerAddress), Client.GetClient())
+	if err != nil {
+		log.Fatal("[WPOKT SIGNER] Error initializing Mint Controller contract", err)
+	}
+	log.Debug("[WPOKT SIGNER] Connected to mint controller contract")
+
+	log.Debug("[WPOKT SIGNER] Fetching mint controller domain data")
+	domain, err := mintControllerContract.Eip712Domain(nil)
+	if err != nil {
+		log.Fatal("[WPOKT SIGNER] Error fetching mint controller domain data: ", err)
+	}
+	log.Debug("[WPOKT SIGNER] Fetched mint controller domain data")
+
 	b := &WPoktSignerService{
-		stop:          make(chan bool),
-		interval:      time.Duration(app.Config.WPOKTSigner.IntervalSecs) * time.Second,
-		signer:        signer,
-		address:       address,
-		wpoktContract: contract,
+		stop:                   make(chan bool),
+		interval:               time.Duration(app.Config.WPOKTSigner.IntervalSecs) * time.Second,
+		privateKey:             privateKey,
+		address:                address,
+		wpoktContract:          contract,
+		mintControllerContract: mintControllerContract,
+		validators:             sortAddresses(app.Config.Ethereum.ValidatorAddresses),
+		domain:                 domain,
 	}
 
 	log.Debug("[WPOKT SIGNER] Initialized wpokt signer")
 
 	return b
+}
+
+func sortAddresses(addresses []string) []string {
+	for i, address := range addresses {
+		addresses[i] = common.HexToAddress(address).Hex()
+	}
+	sort.Slice(addresses, func(i, j int) bool {
+		return common.HexToAddress(addresses[i]).Big().Cmp(common.HexToAddress(addresses[j]).Big()) == -1
+	})
+	return addresses
 }

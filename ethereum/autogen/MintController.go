@@ -38,7 +38,7 @@ type MintControllerMintData struct {
 
 // MintControllerMetaData contains all meta data concerning the MintController contract.
 var MintControllerMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_wPokt\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidShortString\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignatureRatio\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignatures\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NonAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NonCopper\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OverMintLimit\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"str\",\"type\":\"string\"}],\"name\":\"StringTooLong\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"lastMint\",\"type\":\"uint256\"}],\"name\":\"CurrentMintLimit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"EIP712DomainChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newLimit\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCooldown\",\"type\":\"uint256\"}],\"name\":\"MintCooldownSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"NewValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"RemovedValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"ratio\",\"type\":\"uint256\"}],\"name\":\"SignatureRatioSet\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_validator\",\"type\":\"address\"}],\"name\":\"addValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentMintLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"eip712Domain\",\"outputs\":[{\"internalType\":\"bytes1\",\"name\":\"fields\",\"type\":\"bytes1\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"verifyingContract\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"extensions\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastMint\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastMintLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"maxMintLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mintPerSecond\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"internalType\":\"structMintController.MintData\",\"name\":\"_data\",\"type\":\"tuple\"},{\"internalType\":\"bytes[]\",\"name\":\"_signatures\",\"type\":\"bytes[]\"}],\"name\":\"mintWrappedPocket\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_validator\",\"type\":\"address\"}],\"name\":\"removeValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newMintPerSecond\",\"type\":\"uint256\"}],\"name\":\"setMintCooldown\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_signatureRatio\",\"type\":\"uint256\"}],\"name\":\"setSignatureRatio\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"signatureRatio\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"validators\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"wPokt\",\"outputs\":[{\"internalType\":\"contractIWPokt\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_wPokt\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"BelowMinThreshold\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidShortString\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignatureRatio\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidSignatures\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NonAdmin\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NonCopper\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NonZero\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OverMintLimit\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"str\",\"type\":\"string\"}],\"name\":\"StringTooLong\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"lastMint\",\"type\":\"uint256\"}],\"name\":\"CurrentMintLimit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"EIP712DomainChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newLimit\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCooldown\",\"type\":\"uint256\"}],\"name\":\"MintCooldownSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"NewValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"RemovedValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"ratio\",\"type\":\"uint256\"}],\"name\":\"SignerThresholdSet\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"addValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentMintLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"eip712Domain\",\"outputs\":[{\"internalType\":\"bytes1\",\"name\":\"fields\",\"type\":\"bytes1\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"verifyingContract\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"extensions\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastMint\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"lastMintLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"maxMintLimit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mintPerSecond\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"internalType\":\"structMintController.MintData\",\"name\":\"data\",\"type\":\"tuple\"},{\"internalType\":\"bytes[]\",\"name\":\"signatures\",\"type\":\"bytes[]\"}],\"name\":\"mintWrappedPocket\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"removeValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"newMintPerSecond\",\"type\":\"uint256\"}],\"name\":\"setMintCooldown\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"signatureRatio\",\"type\":\"uint256\"}],\"name\":\"setSignerThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"signerThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"validators\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"wPokt\",\"outputs\":[{\"internalType\":\"contractIWPokt\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // MintControllerABI is the input ABI used to generate the binding from.
@@ -443,12 +443,12 @@ func (_MintController *MintControllerCallerSession) MintPerSecond() (*big.Int, e
 	return _MintController.Contract.MintPerSecond(&_MintController.CallOpts)
 }
 
-// SignatureRatio is a free data retrieval call binding the contract method 0xde8dc44c.
+// SignerThreshold is a free data retrieval call binding the contract method 0xa4a4f390.
 //
-// Solidity: function signatureRatio() view returns(uint256)
-func (_MintController *MintControllerCaller) SignatureRatio(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function signerThreshold() view returns(uint256)
+func (_MintController *MintControllerCaller) SignerThreshold(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _MintController.contract.Call(opts, &out, "signatureRatio")
+	err := _MintController.contract.Call(opts, &out, "signerThreshold")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -460,18 +460,18 @@ func (_MintController *MintControllerCaller) SignatureRatio(opts *bind.CallOpts)
 
 }
 
-// SignatureRatio is a free data retrieval call binding the contract method 0xde8dc44c.
+// SignerThreshold is a free data retrieval call binding the contract method 0xa4a4f390.
 //
-// Solidity: function signatureRatio() view returns(uint256)
-func (_MintController *MintControllerSession) SignatureRatio() (*big.Int, error) {
-	return _MintController.Contract.SignatureRatio(&_MintController.CallOpts)
+// Solidity: function signerThreshold() view returns(uint256)
+func (_MintController *MintControllerSession) SignerThreshold() (*big.Int, error) {
+	return _MintController.Contract.SignerThreshold(&_MintController.CallOpts)
 }
 
-// SignatureRatio is a free data retrieval call binding the contract method 0xde8dc44c.
+// SignerThreshold is a free data retrieval call binding the contract method 0xa4a4f390.
 //
-// Solidity: function signatureRatio() view returns(uint256)
-func (_MintController *MintControllerCallerSession) SignatureRatio() (*big.Int, error) {
-	return _MintController.Contract.SignatureRatio(&_MintController.CallOpts)
+// Solidity: function signerThreshold() view returns(uint256)
+func (_MintController *MintControllerCallerSession) SignerThreshold() (*big.Int, error) {
+	return _MintController.Contract.SignerThreshold(&_MintController.CallOpts)
 }
 
 // ValidatorCount is a free data retrieval call binding the contract method 0x0f43a677.
@@ -569,65 +569,65 @@ func (_MintController *MintControllerCallerSession) WPokt() (common.Address, err
 
 // AddValidator is a paid mutator transaction binding the contract method 0x4d238c8e.
 //
-// Solidity: function addValidator(address _validator) returns()
-func (_MintController *MintControllerTransactor) AddValidator(opts *bind.TransactOpts, _validator common.Address) (*types.Transaction, error) {
-	return _MintController.contract.Transact(opts, "addValidator", _validator)
+// Solidity: function addValidator(address validator) returns()
+func (_MintController *MintControllerTransactor) AddValidator(opts *bind.TransactOpts, validator common.Address) (*types.Transaction, error) {
+	return _MintController.contract.Transact(opts, "addValidator", validator)
 }
 
 // AddValidator is a paid mutator transaction binding the contract method 0x4d238c8e.
 //
-// Solidity: function addValidator(address _validator) returns()
-func (_MintController *MintControllerSession) AddValidator(_validator common.Address) (*types.Transaction, error) {
-	return _MintController.Contract.AddValidator(&_MintController.TransactOpts, _validator)
+// Solidity: function addValidator(address validator) returns()
+func (_MintController *MintControllerSession) AddValidator(validator common.Address) (*types.Transaction, error) {
+	return _MintController.Contract.AddValidator(&_MintController.TransactOpts, validator)
 }
 
 // AddValidator is a paid mutator transaction binding the contract method 0x4d238c8e.
 //
-// Solidity: function addValidator(address _validator) returns()
-func (_MintController *MintControllerTransactorSession) AddValidator(_validator common.Address) (*types.Transaction, error) {
-	return _MintController.Contract.AddValidator(&_MintController.TransactOpts, _validator)
+// Solidity: function addValidator(address validator) returns()
+func (_MintController *MintControllerTransactorSession) AddValidator(validator common.Address) (*types.Transaction, error) {
+	return _MintController.Contract.AddValidator(&_MintController.TransactOpts, validator)
 }
 
 // MintWrappedPocket is a paid mutator transaction binding the contract method 0x0f22ed52.
 //
-// Solidity: function mintWrappedPocket((address,uint256,uint256) _data, bytes[] _signatures) returns()
-func (_MintController *MintControllerTransactor) MintWrappedPocket(opts *bind.TransactOpts, _data MintControllerMintData, _signatures [][]byte) (*types.Transaction, error) {
-	return _MintController.contract.Transact(opts, "mintWrappedPocket", _data, _signatures)
+// Solidity: function mintWrappedPocket((address,uint256,uint256) data, bytes[] signatures) returns()
+func (_MintController *MintControllerTransactor) MintWrappedPocket(opts *bind.TransactOpts, data MintControllerMintData, signatures [][]byte) (*types.Transaction, error) {
+	return _MintController.contract.Transact(opts, "mintWrappedPocket", data, signatures)
 }
 
 // MintWrappedPocket is a paid mutator transaction binding the contract method 0x0f22ed52.
 //
-// Solidity: function mintWrappedPocket((address,uint256,uint256) _data, bytes[] _signatures) returns()
-func (_MintController *MintControllerSession) MintWrappedPocket(_data MintControllerMintData, _signatures [][]byte) (*types.Transaction, error) {
-	return _MintController.Contract.MintWrappedPocket(&_MintController.TransactOpts, _data, _signatures)
+// Solidity: function mintWrappedPocket((address,uint256,uint256) data, bytes[] signatures) returns()
+func (_MintController *MintControllerSession) MintWrappedPocket(data MintControllerMintData, signatures [][]byte) (*types.Transaction, error) {
+	return _MintController.Contract.MintWrappedPocket(&_MintController.TransactOpts, data, signatures)
 }
 
 // MintWrappedPocket is a paid mutator transaction binding the contract method 0x0f22ed52.
 //
-// Solidity: function mintWrappedPocket((address,uint256,uint256) _data, bytes[] _signatures) returns()
-func (_MintController *MintControllerTransactorSession) MintWrappedPocket(_data MintControllerMintData, _signatures [][]byte) (*types.Transaction, error) {
-	return _MintController.Contract.MintWrappedPocket(&_MintController.TransactOpts, _data, _signatures)
+// Solidity: function mintWrappedPocket((address,uint256,uint256) data, bytes[] signatures) returns()
+func (_MintController *MintControllerTransactorSession) MintWrappedPocket(data MintControllerMintData, signatures [][]byte) (*types.Transaction, error) {
+	return _MintController.Contract.MintWrappedPocket(&_MintController.TransactOpts, data, signatures)
 }
 
 // RemoveValidator is a paid mutator transaction binding the contract method 0x40a141ff.
 //
-// Solidity: function removeValidator(address _validator) returns()
-func (_MintController *MintControllerTransactor) RemoveValidator(opts *bind.TransactOpts, _validator common.Address) (*types.Transaction, error) {
-	return _MintController.contract.Transact(opts, "removeValidator", _validator)
+// Solidity: function removeValidator(address validator) returns()
+func (_MintController *MintControllerTransactor) RemoveValidator(opts *bind.TransactOpts, validator common.Address) (*types.Transaction, error) {
+	return _MintController.contract.Transact(opts, "removeValidator", validator)
 }
 
 // RemoveValidator is a paid mutator transaction binding the contract method 0x40a141ff.
 //
-// Solidity: function removeValidator(address _validator) returns()
-func (_MintController *MintControllerSession) RemoveValidator(_validator common.Address) (*types.Transaction, error) {
-	return _MintController.Contract.RemoveValidator(&_MintController.TransactOpts, _validator)
+// Solidity: function removeValidator(address validator) returns()
+func (_MintController *MintControllerSession) RemoveValidator(validator common.Address) (*types.Transaction, error) {
+	return _MintController.Contract.RemoveValidator(&_MintController.TransactOpts, validator)
 }
 
 // RemoveValidator is a paid mutator transaction binding the contract method 0x40a141ff.
 //
-// Solidity: function removeValidator(address _validator) returns()
-func (_MintController *MintControllerTransactorSession) RemoveValidator(_validator common.Address) (*types.Transaction, error) {
-	return _MintController.Contract.RemoveValidator(&_MintController.TransactOpts, _validator)
+// Solidity: function removeValidator(address validator) returns()
+func (_MintController *MintControllerTransactorSession) RemoveValidator(validator common.Address) (*types.Transaction, error) {
+	return _MintController.Contract.RemoveValidator(&_MintController.TransactOpts, validator)
 }
 
 // SetMintCooldown is a paid mutator transaction binding the contract method 0x59aa6859.
@@ -651,25 +651,25 @@ func (_MintController *MintControllerTransactorSession) SetMintCooldown(newLimit
 	return _MintController.Contract.SetMintCooldown(&_MintController.TransactOpts, newLimit, newMintPerSecond)
 }
 
-// SetSignatureRatio is a paid mutator transaction binding the contract method 0x82cc97a0.
+// SetSignerThreshold is a paid mutator transaction binding the contract method 0x251b8192.
 //
-// Solidity: function setSignatureRatio(uint256 _signatureRatio) returns()
-func (_MintController *MintControllerTransactor) SetSignatureRatio(opts *bind.TransactOpts, _signatureRatio *big.Int) (*types.Transaction, error) {
-	return _MintController.contract.Transact(opts, "setSignatureRatio", _signatureRatio)
+// Solidity: function setSignerThreshold(uint256 signatureRatio) returns()
+func (_MintController *MintControllerTransactor) SetSignerThreshold(opts *bind.TransactOpts, signatureRatio *big.Int) (*types.Transaction, error) {
+	return _MintController.contract.Transact(opts, "setSignerThreshold", signatureRatio)
 }
 
-// SetSignatureRatio is a paid mutator transaction binding the contract method 0x82cc97a0.
+// SetSignerThreshold is a paid mutator transaction binding the contract method 0x251b8192.
 //
-// Solidity: function setSignatureRatio(uint256 _signatureRatio) returns()
-func (_MintController *MintControllerSession) SetSignatureRatio(_signatureRatio *big.Int) (*types.Transaction, error) {
-	return _MintController.Contract.SetSignatureRatio(&_MintController.TransactOpts, _signatureRatio)
+// Solidity: function setSignerThreshold(uint256 signatureRatio) returns()
+func (_MintController *MintControllerSession) SetSignerThreshold(signatureRatio *big.Int) (*types.Transaction, error) {
+	return _MintController.Contract.SetSignerThreshold(&_MintController.TransactOpts, signatureRatio)
 }
 
-// SetSignatureRatio is a paid mutator transaction binding the contract method 0x82cc97a0.
+// SetSignerThreshold is a paid mutator transaction binding the contract method 0x251b8192.
 //
-// Solidity: function setSignatureRatio(uint256 _signatureRatio) returns()
-func (_MintController *MintControllerTransactorSession) SetSignatureRatio(_signatureRatio *big.Int) (*types.Transaction, error) {
-	return _MintController.Contract.SetSignatureRatio(&_MintController.TransactOpts, _signatureRatio)
+// Solidity: function setSignerThreshold(uint256 signatureRatio) returns()
+func (_MintController *MintControllerTransactorSession) SetSignerThreshold(signatureRatio *big.Int) (*types.Transaction, error) {
+	return _MintController.Contract.SetSignerThreshold(&_MintController.TransactOpts, signatureRatio)
 }
 
 // MintControllerCurrentMintLimitIterator is returned from FilterCurrentMintLimit and is used to iterate over the raw logs and unpacked data for CurrentMintLimit events raised by the MintController contract.
@@ -1381,9 +1381,9 @@ func (_MintController *MintControllerFilterer) ParseRemovedValidator(log types.L
 	return event, nil
 }
 
-// MintControllerSignatureRatioSetIterator is returned from FilterSignatureRatioSet and is used to iterate over the raw logs and unpacked data for SignatureRatioSet events raised by the MintController contract.
-type MintControllerSignatureRatioSetIterator struct {
-	Event *MintControllerSignatureRatioSet // Event containing the contract specifics and raw log
+// MintControllerSignerThresholdSetIterator is returned from FilterSignerThresholdSet and is used to iterate over the raw logs and unpacked data for SignerThresholdSet events raised by the MintController contract.
+type MintControllerSignerThresholdSetIterator struct {
+	Event *MintControllerSignerThresholdSet // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1397,7 +1397,7 @@ type MintControllerSignatureRatioSetIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *MintControllerSignatureRatioSetIterator) Next() bool {
+func (it *MintControllerSignerThresholdSetIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1406,7 +1406,7 @@ func (it *MintControllerSignatureRatioSetIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(MintControllerSignatureRatioSet)
+			it.Event = new(MintControllerSignerThresholdSet)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1421,7 +1421,7 @@ func (it *MintControllerSignatureRatioSetIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(MintControllerSignatureRatioSet)
+		it.Event = new(MintControllerSignerThresholdSet)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1437,51 +1437,51 @@ func (it *MintControllerSignatureRatioSetIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *MintControllerSignatureRatioSetIterator) Error() error {
+func (it *MintControllerSignerThresholdSetIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *MintControllerSignatureRatioSetIterator) Close() error {
+func (it *MintControllerSignerThresholdSetIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// MintControllerSignatureRatioSet represents a SignatureRatioSet event raised by the MintController contract.
-type MintControllerSignatureRatioSet struct {
+// MintControllerSignerThresholdSet represents a SignerThresholdSet event raised by the MintController contract.
+type MintControllerSignerThresholdSet struct {
 	Ratio *big.Int
 	Raw   types.Log // Blockchain specific contextual infos
 }
 
-// FilterSignatureRatioSet is a free log retrieval operation binding the contract event 0xca0f539fa7e57fc2d6f06ed35fd8e918ac0c5cf7b07e442449fbeb83df9bb504.
+// FilterSignerThresholdSet is a free log retrieval operation binding the contract event 0x030f8d880b0bf7b6311c00e028809570118cbccc8302e08c8776ad77d10f505e.
 //
-// Solidity: event SignatureRatioSet(uint256 indexed ratio)
-func (_MintController *MintControllerFilterer) FilterSignatureRatioSet(opts *bind.FilterOpts, ratio []*big.Int) (*MintControllerSignatureRatioSetIterator, error) {
+// Solidity: event SignerThresholdSet(uint256 indexed ratio)
+func (_MintController *MintControllerFilterer) FilterSignerThresholdSet(opts *bind.FilterOpts, ratio []*big.Int) (*MintControllerSignerThresholdSetIterator, error) {
 
 	var ratioRule []interface{}
 	for _, ratioItem := range ratio {
 		ratioRule = append(ratioRule, ratioItem)
 	}
 
-	logs, sub, err := _MintController.contract.FilterLogs(opts, "SignatureRatioSet", ratioRule)
+	logs, sub, err := _MintController.contract.FilterLogs(opts, "SignerThresholdSet", ratioRule)
 	if err != nil {
 		return nil, err
 	}
-	return &MintControllerSignatureRatioSetIterator{contract: _MintController.contract, event: "SignatureRatioSet", logs: logs, sub: sub}, nil
+	return &MintControllerSignerThresholdSetIterator{contract: _MintController.contract, event: "SignerThresholdSet", logs: logs, sub: sub}, nil
 }
 
-// WatchSignatureRatioSet is a free log subscription operation binding the contract event 0xca0f539fa7e57fc2d6f06ed35fd8e918ac0c5cf7b07e442449fbeb83df9bb504.
+// WatchSignerThresholdSet is a free log subscription operation binding the contract event 0x030f8d880b0bf7b6311c00e028809570118cbccc8302e08c8776ad77d10f505e.
 //
-// Solidity: event SignatureRatioSet(uint256 indexed ratio)
-func (_MintController *MintControllerFilterer) WatchSignatureRatioSet(opts *bind.WatchOpts, sink chan<- *MintControllerSignatureRatioSet, ratio []*big.Int) (event.Subscription, error) {
+// Solidity: event SignerThresholdSet(uint256 indexed ratio)
+func (_MintController *MintControllerFilterer) WatchSignerThresholdSet(opts *bind.WatchOpts, sink chan<- *MintControllerSignerThresholdSet, ratio []*big.Int) (event.Subscription, error) {
 
 	var ratioRule []interface{}
 	for _, ratioItem := range ratio {
 		ratioRule = append(ratioRule, ratioItem)
 	}
 
-	logs, sub, err := _MintController.contract.WatchLogs(opts, "SignatureRatioSet", ratioRule)
+	logs, sub, err := _MintController.contract.WatchLogs(opts, "SignerThresholdSet", ratioRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1491,8 +1491,8 @@ func (_MintController *MintControllerFilterer) WatchSignatureRatioSet(opts *bind
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(MintControllerSignatureRatioSet)
-				if err := _MintController.contract.UnpackLog(event, "SignatureRatioSet", log); err != nil {
+				event := new(MintControllerSignerThresholdSet)
+				if err := _MintController.contract.UnpackLog(event, "SignerThresholdSet", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1513,12 +1513,12 @@ func (_MintController *MintControllerFilterer) WatchSignatureRatioSet(opts *bind
 	}), nil
 }
 
-// ParseSignatureRatioSet is a log parse operation binding the contract event 0xca0f539fa7e57fc2d6f06ed35fd8e918ac0c5cf7b07e442449fbeb83df9bb504.
+// ParseSignerThresholdSet is a log parse operation binding the contract event 0x030f8d880b0bf7b6311c00e028809570118cbccc8302e08c8776ad77d10f505e.
 //
-// Solidity: event SignatureRatioSet(uint256 indexed ratio)
-func (_MintController *MintControllerFilterer) ParseSignatureRatioSet(log types.Log) (*MintControllerSignatureRatioSet, error) {
-	event := new(MintControllerSignatureRatioSet)
-	if err := _MintController.contract.UnpackLog(event, "SignatureRatioSet", log); err != nil {
+// Solidity: event SignerThresholdSet(uint256 indexed ratio)
+func (_MintController *MintControllerFilterer) ParseSignerThresholdSet(log types.Log) (*MintControllerSignerThresholdSet, error) {
+	event := new(MintControllerSignerThresholdSet)
+	if err := _MintController.contract.UnpackLog(event, "SignerThresholdSet", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

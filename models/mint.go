@@ -22,7 +22,7 @@ type Mint struct {
 	CreatedAt        time.Time           `bson:"created_at"`
 	UpdatedAt        time.Time           `bson:"updated_at"`
 	Status           string              `bson:"status"`
-	TypedData        string              `bson:"typed_data"`
+	Data             *MintData           `bson:"data"`
 	Signers          []string            `bson:"signers"`
 	Signatures       []string            `bson:"signatures"`
 }
@@ -30,4 +30,10 @@ type Mint struct {
 type MintMemo struct {
 	Address string `json:"address"`
 	ChainId string `json:"chain_id"`
+}
+
+type MintData struct {
+	Recipient string `json:"recipient" bson:"recipient"`
+	Amount    string `json:"amount" bson:"amount"`
+	Nonce     string `json:"nonce" bson:"nonce"`
 }
