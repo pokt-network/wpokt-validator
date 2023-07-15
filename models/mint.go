@@ -11,20 +11,21 @@ const (
 )
 
 type Mint struct {
-	Id               *primitive.ObjectID `bson:"_id,omitempty"`
-	TransactionHash  string              `bson:"transaction_hash"`
-	Height           string              `bson:"height"`
-	SenderAddress    string              `bson:"sender_address"`
-	SenderChainId    string              `bson:"sender_chain_id"`
-	RecipientAddress string              `bson:"recipient_address"`
-	RecipientChainId string              `bson:"recipient_chain_id"`
-	Amount           string              `bson:"amount"`
-	CreatedAt        time.Time           `bson:"created_at"`
-	UpdatedAt        time.Time           `bson:"updated_at"`
-	Status           string              `bson:"status"`
-	Data             *MintData           `bson:"data"`
-	Signers          []string            `bson:"signers"`
-	Signatures       []string            `bson:"signatures"`
+	Id                  *primitive.ObjectID `bson:"_id,omitempty"`
+	TransactionHash     string              `bson:"transaction_hash"`
+	Height              string              `bson:"height"`
+	SenderAddress       string              `bson:"sender_address"`
+	SenderChainId       string              `bson:"sender_chain_id"`
+	RecipientAddress    string              `bson:"recipient_address"`
+	RecipientChainId    string              `bson:"recipient_chain_id"`
+	Amount              string              `bson:"amount"`
+	CreatedAt           time.Time           `bson:"created_at"`
+	UpdatedAt           time.Time           `bson:"updated_at"`
+	Status              string              `bson:"status"`
+	Data                *MintData           `bson:"data"`
+	Signers             []string            `bson:"signers"`
+	Signatures          []string            `bson:"signatures"`
+	MintTransactionHash string              `bson:"mint_tx_hash"`
 }
 
 type MintMemo struct {

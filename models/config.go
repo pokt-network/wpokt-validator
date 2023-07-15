@@ -1,15 +1,16 @@
 package models
 
 type Config struct {
-	Logger       LoggerConfig       `yaml:"logger"`
-	MongoDB      MongoConfig        `yaml:"mongodb"`
-	Ethereum     EthereumConfig     `yaml:"ethereum"`
-	WPOKTMonitor WPOKTMonitorConfig `yaml:"wpokt_monitor"`
-	WPOKTSigner  WPOKTSignerConfig  `yaml:"wpokt_signer"`
-	Pocket       PocketConfig       `yaml:"pocket"`
-	PoktMonitor  PoktMonitorConfig  `yaml:"pokt_monitor"`
-	PoktSigner   PoktSignerConfig   `yaml:"pokt_signer"`
-	PoktExecutor PoktExecutorConfig `yaml:"pokt_executor"`
+	Logger        LoggerConfig        `yaml:"logger"`
+	MongoDB       MongoConfig         `yaml:"mongodb"`
+	Ethereum      EthereumConfig      `yaml:"ethereum"`
+	WPOKTMonitor  WPOKTMonitorConfig  `yaml:"wpokt_monitor"`
+	WPOKTSigner   WPOKTSignerConfig   `yaml:"wpokt_signer"`
+	WPOKTExecutor WPOKTExecutorConfig `yaml:"wpokt_executor"`
+	Pocket        PocketConfig        `yaml:"pocket"`
+	PoktMonitor   PoktMonitorConfig   `yaml:"pokt_monitor"`
+	PoktSigner    PoktSignerConfig    `yaml:"pokt_signer"`
+	PoktExecutor  PoktExecutorConfig  `yaml:"pokt_executor"`
 }
 
 type LoggerConfig struct {
@@ -41,6 +42,12 @@ type WPOKTSignerConfig struct {
 	Enabled      bool   `yaml:"enabled"`
 	IntervalSecs uint64 `yaml:"interval_secs"`
 	PrivateKey   string `yaml:"private_key"`
+}
+
+type WPOKTExecutorConfig struct {
+	Enabled          bool   `yaml:"enabled"`
+	StartBlockNumber int64  `yaml:"start_block_number"`
+	IntervalSecs     uint64 `yaml:"interval_secs"`
 }
 
 type PocketConfig struct {

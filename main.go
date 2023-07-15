@@ -42,6 +42,7 @@ func main() {
 
 	wpoktMonitor := ethereum.NewMonitor()
 	wpoktSigner := ethereum.NewSigner()
+	wpoktExecutor := ethereum.NewExecutor()
 
 	go poktMonitor.Start()
 	go poktSigner.Start()
@@ -49,6 +50,7 @@ func main() {
 
 	go wpoktMonitor.Start()
 	go wpoktSigner.Start()
+	go wpoktExecutor.Start()
 
 	// Gracefully shut down server
 	gracefulStop := make(chan os.Signal, 1)
@@ -59,6 +61,7 @@ func main() {
 
 	log.Debug("[MAIN] Stopping server gracefully")
 
+	wpoktExecutor.Stop()
 	wpoktSigner.Stop()
 	wpoktMonitor.Stop()
 

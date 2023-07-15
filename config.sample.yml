@@ -41,12 +41,17 @@ ethereum:
 
 wpokt_monitor:
   enabled: true
-  start_block_number: 9090835
+  start_block_number: 9348824
   interval_secs: 120
 
 wpokt_signer:
   enabled: true
   private_key: ""
+  interval_secs: 120
+
+wpokt_executor:
+  enabled: false
+  start_block_number: 9348824
   interval_secs: 120
 
 logger:

@@ -7,6 +7,8 @@ import (
 	"math/big"
 
 	"github.com/dan13ram/wpokt-backend/app"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	log "github.com/sirupsen/logrus"
@@ -17,6 +19,7 @@ type EthereumClient interface {
 	GetBlockNumber() (uint64, error)
 	GetChainId() (*big.Int, error)
 	GetClient() *ethclient.Client
+	GetTransactionByHash(txHash string) (*types.Transaction, bool, error)
 }
 
 type ethereumClient struct {
@@ -78,4 +81,12 @@ func (c *ethereumClient) ValidateNetwork() {
 		panic("[ETH] Chain ID Mismatch")
 	}
 	log.Debugln("[ETH]", "Validated network")
+}
+
+func (c *ethereumClient) GetTransactionByHash(txHash string) (*types.Transaction, bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
+	defer cancel()
+
+	tx, isPending, err := c.client.TransactionByHash(ctx, common.HexToHash(txHash))
+	return tx, isPending, err
 }

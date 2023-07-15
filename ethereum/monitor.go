@@ -72,8 +72,6 @@ func (b *WPoktMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAn
 	return true
 }
 
-const MAX_QUERY_BLOCKS uint64 = 100000
-
 func (b *WPoktMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
 	filter, err := b.wpoktContract.FilterBurnAndBridge(&bind.FilterOpts{
 		Start:   startBlockNumber,
