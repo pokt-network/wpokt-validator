@@ -84,7 +84,44 @@ func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 	return true
 }
 
-func (m *PoktExecutorService) HandleBurn(mint models.Burn) bool {
+func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
+	log.Debug("[POKT EXECUTOR] Handling burn: ", doc.TransactionHash)
+	if doc.Status == models.StatusSigned {
+		p := rpc.SendRawTxParams{
+			Addr:        m.multisigAddress,
+			RawHexBytes: doc.ReturnTx,
+		}
+
+		res, err := Client.SubmitRawTx(p)
+		if err != nil {
+			log.Error("[POKT EXECUTOR] Error submitting transaction: ", err)
+			return false
+		}
+
+		filter := bson.M{"_id": doc.Id}
+		update := bson.M{"$set": bson.M{"status": models.StatusSubmitted, "return_tx_hash": res.TransactionHash}}
+		err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
+		if err != nil {
+			log.Error("[POKT EXECUTOR] Error updating burn: ", err)
+			return false
+		}
+		log.Debug("[POKT EXECUTOR] Submitted tx for burn")
+
+	} else if doc.Status == models.StatusSubmitted {
+		_, err := Client.GetTx(doc.ReturnTxHash)
+		if err != nil {
+			log.Error("[POKT EXECUTOR] Error fetching transaction: ", err)
+			return false
+		}
+		filter := bson.M{"_id": doc.Id}
+		update := bson.M{"$set": bson.M{"status": models.StatusSuccess}}
+		err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
+		if err != nil {
+			log.Error("[POKT EXECUTOR] Error updating burn: ", err)
+			return false
+		}
+		log.Debug("[POKT EXECUTOR] Executed return tx for burn")
+	}
 	return true
 }
 
@@ -109,6 +146,19 @@ func (m *PoktExecutorService) SyncTxs() bool {
 	var success bool = true
 	for _, doc := range invalidMints {
 		success = m.HandleInvalidMint(doc) && success
+	}
+
+	burns := []models.Burn{}
+	err = app.DB.FindMany(models.CollectionBurns, filter, &burns)
+	if err != nil {
+		log.Error("[POKT EXECUTOR] Error fetching burns: ", err)
+		return false
+	}
+
+	log.Debug("[POKT EXECUTOR] Found burns: ", len(burns))
+
+	for _, doc := range burns {
+		success = m.HandleBurn(doc) && success
 	}
 
 	return success

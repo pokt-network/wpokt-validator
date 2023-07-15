@@ -126,7 +126,85 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 	return true
 }
 
-func (m *PoktSignerService) HandleBurn(mint models.Burn) bool {
+func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
+	log.Debug("[POKT SIGNER] Handling burn: ", doc.TransactionHash)
+
+	signers := doc.Signers
+	returnTx := doc.ReturnTx
+
+	if signers == nil || len(signers) >= m.numSigners {
+		signers = []string{}
+	}
+
+	if returnTx == "" {
+
+		log.Debug("[POKT SIGNER] Creating returnTx for burn")
+		amountWithFees, err := strconv.ParseInt(doc.Amount, 10, 64)
+		if err != nil {
+			log.Error("[POKT SIGNER] Error parsing amount for burn: ", err)
+			return false
+		}
+		amount := amountWithFees - app.Config.Pocket.Fees
+		memo := doc.TransactionHash
+
+		returnTxBytes, err := BuildMultiSigTxAndSign(
+			doc.RecipientAddress,
+			memo,
+			app.Config.Pocket.ChainId,
+			amount,
+			app.Config.Pocket.Fees,
+			m.privateKey,
+			m.multisigPubKey,
+		)
+		if err != nil {
+			log.Error("[POKT SIGNER] Error creating tx for burn: ", err)
+			return false
+		}
+		returnTx = hex.EncodeToString(returnTxBytes)
+		log.Debug("[POKT SIGNER] Created tx for burn")
+
+	} else {
+
+		log.Debug("[POKT SIGNER] Signing tx for burn")
+
+		returnTxBytes, err := SignMultisigTx(
+			returnTx,
+			app.Config.Pocket.ChainId,
+			m.privateKey,
+			m.multisigPubKey,
+		)
+		if err != nil {
+			log.Error("[POKT SIGNER] Error signing tx for burn: ", err)
+			return false
+		}
+		returnTx = hex.EncodeToString(returnTxBytes)
+		log.Debug("[POKT SIGNER] Signed tx for burn")
+
+	}
+
+	signers = append(signers, m.privateKey.PublicKey().RawString())
+
+	status := models.StatusPending
+	if len(signers) == m.numSigners {
+		status = models.StatusSigned
+		log.Debug("[POKT SIGNER] Invalid burn fully signed")
+	}
+
+	filter := bson.M{"_id": doc.Id}
+	update := bson.M{
+		"$set": bson.M{
+			"return_tx": returnTx,
+			"signers":   signers,
+			"status":    status,
+		},
+	}
+	err := app.DB.UpdateOne(models.CollectionBurns, filter, update)
+	if err != nil {
+		log.Error("[POKT SIGNER] Error updating burn: ", err)
+		return false
+	}
+	log.Debug("[POKT SIGNER] Updated burn")
+
 	return true
 }
 
@@ -136,6 +214,7 @@ func (m *PoktSignerService) SyncTxs() bool {
 		"status":  models.StatusPending,
 		"signers": bson.M{"$nin": []string{m.privateKey.PublicKey().RawString()}},
 	}
+
 	invalidMints := []models.InvalidMint{}
 	err := app.DB.FindMany(models.CollectionInvalidMints, filter, &invalidMints)
 	if err != nil {
@@ -147,6 +226,17 @@ func (m *PoktSignerService) SyncTxs() bool {
 	var success bool = true
 	for _, doc := range invalidMints {
 		success = m.HandleInvalidMint(doc) && success
+	}
+
+	burns := []models.Burn{}
+	err = app.DB.FindMany(models.CollectionBurns, filter, &burns)
+	if err != nil {
+		log.Error("[POKT SIGNER] Error fetching burns: ", err)
+		return false
+	}
+	log.Debug("[POKT SIGNER] Found burns: ", len(burns))
+	for _, doc := range burns {
+		success = m.HandleBurn(doc) && success
 	}
 
 	return success
