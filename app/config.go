@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/dan13ram/wpokt-backend/models"
@@ -14,19 +15,25 @@ var (
 	Config models.Config
 )
 
-func InitConfig(configFile string) {
+func InitConfig(configFile string, envFile string) {
 	var yamlFile, err = ioutil.ReadFile(configFile)
 	if err != nil {
-		log.Fatalf("Error reading config file %q: %s\n", configFile, err.Error())
+		log.Fatalf("[CONFIG] Error reading config file %q: %s\n", configFile, err.Error())
 	}
 	err = yaml.Unmarshal(yamlFile, &Config)
 	if err != nil {
-		log.Fatalf("Error unmarshalling config file %q: %s\n", configFile, err.Error())
+		log.Fatalf("[CONFIG] Error unmarshalling config file %q: %s\n", configFile, err.Error())
 	}
-	readConfigFromEnv()
+	readConfigFromEnv(envFile)
 }
 
-func readConfigFromEnv() {
+func readConfigFromEnv(envFile string) {
+	if envFile != "" {
+		err := godotenv.Load(envFile)
+		if err != nil {
+			log.Warn("[CONFIG] Error loading .env file: ", err.Error())
+		}
+	}
 	if Config.MongoDB.URI == "" {
 		Config.MongoDB.URI = os.Getenv("MONGODB_URI")
 	}

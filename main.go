@@ -27,9 +27,19 @@ func main() {
 	}
 	absConfigPath, _ := filepath.Abs(os.Args[1])
 
+	// check 2 argument, if it exists set it as absEnvPath
+	absEnvPath := ""
+	if len(os.Args) == 3 {
+		absEnvPath, _ = filepath.Abs(os.Args[2])
+	}
+
 	log.Info("[MAIN] Starting server")
-	app.InitConfig(absConfigPath)
-	log.Info("[MAIN] Config loaded from: ", absConfigPath)
+	app.InitConfig(absConfigPath, absEnvPath)
+	if absEnvPath != "" {
+		log.Info("[MAIN] Env loaded from: ", absEnvPath, " and merged with config from: ", absConfigPath)
+	} else {
+		log.Info("[MAIN] Config loaded from: ", absConfigPath)
+	}
 	app.InitLogger()
 	log.Info("[MAIN] Logger initialized")
 

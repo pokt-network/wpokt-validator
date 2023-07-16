@@ -46,6 +46,7 @@ require (
 	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/jordanorelli/lexnum v0.0.0-20141216151731-460eeb125754 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
