@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"math/big"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
@@ -51,7 +52,40 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 			log.Error("[WPOKT SIGNER] Error fetching nonce: ", err)
 			return false
 		}
-		// TODO: check db for pending mints with nonce then add 1 to it for this mint
+		var pendingMints []models.Mint
+		filter := bson.M{
+			"_id":               bson.M{"$ne": mint.Id},
+			"recipient_address": mint.RecipientAddress,
+			"status":            bson.M{"$in": []string{models.StatusPending, models.StatusSigned}},
+		}
+		err = app.DB.FindMany(models.CollectionMints, filter, &pendingMints)
+		if err != nil {
+			log.Error("[WPOKT SIGNER] Error fetching pending mints: ", err)
+			return false
+		}
+
+		if len(pendingMints) > 0 {
+			var nonces []int64
+
+			for _, pendingMint := range pendingMints {
+				if pendingMint.Data != nil {
+					nonce, err := strconv.ParseInt(pendingMint.Data.Nonce, 10, 64)
+					if err != nil {
+						log.Error("[WPOKT SIGNER] Error converting nonce to int: ", err)
+						continue
+					}
+					nonces = append(nonces, nonce)
+				}
+			}
+
+			if len(nonces) > 0 {
+				sort.Slice(nonces, func(i, j int) bool {
+					return nonces[i] < nonces[j]
+				})
+
+				currentNonce = big.NewInt(nonces[len(nonces)-1])
+			}
+		}
 
 		nonce = currentNonce.Add(currentNonce, big.NewInt(1))
 	} else {
