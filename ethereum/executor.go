@@ -122,11 +122,11 @@ func (b *WPoktExecutorService) HandleMintEvent(event *autogen.WrappedPocketTrans
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 func (b *WPoktExecutorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
-	filter, err := b.wpoktContract.FilterTransfer(&bind.FilterOpts{
+	filter, err := b.wpoktContract.FilterMinted(&bind.FilterOpts{
 		Start:   startBlockNumber,
 		End:     &endBlockNumber,
 		Context: context.Background(),
-	}, []common.Address{common.HexToAddress(ZERO_ADDRESS)}, []common.Address{})
+	}, []common.Address{}, []common.Address{})
 
 	if err != nil {
 		log.Errorln("[WPOKT EXECUTOR] Error while syncing mint events: ", err)

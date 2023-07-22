@@ -33,6 +33,10 @@ func (b *WPoktSignerService) Stop() {
 	b.stop <- true
 }
 
+func (b *WPoktSignerService) DetermineNonce(mint *models.Mint) {
+
+}
+
 func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 	log.Debug("[WPOKT SIGNER] Handling mint: ", mint.TransactionHash)
 
