@@ -4,7 +4,7 @@ mongodb:
   timeout_secs: 30
 
 pocket:
-  start_height: 111400
+  start_height: 112665
   confirmations: 0
   private_key: ""
   rpc_url: ""
@@ -18,45 +18,45 @@ pocket:
     - "4294fd92033ab62cff7e49190413aa47fcb653dbfa4404fae940980bbc89227b"
 
 pokt_monitor:
-  enabled: false
-  interval_secs: 120
+  enabled: true
+  interval_secs: 300
 
 pokt_signer:
-  enabled: false
-  interval_secs: 120
+  enabled: true
+  interval_secs: 300
 
 pokt_executor:
-  enabled: false
-  interval_secs: 120
+  enabled: true
+  interval_secs: 300
 
 ethereum:
-  start_block_number: 9348824
+  start_block_number: 9398000
   confirmations: 0
   private_key: ""
   rpc_url: ""
   chain_id: ""
   rpc_timeout_secs: 30
-  wpokt_contract_address: "0x8E7ed40A3eF5c75485682f4f1618f079e9bd8A4E"
-  mint_controller_address: "0xC2D18e34F34a9e143D8Da6F0c649a495b0D2BBd7"
+  wpokt_contract_address: "0x69E6049D2D055e67AC9235e9DF80cDBA370bA37C"
+  mint_controller_address: "0xd0D6D748B4Ef08536834c88ef005C37dB1a8a1b9"
   validator_addresses:
     - "0x2CE62AAF07FCE166A329D89d76588f494e39A298"
     - "0x162eFFA5a7aD26b9E1E8E70236007433270C059f"
     - "0x5272015Be727C20C40dFDDDb3Df45Fa109C102E0"
 
 wpokt_monitor:
-  enabled: false
-  interval_secs: 120
+  enabled: true
+  interval_secs: 300
 
 wpokt_signer:
   enabled: true
-  interval_secs: 120
+  interval_secs: 300
 
 wpokt_executor:
-  enabled: false
-  interval_secs: 120
+  enabled: true
+  interval_secs: 300
 
 logger:
   level: "debug"
 
 health:
-  interval_secs: 1800
+  interval_secs: 300
