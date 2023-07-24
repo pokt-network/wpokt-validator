@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  validator:
+    image: dan13ram/wpokt-validator
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: base
+    environment:
+      MONGODB_URI: ${MONGODB_URI}
+      MONGODB_DATABASE: ${MONGODB_DATABASE}
+      ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
+      ETH_RPC_URL: ${ETH_RPC_URL}
+      ETH_CHAIN_ID: ${ETH_CHAIN_ID}
+      ETH_START_BLOCK_NUMBER: ${ETH_START_BLOCK_NUMBER}
+      POKT_PRIVATE_KEY: ${POKT_PRIVATE_KEY}
+      POKT_RPC_URL: ${POKT_RPC_URL}
+      POKT_CHAIN_ID: ${POKT_CHAIN_ID}
+      POKT_START_HEIGHT: ${POKT_START_HEIGHT}
