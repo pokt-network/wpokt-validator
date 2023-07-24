@@ -66,6 +66,16 @@ The validator node requires transactions on the POKT network to include a valid 
 
 Transactions with memos not conforming to this format will not be processed by the validator.
 
+## Docker Image
+
+The wPOKT Validator is also available as a Docker image hosted on Docker Hub. You can run the validator in a Docker container using the following command:
+
+```bash
+docker run -d --env-file .env docker.io/dan13ram/wpokt-validator:latest
+```
+
+Ensure you have set the required environment variables in the `.env` file or directly in the command above.
+
 ## License
 
 This project is licensed under the MIT License.
