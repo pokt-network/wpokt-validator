@@ -11,7 +11,7 @@ const (
 )
 
 type Burn struct {
-	Id               *primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Id               *primitive.ObjectID `bson:"_id,omitempty" json:"_id"`
 	TransactionHash  string              `bson:"transaction_hash" json:"transaction_hash"`
 	LogIndex         string              `bson:"log_index" json:"log_index"`
 	BlockNumber      string              `bson:"block_number" json:"block_number"`

@@ -11,7 +11,7 @@ const (
 )
 
 type Health struct {
-	Id               *primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Id               *primitive.ObjectID `bson:"_id,omitempty" json:"_id"`
 	PoktVaultAddress string              `bson:"pokt_vault_address" json:"pokt_vault_address"`
 	PoktSigners      []string            `bson:"pokt_signers" json:"pokt_signers"`
 	PoktPublicKey    string              `bson:"pokt_public_key" json:"pokt_public_key"`

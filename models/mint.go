@@ -11,7 +11,7 @@ const (
 )
 
 type Mint struct {
-	Id                  *primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Id                  *primitive.ObjectID `bson:"_id,omitempty" json:"_id"`
 	TransactionHash     string              `bson:"transaction_hash" json:"transaction_hash"`
 	Height              string              `bson:"height" json:"height"`
 	Confirmations       string              `bson:"confirmations" json:"confirmations"`
