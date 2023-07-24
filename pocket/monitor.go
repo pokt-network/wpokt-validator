@@ -3,6 +3,7 @@ package pocket
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -175,12 +176,13 @@ func (m *PoktMonitorService) HandleTx(tx *pocket.TxResponse) bool {
 
 	err := json.Unmarshal([]byte(tx.StdTx.Memo), &memo)
 
-	address := common.HexToAddress(memo.Address)
+	address := common.HexToAddress(memo.Address).Hex()
 
-	if err != nil || memo.ChainId != app.Config.Ethereum.ChainId || address.Hex() != memo.Address {
+	if err != nil || memo.ChainId != app.Config.Ethereum.ChainId || strings.ToLower(address) != strings.ToLower(memo.Address) {
 		log.Debug("[POKT MONITOR] Found invalid mint tx: ", tx.Hash, " with memo: ", "\""+tx.StdTx.Memo+"\"")
 		return m.HandleInvalidMint(tx)
 	}
+	memo.Address = address
 	log.Debug("[POKT MONITOR] Found valid mint tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
 	return m.HandleValidMint(tx, memo)
 
