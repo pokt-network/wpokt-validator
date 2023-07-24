@@ -88,6 +88,9 @@ func (b *WPoktExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinte
 		"recipient_address": recipient,
 		"amount":            amount,
 		"nonce":             nonce,
+		"status": bson.M{
+			"$in": []string{models.StatusConfirmed, models.StatusSigned},
+		},
 	}
 
 	update := bson.M{

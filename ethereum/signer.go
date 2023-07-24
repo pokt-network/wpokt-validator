@@ -3,6 +3,7 @@ package ethereum
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"errors"
 	"math/big"
 	"sort"
 	"strconv"
@@ -79,33 +80,27 @@ func (b *WPoktSignerService) UpdateBlocks() {
 	b.poktHeight = poktHeight.Height
 }
 
-func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
-	log.Debug("[WPOKT SIGNER] Handling mint: ", mint.TransactionHash)
-
-	address := common.HexToAddress(mint.RecipientAddress)
-	amount, ok := new(big.Int).SetString(mint.Amount, 10)
-	if !ok {
-		log.Error("[WPOKT SIGNER] Error converting decimal to big int")
-		return false
-	}
-
+// finds nonce for mint transaction
+func (b *WPoktSignerService) FindNonce(mint *models.Mint) (*big.Int, error) {
+	log.Debug("[WPOKT SIGNER] Finding nonce for mint: ", mint.TransactionHash)
 	var nonce *big.Int
 
 	if mint.Nonce != "" {
-		nonce, ok = new(big.Int).SetString(mint.Nonce, 10)
+		mintNonce, ok := new(big.Int).SetString(mint.Nonce, 10)
 		if !ok {
 			log.Error("[WPOKT SIGNER] Error converting decimal to big int")
-			return false
+			return nil, errors.New("error converting decimal to big int")
 		}
+		nonce = mintNonce
 	}
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
 		log.Debug("[WPOKT SIGNER] Mint nonce not set, fetching from contract")
-		currentNonce, err := b.wpoktContract.GetUserNonce(nil, address)
+		currentNonce, err := b.wpoktContract.GetUserNonce(nil, common.HexToAddress(mint.RecipientAddress))
 
 		if err != nil {
-			log.Error("[WPOKT SIGNER] Error fetching nonce: ", err)
-			return false
+			log.Error("[WPOKT SIGNER] Error fetching nonce from contract: ", err)
+			return nil, err
 		}
 
 		var pendingMints []models.Mint
@@ -117,7 +112,7 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		err = app.DB.FindMany(models.CollectionMints, filter, &pendingMints)
 		if err != nil {
 			log.Error("[WPOKT SIGNER] Error fetching pending mints: ", err)
-			return false
+			return nil, err
 		}
 
 		if len(pendingMints) > 0 {
@@ -144,6 +139,25 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		}
 
 		nonce = currentNonce.Add(currentNonce, big.NewInt(1))
+	}
+	return nonce, nil
+}
+
+func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
+	log.Debug("[WPOKT SIGNER] Handling mint: ", mint.TransactionHash)
+
+	address := common.HexToAddress(mint.RecipientAddress)
+	amount, ok := new(big.Int).SetString(mint.Amount, 10)
+	if !ok {
+		log.Error("[WPOKT SIGNER] Error converting decimal to big int")
+		return false
+	}
+
+	nonce, err := b.FindNonce(mint)
+
+	if err != nil {
+		log.Error("[WPOKT SIGNER] Error fetching nonce: ", err)
+		return false
 	}
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
@@ -243,7 +257,7 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		"_id": mint.Id,
 	}
 
-	err := app.DB.UpdateOne(models.CollectionMints, filter, update)
+	err = app.DB.UpdateOne(models.CollectionMints, filter, update)
 	if err != nil {
 		log.Error("[WPOKT SIGNER] Error updating mint: ", err)
 		return false

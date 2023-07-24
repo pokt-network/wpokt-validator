@@ -141,6 +141,8 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 	}
 
+	var update bson.M
+
 	if status == models.StatusConfirmed {
 		if returnTx == "" {
 			log.Debug("[POKT SIGNER] Creating returnTx for invalid mint")
@@ -190,16 +192,22 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 			status = models.StatusSigned
 			log.Debug("[POKT SIGNER] Invalid mint fully signed")
 		}
+		update = bson.M{
+			"$set": bson.M{
+				"return_tx": returnTx,
+				"signers":   signers,
+				"status":    status,
+			},
+		}
+	} else {
+		update = bson.M{
+			"$set": bson.M{
+				"status": status,
+			},
+		}
 	}
 
 	filter := bson.M{"_id": doc.Id}
-	update := bson.M{
-		"$set": bson.M{
-			"return_tx": returnTx,
-			"signers":   signers,
-			"status":    status,
-		},
-	}
 	err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 	if err != nil {
 		log.Error("[POKT SIGNER] Error updating invalid mint: ", err)
@@ -239,10 +247,10 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 		}
 	}
 
+	var update bson.M
+
 	if status == models.StatusConfirmed {
-
 		if returnTx == "" {
-
 			log.Debug("[POKT SIGNER] Creating returnTx for burn")
 			amountWithFees, err := strconv.ParseInt(doc.Amount, 10, 64)
 			if err != nil {
@@ -294,16 +302,22 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 			log.Debug("[POKT SIGNER] Invalid burn fully signed")
 		}
 
+		update = bson.M{
+			"$set": bson.M{
+				"return_tx": returnTx,
+				"signers":   signers,
+				"status":    status,
+			},
+		}
+	} else {
+		update = bson.M{
+			"$set": bson.M{
+				"status": status,
+			},
+		}
 	}
 
 	filter := bson.M{"_id": doc.Id}
-	update := bson.M{
-		"$set": bson.M{
-			"return_tx": returnTx,
-			"signers":   signers,
-			"status":    status,
-		},
-	}
 	err := app.DB.UpdateOne(models.CollectionBurns, filter, update)
 	if err != nil {
 		log.Error("[POKT SIGNER] Error updating burn: ", err)
