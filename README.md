@@ -41,7 +41,7 @@ No specific installation steps are required. Users should have Golang installed 
     - Run the app:
 
     ```bash
-    $ go run main.go config.testnet.yml
+    $ go run main.go config.testnet.yml .env
     ```
 
     c. Running in a Docker container:
@@ -52,3 +52,20 @@ No specific installation steps are required. Users should have Golang installed 
     ```bash
     $ docker-compose up
     ```
+
+## Valid Memo
+
+The validator node requires transactions on the POKT network to include a valid memo in the format of a JSON string. The memo should have the following structure:
+
+```json
+{ "address": "0xC9F2D9adfa6C24ce0D5a999F2BA3c6b06E36F75E", "chain_id": "5" }
+```
+
+-   `address`: The recipient address on the Ethereum network.
+-   `chain_id`: The chain ID of the Ethereum network (represented as a string).
+
+Transactions with memos not conforming to this format will not be processed by the validator.
+
+## License
+
+This project is licensed under the MIT License.
