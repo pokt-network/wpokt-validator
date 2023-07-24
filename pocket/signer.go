@@ -439,6 +439,8 @@ func NewSigner(wg *sync.WaitGroup) models.Service {
 		wpoktAddress:   app.Config.Ethereum.WPOKTAddress,
 	}
 
+	m.UpdateBlocks()
+
 	log.Debug("[POKT SIGNER] Initialized pokt signer")
 
 	return m
