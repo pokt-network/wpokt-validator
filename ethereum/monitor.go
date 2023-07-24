@@ -73,6 +73,7 @@ func (b *WPoktMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAn
 		BlockNumber:      strconv.FormatInt(int64(event.Raw.BlockNumber), 10),
 		TransactionHash:  event.Raw.TxHash.String(),
 		LogIndex:         strconv.FormatInt(int64(event.Raw.Index), 10),
+		WPOKTAddress:     event.Raw.Address.String(),
 		SenderAddress:    event.From.String(),
 		SenderChainId:    app.Config.Ethereum.ChainId,
 		RecipientAddress: strings.Split(event.PoktAddress.String(), "0x")[1],
@@ -190,8 +191,8 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 	if err != nil {
 		log.Fatal("[WPOKT MONITOR] Error initializing ethereum client: ", err)
 	}
-	log.Debug("[WPOKT MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), client.GetClient())
+	log.Debug("[WPOKT MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTAddress)
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTAddress), client.GetClient())
 	if err != nil {
 		log.Fatal("[WPOKT MONITOR] Error initializing Wrapped Pocket contract", err)
 	}

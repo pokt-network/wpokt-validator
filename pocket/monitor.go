@@ -21,6 +21,7 @@ type PoktMonitorService struct {
 	name          string
 	client        pocket.PocketClient
 	stop          chan bool
+	wpoktAddress  string
 	vaultAddress  string
 	lastSyncTime  time.Time
 	interval      time.Duration
@@ -112,7 +113,9 @@ func (m *PoktMonitorService) HandleInvalidMint(tx *pocket.TxResponse) bool {
 		TransactionHash: tx.Hash,
 		SenderAddress:   tx.StdTx.Msg.Value.FromAddress,
 		SenderChainId:   app.Config.Pocket.ChainId,
+		Memo:            tx.StdTx.Memo,
 		Amount:          tx.StdTx.Msg.Value.Amount,
+		VaultAddress:    m.vaultAddress,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 		Status:          models.StatusPending,
@@ -145,7 +148,10 @@ func (m *PoktMonitorService) HandleValidMint(tx *pocket.TxResponse, memo models.
 		SenderChainId:       app.Config.Pocket.ChainId,
 		RecipientAddress:    memo.Address,
 		RecipientChainId:    memo.ChainId,
+		WPOKTAddress:        m.wpoktAddress,
+		VaultAddress:        m.vaultAddress,
 		Amount:              tx.StdTx.Msg.Value.Amount,
+		Memo:                &memo,
 		CreatedAt:           time.Now(),
 		UpdatedAt:           time.Now(),
 		Status:              models.StatusPending,
@@ -229,6 +235,7 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 		name:          "pokt-monitor",
 		interval:      time.Duration(app.Config.PoktMonitor.IntervalSecs) * time.Second,
 		vaultAddress:  multisigAddress,
+		wpoktAddress:  app.Config.Ethereum.WPOKTAddress,
 		startHeight:   0,
 		currentHeight: 0,
 		stop:          make(chan bool),

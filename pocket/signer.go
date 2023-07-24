@@ -28,6 +28,8 @@ type PoktSignerService struct {
 	poktClient     pocket.PocketClient
 	poktHeight     int64
 	ethBlockNumber int64
+	vaultAddress   string
+	wpoktAddress   string
 }
 
 func (m *PoktSignerService) Health() models.ServiceHealth {
@@ -207,7 +209,10 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 	}
 
-	filter := bson.M{"_id": doc.Id}
+	filter := bson.M{
+		"_id":           doc.Id,
+		"vault_address": m.vaultAddress,
+	}
 	err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 	if err != nil {
 		log.Error("[POKT SIGNER] Error updating invalid mint: ", err)
@@ -317,7 +322,10 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 		}
 	}
 
-	filter := bson.M{"_id": doc.Id}
+	filter := bson.M{
+		"_id":           doc.Id,
+		"wpokt_address": m.wpoktAddress,
+	}
 	err := app.DB.UpdateOne(models.CollectionBurns, filter, update)
 	if err != nil {
 		log.Error("[POKT SIGNER] Error updating burn: ", err)
@@ -408,6 +416,8 @@ func NewSigner(wg *sync.WaitGroup) models.Service {
 		numSigners:     len(pks),
 		ethClient:      ethClient,
 		poktClient:     poktClient,
+		vaultAddress:   app.Config.Pocket.VaultAddress,
+		wpoktAddress:   app.Config.Ethereum.WPOKTAddress,
 	}
 
 	log.Debug("[POKT SIGNER] Initialized pokt signer")

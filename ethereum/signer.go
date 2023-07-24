@@ -1,6 +1,7 @@
 package ethereum
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
@@ -15,6 +16,7 @@ import (
 	ethereum "github.com/dan13ram/wpokt-backend/ethereum/client"
 	"github.com/dan13ram/wpokt-backend/models"
 	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	log "github.com/sirupsen/logrus"
@@ -29,6 +31,8 @@ type WPoktSignerService struct {
 	privateKey             *ecdsa.PrivateKey
 	lastSyncTime           time.Time
 	interval               time.Duration
+	vaultAddress           string
+	wpoktAddress           string
 	wpoktContract          *autogen.WrappedPocket
 	mintControllerContract *autogen.MintController
 	validators             []string
@@ -96,7 +100,10 @@ func (b *WPoktSignerService) FindNonce(mint *models.Mint) (*big.Int, error) {
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
 		log.Debug("[WPOKT SIGNER] Mint nonce not set, fetching from contract")
-		currentNonce, err := b.wpoktContract.GetUserNonce(nil, common.HexToAddress(mint.RecipientAddress))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
+		defer cancel()
+		opts := &bind.CallOpts{Context: ctx, Pending: false}
+		currentNonce, err := b.wpoktContract.GetUserNonce(opts, common.HexToAddress(mint.RecipientAddress))
 
 		if err != nil {
 			log.Error("[WPOKT SIGNER] Error fetching nonce from contract: ", err)
@@ -106,6 +113,8 @@ func (b *WPoktSignerService) FindNonce(mint *models.Mint) (*big.Int, error) {
 		var pendingMints []models.Mint
 		filter := bson.M{
 			"_id":               bson.M{"$ne": mint.Id},
+			"vault_address":     b.vaultAddress,
+			"wpokt_address":     b.wpoktAddress,
 			"recipient_address": mint.RecipientAddress,
 			"status":            bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed, models.StatusSigned}},
 		}
@@ -254,7 +263,9 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 	}
 
 	filter := bson.M{
-		"_id": mint.Id,
+		"_id":           mint.Id,
+		"wpokt_address": b.wpoktAddress,
+		"vault_address": b.vaultAddress,
 	}
 
 	err = app.DB.UpdateOne(models.CollectionMints, filter, update)
@@ -271,7 +282,9 @@ func (b *WPoktSignerService) SyncTxs() bool {
 	log.Debug("[WPOKT SIGNER] Syncing pending txs")
 
 	filter := bson.M{
-		"status": bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
+		"wpokt_address": b.wpoktAddress,
+		"vault_address": b.vaultAddress,
+		"status":        bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
 		"signers": bson.M{
 			"$nin": []string{b.address},
 		},
@@ -348,8 +361,8 @@ func NewSigner(wg *sync.WaitGroup) models.Service {
 		log.Fatal("[WPOKT SIGNER] Error initializing ethereum client: ", err)
 	}
 
-	log.Debug("[WPOKT SIGNER] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), ethClient.GetClient())
+	log.Debug("[WPOKT SIGNER] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTAddress)
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTAddress), ethClient.GetClient())
 	if err != nil {
 		log.Fatal("[WPOKT SIGNER] Error initializing Wrapped Pocket contract", err)
 	}
@@ -363,7 +376,12 @@ func NewSigner(wg *sync.WaitGroup) models.Service {
 	log.Debug("[WPOKT SIGNER] Connected to mint controller contract")
 
 	log.Debug("[WPOKT SIGNER] Fetching mint controller domain data")
-	domain, err := mintControllerContract.Eip712Domain(nil)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	domain, err := mintControllerContract.Eip712Domain(opts)
+
 	if err != nil {
 		log.Fatal("[WPOKT SIGNER] Error fetching mint controller domain data: ", err)
 	}
@@ -376,6 +394,8 @@ func NewSigner(wg *sync.WaitGroup) models.Service {
 		interval:               time.Duration(app.Config.WPOKTSigner.IntervalSecs) * time.Second,
 		privateKey:             privateKey,
 		address:                address,
+		wpoktAddress:           app.Config.Ethereum.WPOKTAddress,
+		vaultAddress:           app.Config.Pocket.VaultAddress,
 		wpoktContract:          contract,
 		mintControllerContract: mintControllerContract,
 		validators:             sortAddresses(app.Config.Ethereum.ValidatorAddresses),

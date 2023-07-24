@@ -17,6 +17,7 @@ type PoktExecutorService struct {
 	wg              *sync.WaitGroup
 	name            string
 	client          pocket.PocketClient
+	wpoktAddress    string
 	stop            chan bool
 	lastSyncTime    time.Time
 	interval        time.Duration
@@ -87,8 +88,16 @@ func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 			return false
 		}
 
-		filter := bson.M{"_id": doc.Id}
-		update := bson.M{"$set": bson.M{"status": models.StatusSubmitted, "return_tx_hash": res.TransactionHash}}
+		filter := bson.M{
+			"_id":           doc.Id,
+			"vault_address": m.multisigAddress,
+		}
+		update := bson.M{
+			"$set": bson.M{
+				"status":         models.StatusSubmitted,
+				"return_tx_hash": res.TransactionHash,
+			},
+		}
 		err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 		if err != nil {
 			log.Error("[POKT EXECUTOR] Error updating invalid mint: ", err)
@@ -102,8 +111,15 @@ func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 			log.Error("[POKT EXECUTOR] Error fetching transaction: ", err)
 			return false
 		}
-		filter := bson.M{"_id": doc.Id}
-		update := bson.M{"$set": bson.M{"status": models.StatusSuccess}}
+		filter := bson.M{
+			"_id":           doc.Id,
+			"vault_address": m.multisigAddress,
+		}
+		update := bson.M{
+			"$set": bson.M{
+				"status": models.StatusSuccess,
+			},
+		}
 		err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 		if err != nil {
 			log.Error("[POKT EXECUTOR] Error updating invalid mint: ", err)
@@ -129,8 +145,16 @@ func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
 			return false
 		}
 
-		filter := bson.M{"_id": doc.Id}
-		update := bson.M{"$set": bson.M{"status": models.StatusSubmitted, "return_tx_hash": res.TransactionHash}}
+		filter := bson.M{
+			"_id":           doc.Id,
+			"wpokt_address": m.wpoktAddress,
+		}
+		update := bson.M{
+			"$set": bson.M{
+				"status":         models.StatusSubmitted,
+				"return_tx_hash": res.TransactionHash,
+			},
+		}
 		err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
 		if err != nil {
 			log.Error("[POKT EXECUTOR] Error updating burn: ", err)
@@ -144,8 +168,15 @@ func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
 			log.Error("[POKT EXECUTOR] Error fetching transaction: ", err)
 			return false
 		}
-		filter := bson.M{"_id": doc.Id}
-		update := bson.M{"$set": bson.M{"status": models.StatusSuccess}}
+		filter := bson.M{
+			"_id":           doc.Id,
+			"wpokt_address": m.wpoktAddress,
+		}
+		update := bson.M{
+			"$set": bson.M{
+				"status": models.StatusSuccess,
+			},
+		}
 		err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
 		if err != nil {
 			log.Error("[POKT EXECUTOR] Error updating burn: ", err)
@@ -216,6 +247,9 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
 	multisigAddress := multisigPk.Address().String()
 	log.Debug("[POKT EXECUTOR] Multisig address: ", multisigAddress)
+	if multisigAddress != app.Config.Pocket.VaultAddress {
+		log.Fatal("[POKT EXECUTOR] Multisig address does not match vault address")
+	}
 
 	m := &PoktExecutorService{
 		wg:              wg,
@@ -223,6 +257,7 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 		interval:        time.Duration(app.Config.PoktExecutor.IntervalSecs) * time.Second,
 		stop:            make(chan bool),
 		multisigAddress: multisigAddress,
+		wpoktAddress:    app.Config.Ethereum.WPOKTAddress,
 		client:          pocket.NewClient(),
 	}
 

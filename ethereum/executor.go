@@ -29,6 +29,8 @@ type WPoktExecutorService struct {
 	wpoktContract      WrappedPocketContract
 	mintControllerAbi  *abi.ABI
 	client             ethereum.EthereumClient
+	vaultAddress       string
+	wpoktAddress       string
 }
 
 func (b *WPoktExecutorService) Health() models.ServiceHealth {
@@ -85,6 +87,8 @@ func (b *WPoktExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinte
 	nonce := event.Nonce.String()
 
 	filter := bson.M{
+		"wpokt_address":     b.wpoktAddress,
+		"vault_address":     b.vaultAddress,
 		"recipient_address": recipient,
 		"amount":            amount,
 		"nonce":             nonce,
@@ -193,8 +197,8 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 	if err != nil {
 		log.Fatal("[WPOKT EXECUTOR] Error initializing ethereum client", err)
 	}
-	log.Debug("[WPOKT EXECUTOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), client.GetClient())
+	log.Debug("[WPOKT EXECUTOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTAddress)
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTAddress), client.GetClient())
 	if err != nil {
 		log.Fatal("[WPOKT EXECUTOR] Error initializing Wrapped Pocket contract", err)
 	}
@@ -217,6 +221,8 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 		wpoktContract:      &WrappedPocketContractImpl{contract},
 		mintControllerAbi:  mintControllerAbi,
 		client:             client,
+		wpoktAddress:       app.Config.Ethereum.WPOKTAddress,
+		vaultAddress:       app.Config.Pocket.VaultAddress,
 	}
 
 	b.UpdateCurrentBlockNumber()

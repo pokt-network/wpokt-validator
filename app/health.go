@@ -21,6 +21,7 @@ type HealthService struct {
 	poktVaultAddress string
 	ethValidators    []string
 	ethAddress       string
+	wpoktAddress     string
 	hostname         string
 	lastSyncTime     time.Time
 	interval         time.Duration
@@ -73,6 +74,7 @@ func (b *HealthService) PostHealth() bool {
 		PoktAddress:      b.poktAddress,
 		EthValidators:    b.ethValidators,
 		EthAddress:       b.ethAddress,
+		WPoktAddress:     b.wpoktAddress,
 		Hostname:         b.hostname,
 		Healthy:          true,
 		CreatedAt:        time.Now(),
@@ -141,19 +143,23 @@ func NewHealthCheck(services []models.Service, wg *sync.WaitGroup) models.Servic
 		pks = append(pks, p)
 	}
 
-	multisigPk := poktCrypto.PublicKeyMultiSignature{PublicKeys: pks}
-	log.Debug("[HEALTH] Multisig address: ", multisigPk.Address().String())
+	multisigPkAddress := poktCrypto.PublicKeyMultiSignature{PublicKeys: pks}.Address().String()
+	log.Debug("[HEALTH] Multisig address: ", multisigPkAddress)
+	if multisigPkAddress != Config.Pocket.VaultAddress {
+		log.Fatal("[HEALTH] Multisig address does not match vault address")
+	}
 
 	b := &HealthService{
 		name:             "health",
 		stop:             make(chan bool),
 		interval:         time.Duration(Config.Health.IntervalSecs) * time.Second,
-		poktVaultAddress: multisigPk.Address().String(),
+		poktVaultAddress: multisigPkAddress,
 		poktSigners:      Config.Pocket.MultisigPublicKeys,
 		poktPublicKey:    pk.PublicKey().RawString(),
 		poktAddress:      pk.PublicKey().Address().String(),
 		ethValidators:    Config.Ethereum.ValidatorAddresses,
 		ethAddress:       ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex(),
+		wpoktAddress:     Config.Ethereum.WPOKTAddress,
 		hostname:         hostname,
 		services:         services,
 		wg:               wg,

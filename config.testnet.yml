@@ -5,13 +5,13 @@ mongodb:
 
 pocket:
   start_height: 112665
-  confirmations: 0
+  confirmations: 3
   private_key: ""
   rpc_url: ""
   chain_id: ""
   rpc_timeout_secs: 30
   fees: 10000
-  multisig_address: "7FB0A18CEB4E803F22911F5B85E2727BB3BDF04B"
+  vault_address: "7FB0A18CEB4E803F22911F5B85E2727BB3BDF04B"
   multisig_public_keys:
     - "b051b20ad19432189aaea89642bf222af5c10b0c7730a374905953fd2d990715"
     - "ad7a05bb00234484531c1f379e65c4ec7e2f0feeb5e27646e193578f0fb28bb6"
@@ -31,12 +31,12 @@ pokt_executor:
 
 ethereum:
   start_block_number: 9398000
-  confirmations: 0
+  confirmations: 12
   private_key: ""
   rpc_url: ""
   chain_id: ""
   rpc_timeout_secs: 30
-  wpokt_contract_address: "0x69E6049D2D055e67AC9235e9DF80cDBA370bA37C"
+  wpokt_address: "0x69E6049D2D055e67AC9235e9DF80cDBA370bA37C"
   mint_controller_address: "0xd0D6D748B4Ef08536834c88ef005C37dB1a8a1b9"
   validator_addresses:
     - "0x2CE62AAF07FCE166A329D89d76588f494e39A298"

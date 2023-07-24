@@ -55,6 +55,7 @@ func readConfigFromEnv(envFile string) {
 		blockNumber, err := strconv.ParseInt(os.Getenv("ETH_START_BLOCK_NUMBER"), 10, 64)
 		if err != nil {
 			log.Warn("[CONFIG] Error parsing ETH_START_BLOCK_NUMBER: ", err.Error())
+			log.Info("[CONFIG] Setting ETH_START_BLOCK_NUMBER to 0")
 		} else {
 			Config.Ethereum.StartBlockNumber = blockNumber
 		}
@@ -72,6 +73,7 @@ func readConfigFromEnv(envFile string) {
 		startHeight, err := strconv.ParseInt(os.Getenv("POKT_START_HEIGHT"), 10, 64)
 		if err != nil {
 			log.Warn("[CONFIG] Error parsing POKT_START_HEIGHT: ", err.Error())
+			log.Info("[CONFIG] Setting POKT_START_HEIGHT to 0")
 		} else {
 			Config.Pocket.StartHeight = startHeight
 		}
