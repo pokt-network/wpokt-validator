@@ -27,12 +27,15 @@ type HealthService struct {
 	services         []models.Service
 }
 
-func (b *HealthService) EthBlockNumber() string {
-	return ""
-}
-
-func (b *HealthService) PoktHeight() string {
-	return ""
+func (b *HealthService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
+		Name:           b.Name(),
+		LastSyncTime:   b.LastSyncTime(),
+		NextSyncTime:   b.LastSyncTime().Add(b.Interval()),
+		PoktHeight:     "",
+		EthBlockNumber: "",
+		Healthy:        true,
+	}
 }
 
 func (b *HealthService) LastSyncTime() time.Time {
@@ -55,23 +58,9 @@ func (b *HealthService) Stop() {
 func (b *HealthService) ServiceHealths() []models.ServiceHealth {
 	var serviceHealths []models.ServiceHealth
 	for _, service := range b.services {
-		var serviceHealth models.ServiceHealth
-		serviceHealth.Name = service.Name()
-		serviceHealth.Healthy = true
-		serviceHealth.LastSyncTime = service.LastSyncTime()
-		serviceHealth.NextSyncTime = service.LastSyncTime().Add(service.Interval())
-		serviceHealth.EthBlockNumber = service.EthBlockNumber()
-		serviceHealth.PoktHeight = service.PoktHeight()
-		serviceHealths = append(serviceHealths, serviceHealth)
+		serviceHealths = append(serviceHealths, service.Health())
 	}
-	serviceHealths = append(serviceHealths, models.ServiceHealth{
-		Name:           "health",
-		Healthy:        true,
-		LastSyncTime:   b.LastSyncTime(),
-		NextSyncTime:   b.LastSyncTime().Add(b.Interval()),
-		EthBlockNumber: b.EthBlockNumber(),
-		PoktHeight:     b.PoktHeight(),
-	})
+	serviceHealths = append(serviceHealths, b.Health())
 	return serviceHealths
 }
 

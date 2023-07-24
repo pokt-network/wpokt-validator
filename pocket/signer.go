@@ -30,6 +30,17 @@ type PoktSignerService struct {
 	ethBlockNumber int64
 }
 
+func (m *PoktSignerService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
+		Name:           m.Name(),
+		LastSyncTime:   m.LastSyncTime(),
+		NextSyncTime:   m.LastSyncTime().Add(m.Interval()),
+		PoktHeight:     m.PoktHeight(),
+		EthBlockNumber: m.EthBlockNumber(),
+		Healthy:        true,
+	}
+}
+
 func (m *PoktSignerService) PoktHeight() string {
 	return strconv.FormatInt(m.poktHeight, 10)
 }

@@ -27,12 +27,19 @@ type PoktMonitorService struct {
 	currentHeight uint64
 }
 
-func (m *PoktMonitorService) PoktHeight() string {
-	return strconv.FormatUint(m.startHeight, 10)
+func (m *PoktMonitorService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
+		Name:           m.Name(),
+		LastSyncTime:   m.LastSyncTime(),
+		NextSyncTime:   m.LastSyncTime().Add(m.Interval()),
+		PoktHeight:     m.PoktHeight(),
+		EthBlockNumber: "",
+		Healthy:        true,
+	}
 }
 
-func (m *PoktMonitorService) EthBlockNumber() string {
-	return ""
+func (m *PoktMonitorService) PoktHeight() string {
+	return strconv.FormatUint(m.startHeight, 10)
 }
 
 func (m *PoktMonitorService) LastSyncTime() time.Time {

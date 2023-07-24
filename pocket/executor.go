@@ -23,12 +23,15 @@ type PoktExecutorService struct {
 	multisigAddress string
 }
 
-func (m *PoktExecutorService) PoktHeight() string {
-	return ""
-}
-
-func (m *PoktExecutorService) EthBlockNumber() string {
-	return ""
+func (m *PoktExecutorService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
+		Name:           m.Name(),
+		LastSyncTime:   m.LastSyncTime(),
+		NextSyncTime:   m.LastSyncTime().Add(m.Interval()),
+		PoktHeight:     "",
+		EthBlockNumber: "",
+		Healthy:        true,
+	}
 }
 
 func (m *PoktExecutorService) LastSyncTime() time.Time {

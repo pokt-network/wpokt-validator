@@ -31,6 +31,17 @@ type WPoktExecutorService struct {
 	client             ethereum.EthereumClient
 }
 
+func (b *WPoktExecutorService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
+		Name:           b.Name(),
+		LastSyncTime:   b.LastSyncTime(),
+		NextSyncTime:   b.LastSyncTime().Add(b.Interval()),
+		PoktHeight:     "",
+		EthBlockNumber: b.EthBlockNumber(),
+		Healthy:        true,
+	}
+}
+
 func (b *WPoktExecutorService) PoktHeight() string {
 	return ""
 }

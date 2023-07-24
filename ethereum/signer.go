@@ -37,12 +37,19 @@ type WPoktSignerService struct {
 	poktHeight             int64
 }
 
-func (b *WPoktSignerService) PoktHeight() string {
-	return strconv.FormatInt(b.poktHeight, 10)
+func (b *WPoktSignerService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
+		Name:           b.Name(),
+		LastSyncTime:   b.LastSyncTime(),
+		NextSyncTime:   b.LastSyncTime().Add(b.Interval()),
+		PoktHeight:     b.PoktHeight(),
+		EthBlockNumber: "",
+		Healthy:        true,
+	}
 }
 
-func (b *WPoktSignerService) EthBlockNumber() string {
-	return ""
+func (b *WPoktSignerService) PoktHeight() string {
+	return strconv.FormatInt(b.poktHeight, 10)
 }
 
 func (b *WPoktSignerService) LastSyncTime() time.Time {

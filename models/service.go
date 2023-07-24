@@ -10,8 +10,7 @@ type Service interface {
 	Start()
 	LastSyncTime() time.Time
 	Interval() time.Duration
-	EthBlockNumber() string
-	PoktHeight() string
+	Health() ServiceHealth
 	Stop()
 }
 
@@ -38,12 +37,15 @@ func (e *EmptyService) Interval() time.Duration {
 	return time.Second * 0
 }
 
-func (e *EmptyService) EthBlockNumber() string {
-	return ""
-}
-
-func (e *EmptyService) PoktHeight() string {
-	return ""
+func (e *EmptyService) Health() ServiceHealth {
+	return ServiceHealth{
+		Name:           e.Name(),
+		LastSyncTime:   e.LastSyncTime(),
+		NextSyncTime:   e.LastSyncTime().Add(e.Interval()),
+		PoktHeight:     "",
+		EthBlockNumber: "",
+		Healthy:        true,
+	}
 }
 
 func NewEmptyService(wg *sync.WaitGroup, name string) *EmptyService {
