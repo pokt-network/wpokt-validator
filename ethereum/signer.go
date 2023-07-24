@@ -181,6 +181,10 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 	}
 
 	status := mint.Status
+	confirmations, err := strconv.ParseInt(mint.Confirmations, 10, 64)
+	if err != nil {
+		confirmations = 0
+	}
 
 	if status == models.StatusPending {
 		if app.Config.Pocket.Confirmations == 0 {
@@ -196,7 +200,7 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 			if totalConfirmations >= app.Config.Pocket.Confirmations {
 				status = models.StatusConfirmed
 			}
-			mint.Confirmations = strconv.FormatInt(totalConfirmations, 10)
+			confirmations = totalConfirmations
 		}
 	}
 
@@ -242,9 +246,10 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 					Amount:    data.Amount.String(),
 					Nonce:     data.Nonce.String(),
 				},
-				"signatures": sortedSignatures,
-				"signers":    sortedSigners,
-				"status":     status,
+				"signatures":    sortedSignatures,
+				"signers":       sortedSigners,
+				"status":        status,
+				"confirmations": strconv.FormatInt(confirmations, 10),
 			},
 		}
 
@@ -257,7 +262,8 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 					Amount:    data.Amount.String(),
 					Nonce:     data.Nonce.String(),
 				},
-				"status": status,
+				"status":        status,
+				"confirmations": strconv.FormatInt(confirmations, 10),
 			},
 		}
 	}

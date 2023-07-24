@@ -124,6 +124,10 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 	}
 
 	status := doc.Status
+	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
+	if err != nil {
+		confirmations = 0
+	}
 
 	if status == models.StatusPending {
 		if app.Config.Pocket.Confirmations == 0 {
@@ -139,7 +143,7 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 			if totalConfirmations >= app.Config.Pocket.Confirmations {
 				status = models.StatusConfirmed
 			}
-			doc.Confirmations = strconv.FormatInt(totalConfirmations, 10)
+			confirmations = totalConfirmations
 		}
 	}
 
@@ -196,15 +200,17 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 		update = bson.M{
 			"$set": bson.M{
-				"return_tx": returnTx,
-				"signers":   signers,
-				"status":    status,
+				"return_tx":     returnTx,
+				"signers":       signers,
+				"status":        status,
+				"confirmations": strconv.FormatInt(confirmations, 10),
 			},
 		}
 	} else {
 		update = bson.M{
 			"$set": bson.M{
-				"status": status,
+				"status":        status,
+				"confirmations": strconv.FormatInt(confirmations, 10),
 			},
 		}
 	}
@@ -213,7 +219,7 @@ func (m *PoktSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 		"_id":           doc.Id,
 		"vault_address": m.vaultAddress,
 	}
-	err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
+	err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 	if err != nil {
 		log.Error("[POKT SIGNER] Error updating invalid mint: ", err)
 		return false
@@ -233,6 +239,10 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 	}
 
 	status := doc.Status
+	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
+	if err != nil {
+		confirmations = 0
+	}
 
 	if status == models.StatusPending {
 		if app.Config.Ethereum.Confirmations == 0 {
@@ -248,7 +258,7 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 			if totalConfirmations >= app.Config.Pocket.Confirmations {
 				status = models.StatusConfirmed
 			}
-			doc.Confirmations = strconv.FormatInt(totalConfirmations, 10)
+			confirmations = totalConfirmations
 		}
 	}
 
@@ -309,15 +319,17 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 
 		update = bson.M{
 			"$set": bson.M{
-				"return_tx": returnTx,
-				"signers":   signers,
-				"status":    status,
+				"return_tx":     returnTx,
+				"signers":       signers,
+				"status":        status,
+				"confirmations": confirmations,
 			},
 		}
 	} else {
 		update = bson.M{
 			"$set": bson.M{
-				"status": status,
+				"status":        status,
+				"confirmations": confirmations,
 			},
 		}
 	}
@@ -326,7 +338,7 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 		"_id":           doc.Id,
 		"wpokt_address": m.wpoktAddress,
 	}
-	err := app.DB.UpdateOne(models.CollectionBurns, filter, update)
+	err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
 	if err != nil {
 		log.Error("[POKT SIGNER] Error updating burn: ", err)
 		return false

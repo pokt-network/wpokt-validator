@@ -143,6 +143,7 @@ func (m *PoktMonitorService) HandleInvalidMint(tx *pocket.TxResponse) bool {
 func (m *PoktMonitorService) HandleValidMint(tx *pocket.TxResponse, memo models.MintMemo) bool {
 	doc := models.Mint{
 		Height:              strconv.FormatInt(tx.Height, 10),
+		Confirmations:       "0",
 		TransactionHash:     tx.Hash,
 		SenderAddress:       tx.StdTx.Msg.Value.FromAddress,
 		SenderChainId:       app.Config.Pocket.ChainId,

@@ -71,6 +71,7 @@ func (b *WPoktMonitorService) UpdateCurrentBlockNumber() {
 func (b *WPoktMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAndBridge) bool {
 	doc := models.Burn{
 		BlockNumber:      strconv.FormatInt(int64(event.Raw.BlockNumber), 10),
+		Confirmations:    "0",
 		TransactionHash:  event.Raw.TxHash.String(),
 		LogIndex:         strconv.FormatInt(int64(event.Raw.Index), 10),
 		WPOKTAddress:     event.Raw.Address.String(),
