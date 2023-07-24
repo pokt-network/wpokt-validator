@@ -246,6 +246,7 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 					Amount:    data.Amount.String(),
 					Nonce:     data.Nonce.String(),
 				},
+				"nonce":         data.Nonce.String(),
 				"signatures":    sortedSignatures,
 				"signers":       sortedSigners,
 				"status":        status,
@@ -257,11 +258,6 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		log.Debug("[WPOKT SIGNER] Mint pending confirmation")
 		update = bson.M{
 			"$set": bson.M{
-				"data": models.MintData{
-					Recipient: data.Recipient.Hex(),
-					Amount:    data.Amount.String(),
-					Nonce:     data.Nonce.String(),
-				},
 				"status":        status,
 				"confirmations": strconv.FormatInt(confirmations, 10),
 			},

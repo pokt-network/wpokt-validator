@@ -322,14 +322,14 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 				"return_tx":     returnTx,
 				"signers":       signers,
 				"status":        status,
-				"confirmations": confirmations,
+				"confirmations": strconv.FormatInt(confirmations, 10),
 			},
 		}
 	} else {
 		update = bson.M{
 			"$set": bson.M{
 				"status":        status,
-				"confirmations": confirmations,
+				"confirmations": strconv.FormatInt(confirmations, 10),
 			},
 		}
 	}
@@ -351,8 +351,9 @@ func (m *PoktSignerService) HandleBurn(doc models.Burn) bool {
 func (m *PoktSignerService) SyncTxs() bool {
 	log.Debug("[POKT SIGNER] Syncing txs")
 	filter := bson.M{
-		"status":  models.StatusPending,
-		"signers": bson.M{"$nin": []string{m.privateKey.PublicKey().RawString()}},
+		"vault_address": m.vaultAddress,
+		"status":        bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
+		"signers":       bson.M{"$nin": []string{m.privateKey.PublicKey().RawString()}},
 	}
 
 	invalidMints := []models.InvalidMint{}
@@ -366,6 +367,12 @@ func (m *PoktSignerService) SyncTxs() bool {
 	var success bool = true
 	for _, doc := range invalidMints {
 		success = m.HandleInvalidMint(doc) && success
+	}
+
+	filter = bson.M{
+		"wpokt_address": m.wpoktAddress,
+		"status":        bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
+		"signers":       bson.M{"$nin": []string{m.privateKey.PublicKey().RawString()}},
 	}
 
 	burns := []models.Burn{}
