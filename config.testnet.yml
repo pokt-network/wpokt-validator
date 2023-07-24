@@ -4,6 +4,9 @@ mongodb:
   timeout_secs: 30
 
 pocket:
+  start_height: 111400
+  confirmations: 0
+  private_key: ""
   rpc_url: ""
   chain_id: ""
   rpc_timeout_secs: 30
@@ -16,19 +19,20 @@ pocket:
 
 pokt_monitor:
   enabled: false
-  start_height: 111400
   interval_secs: 120
 
 pokt_signer:
   enabled: false
   interval_secs: 120
-  private_key: ""
 
 pokt_executor:
   enabled: false
   interval_secs: 120
 
 ethereum:
+  start_block_number: 9348824
+  confirmations: 0
+  private_key: ""
   rpc_url: ""
   chain_id: ""
   rpc_timeout_secs: 30
@@ -41,17 +45,14 @@ ethereum:
 
 wpokt_monitor:
   enabled: false
-  start_block_number: 9348824
   interval_secs: 120
 
 wpokt_signer:
   enabled: true
   interval_secs: 120
-  private_key: ""
 
 wpokt_executor:
   enabled: false
-  start_block_number: 9348824
   interval_secs: 120
 
 logger:

@@ -1,4 +1,4 @@
-package pocket
+package client
 
 type HeightResponse struct {
 	Height int64 `json:"height"`

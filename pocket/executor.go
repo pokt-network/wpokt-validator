@@ -1,10 +1,12 @@
 package pocket
 
 import (
+	"sync"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/models"
+	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
 	"github.com/pokt-network/pocket-core/app/cmd/rpc"
 	"github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
@@ -12,9 +14,33 @@ import (
 )
 
 type PoktExecutorService struct {
+	wg              *sync.WaitGroup
+	name            string
+	client          pocket.PocketClient
 	stop            chan bool
+	lastSyncTime    time.Time
 	interval        time.Duration
 	multisigAddress string
+}
+
+func (m *PoktExecutorService) PoktHeight() string {
+	return ""
+}
+
+func (m *PoktExecutorService) EthBlockNumber() string {
+	return ""
+}
+
+func (m *PoktExecutorService) LastSyncTime() time.Time {
+	return m.lastSyncTime
+}
+
+func (m *PoktExecutorService) Interval() time.Duration {
+	return m.interval
+}
+
+func (m *PoktExecutorService) Name() string {
+	return m.name
 }
 
 func (m *PoktExecutorService) Start() {
@@ -22,6 +48,7 @@ func (m *PoktExecutorService) Start() {
 	stop := false
 	for !stop {
 		log.Debug("[POKT EXECUTOR] Starting pokt executor sync")
+		m.lastSyncTime = time.Now()
 
 		m.SyncTxs()
 
@@ -35,6 +62,7 @@ func (m *PoktExecutorService) Start() {
 		case <-time.After(m.interval):
 		}
 	}
+	m.wg.Done()
 }
 
 func (m *PoktExecutorService) Stop() {
@@ -50,7 +78,7 @@ func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 			RawHexBytes: doc.ReturnTx,
 		}
 
-		res, err := Client.SubmitRawTx(p)
+		res, err := m.client.SubmitRawTx(p)
 		if err != nil {
 			log.Error("[POKT EXECUTOR] Error submitting transaction: ", err)
 			return false
@@ -66,7 +94,7 @@ func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 		log.Debug("[POKT EXECUTOR] Submitted tx for invalid mint")
 
 	} else if doc.Status == models.StatusSubmitted {
-		_, err := Client.GetTx(doc.ReturnTxHash)
+		_, err := m.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
 			log.Error("[POKT EXECUTOR] Error fetching transaction: ", err)
 			return false
@@ -92,7 +120,7 @@ func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
 			RawHexBytes: doc.ReturnTx,
 		}
 
-		res, err := Client.SubmitRawTx(p)
+		res, err := m.client.SubmitRawTx(p)
 		if err != nil {
 			log.Error("[POKT EXECUTOR] Error submitting transaction: ", err)
 			return false
@@ -108,7 +136,7 @@ func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
 		log.Debug("[POKT EXECUTOR] Submitted tx for burn")
 
 	} else if doc.Status == models.StatusSubmitted {
-		_, err := Client.GetTx(doc.ReturnTxHash)
+		_, err := m.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
 			log.Error("[POKT EXECUTOR] Error fetching transaction: ", err)
 			return false
@@ -164,10 +192,10 @@ func (m *PoktExecutorService) SyncTxs() bool {
 	return success
 }
 
-func NewExecutor() models.Service {
+func NewExecutor(wg *sync.WaitGroup) models.Service {
 	if !app.Config.PoktExecutor.Enabled {
 		log.Debug("[POKT EXECUTOR] Pokt executor disabled")
-		return models.NewEmptyService()
+		return models.NewEmptyService(wg, "empty-pokt-executor")
 	}
 
 	log.Debug("[POKT EXECUTOR] Initializing pokt executor")
@@ -187,9 +215,12 @@ func NewExecutor() models.Service {
 	log.Debug("[POKT EXECUTOR] Multisig address: ", multisigAddress)
 
 	m := &PoktExecutorService{
+		wg:              wg,
+		name:            "pokt-executor",
 		interval:        time.Duration(app.Config.PoktExecutor.IntervalSecs) * time.Second,
 		stop:            make(chan bool),
 		multisigAddress: multisigAddress,
+		client:          pocket.NewClient(),
 	}
 
 	log.Debug("[POKT EXECUTOR] Initialized pokt executor")

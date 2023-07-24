@@ -2,13 +2,14 @@ package ethereum
 
 import (
 	"context"
-	"encoding/hex"
 	"math/big"
-	"reflect"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
+	ethereum "github.com/dan13ram/wpokt-backend/ethereum/client"
 	"github.com/dan13ram/wpokt-backend/models"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -18,12 +19,36 @@ import (
 )
 
 type WPoktExecutorService struct {
+	wg                 *sync.WaitGroup
+	name               string
 	stop               chan bool
 	startBlockNumber   uint64
 	currentBlockNumber uint64
+	lastSyncTime       time.Time
 	interval           time.Duration
 	wpoktContract      WrappedPocketContract
 	mintControllerAbi  *abi.ABI
+	client             ethereum.EthereumClient
+}
+
+func (b *WPoktExecutorService) PoktHeight() string {
+	return ""
+}
+
+func (b *WPoktExecutorService) EthBlockNumber() string {
+	return strconv.FormatUint(b.startBlockNumber, 10)
+}
+
+func (b *WPoktExecutorService) LastSyncTime() time.Time {
+	return b.lastSyncTime
+}
+
+func (b *WPoktExecutorService) Interval() time.Duration {
+	return b.interval
+}
+
+func (b *WPoktExecutorService) Name() string {
+	return b.name
 }
 
 func (b *WPoktExecutorService) Stop() {
@@ -32,7 +57,7 @@ func (b *WPoktExecutorService) Stop() {
 }
 
 func (b *WPoktExecutorService) UpdateCurrentBlockNumber() {
-	res, err := Client.GetBlockNumber()
+	res, err := b.client.GetBlockNumber()
 	if err != nil {
 		log.Error(err)
 		return
@@ -41,73 +66,27 @@ func (b *WPoktExecutorService) UpdateCurrentBlockNumber() {
 	log.Debug("[WPOKT EXECUTOR] Current block number: ", b.currentBlockNumber)
 }
 
-func decodeMintData(data interface{}) models.MintData {
-	value := reflect.ValueOf(data)
-	return models.MintData{
-		Recipient: value.Field(0).Interface().(common.Address).String(),
-		Amount:    value.Field(1).Interface().(*big.Int).String(),
-		Nonce:     value.Field(2).Interface().(*big.Int).String(),
-	}
-}
-
-func (b *WPoktExecutorService) HandleMintEvent(event *autogen.WrappedPocketTransfer) bool {
+func (b *WPoktExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinted) bool {
 	log.Debug("[WPOKT EXECUTOR] Handling mint event: ", event.Raw.TxHash, " ", event.Raw.Index)
 
-	if (event.From.String() != ZERO_ADDRESS) || (event.To.String() == ZERO_ADDRESS) {
-		log.Debug("[WPOKT EXECUTOR] Skipping mint event: invalid from or to address")
-		return true
-	}
-
-	recipient := event.To.String()
-	amount := event.Value.String()
-
-	tx, _, err := Client.GetTransactionByHash(event.Raw.TxHash.String())
-	if err != nil {
-		log.Error("[WPOKT EXECUTOR] Error while getting transaction by hash: ", err)
-		return false
-	}
-
-	data := tx.Data()
-
-	methodId := data[:4]
-
-	mintMethod := b.mintControllerAbi.Methods["mintWrappedPocket"]
-
-	if hex.EncodeToString(methodId) != hex.EncodeToString(mintMethod.ID) {
-		log.Debug("[WPOKT EXECUTOR] Skipping mint event: invalid method id")
-		return true
-	}
-
-	decoded, err := abi.Arguments(mintMethod.Inputs).UnpackValues(data[4:])
-	if err != nil {
-		log.Error("[WPOKT EXECUTOR] Error while decoding mint function input: ", err)
-		return false
-	}
-
-	mintData := decodeMintData(decoded[0])
-
-	if (mintData.Recipient != recipient) || (mintData.Amount != amount) {
-		log.Debug("[WPOKT EXECUTOR] Skipping mint event: invalid recipient or amount")
-		return true
-	}
+	recipient := event.Recipient.Hex()
+	amount := event.Amount.String()
+	nonce := event.Nonce.String()
 
 	filter := bson.M{
 		"recipient_address": recipient,
 		"amount":            amount,
-		"data":              mintData,
-		"status": bson.M{
-			"$in": []string{models.StatusPending, models.StatusSigned},
-		},
+		"nonce":             nonce,
 	}
 
 	update := bson.M{
 		"$set": bson.M{
-			"status":  models.StatusSuccess,
-			"tx_hash": event.Raw.TxHash.String(),
+			"status":       models.StatusSuccess,
+			"mint_tx_hash": event.Raw.TxHash.String(),
 		},
 	}
 
-	err = app.DB.UpdateOne(models.CollectionMints, filter, update)
+	err := app.DB.UpdateOne(models.CollectionMints, filter, update)
 
 	if err != nil {
 		log.Error("[WPOKT EXECUTOR] Error while updating mint: ", err)
@@ -119,14 +98,12 @@ func (b *WPoktExecutorService) HandleMintEvent(event *autogen.WrappedPocketTrans
 	return true
 }
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
-
 func (b *WPoktExecutorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
 	filter, err := b.wpoktContract.FilterMinted(&bind.FilterOpts{
 		Start:   startBlockNumber,
 		End:     &endBlockNumber,
 		Context: context.Background(),
-	}, []common.Address{}, []common.Address{})
+	}, []common.Address{}, []*big.Int{}, []*big.Int{})
 
 	if err != nil {
 		log.Errorln("[WPOKT EXECUTOR] Error while syncing mint events: ", err)
@@ -165,6 +142,7 @@ func (b *WPoktExecutorService) Start() {
 	stop := false
 	for !stop {
 		log.Debug("[WPOKT EXECUTOR] Starting mint sync")
+		b.lastSyncTime = time.Now()
 
 		b.UpdateCurrentBlockNumber()
 
@@ -187,17 +165,22 @@ func (b *WPoktExecutorService) Start() {
 		case <-time.After(b.interval):
 		}
 	}
+	b.wg.Done()
 }
 
-func NewExecutor() models.Service {
+func NewExecutor(wg *sync.WaitGroup) models.Service {
 	if app.Config.WPOKTExecutor.Enabled == false {
 		log.Debug("[WPOKT EXECUTOR] WPOKT executor disabled")
-		return models.NewEmptyService()
+		return models.NewEmptyService(wg, "empty-wpokt-executor")
 	}
 
 	log.Debug("[WPOKT EXECUTOR] Initializing wpokt executor")
+	client, err := ethereum.NewClient()
+	if err != nil {
+		log.Fatal("[WPOKT EXECUTOR] Error initializing ethereum client", err)
+	}
 	log.Debug("[WPOKT EXECUTOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), Client.GetClient())
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), client.GetClient())
 	if err != nil {
 		log.Fatal("[WPOKT EXECUTOR] Error initializing Wrapped Pocket contract", err)
 	}
@@ -211,17 +194,20 @@ func NewExecutor() models.Service {
 	log.Debug("[WPOKT EXECUTOR] Mint controller abi parsed")
 
 	b := &WPoktExecutorService{
+		wg:                 wg,
+		name:               "wpokt-executor",
 		stop:               make(chan bool),
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
 		interval:           time.Duration(app.Config.WPOKTExecutor.IntervalSecs) * time.Second,
 		wpoktContract:      &WrappedPocketContractImpl{contract},
 		mintControllerAbi:  mintControllerAbi,
+		client:             client,
 	}
 
 	b.UpdateCurrentBlockNumber()
-	if app.Config.WPOKTExecutor.StartBlockNumber > 0 {
-		b.startBlockNumber = uint64(app.Config.WPOKTExecutor.StartBlockNumber)
+	if app.Config.Ethereum.StartBlockNumber > 0 {
+		b.startBlockNumber = uint64(app.Config.Ethereum.StartBlockNumber)
 	} else {
 		log.Debug("[WPOKT EXECUTOR] Found invalid start block number, updating to current block number")
 		b.startBlockNumber = b.currentBlockNumber

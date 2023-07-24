@@ -14,6 +14,7 @@ type InvalidMint struct {
 	Id              *primitive.ObjectID `bson:"_id,omitempty"`
 	TransactionHash string              `bson:"transaction_hash"`
 	Height          string              `bson:"height"`
+	Confirmations   string              `bson:"confirmations"`
 	SenderAddress   string              `bson:"sender_address"`
 	SenderChainId   string              `bson:"sender_chain_id"`
 	Amount          string              `bson:"amount"`

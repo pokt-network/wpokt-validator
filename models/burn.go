@@ -15,6 +15,7 @@ type Burn struct {
 	TransactionHash  string              `bson:"transaction_hash"`
 	LogIndex         string              `bson:"log_index"`
 	BlockNumber      string              `bson:"block_number"`
+	Confirmations    string              `bson:"confirmations"`
 	SenderAddress    string              `bson:"sender_address"`
 	SenderChainId    string              `bson:"sender_chain_id"`
 	RecipientAddress string              `bson:"recipient_address"`

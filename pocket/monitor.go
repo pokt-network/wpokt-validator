@@ -3,10 +3,12 @@ package pocket
 import (
 	"encoding/json"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/models"
+	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
@@ -14,11 +16,35 @@ import (
 )
 
 type PoktMonitorService struct {
+	wg            *sync.WaitGroup
+	name          string
+	client        pocket.PocketClient
 	stop          chan bool
 	vaultAddress  string
+	lastSyncTime  time.Time
 	interval      time.Duration
 	startHeight   uint64
 	currentHeight uint64
+}
+
+func (m *PoktMonitorService) PoktHeight() string {
+	return strconv.FormatUint(m.startHeight, 10)
+}
+
+func (m *PoktMonitorService) EthBlockNumber() string {
+	return ""
+}
+
+func (m *PoktMonitorService) LastSyncTime() time.Time {
+	return m.lastSyncTime
+}
+
+func (m *PoktMonitorService) Interval() time.Duration {
+	return m.interval
+}
+
+func (m *PoktMonitorService) Name() string {
+	return m.name
 }
 
 func (m *PoktMonitorService) Start() {
@@ -26,6 +52,7 @@ func (m *PoktMonitorService) Start() {
 	stop := false
 	for !stop {
 		log.Debug("[POKT MONITOR] Starting pokt monitor sync")
+		m.lastSyncTime = time.Now()
 
 		m.UpdateCurrentHeight()
 
@@ -49,6 +76,7 @@ func (m *PoktMonitorService) Start() {
 		case <-time.After(m.interval):
 		}
 	}
+	m.wg.Done()
 }
 
 func (m *PoktMonitorService) Stop() {
@@ -57,7 +85,7 @@ func (m *PoktMonitorService) Stop() {
 }
 
 func (m *PoktMonitorService) UpdateCurrentHeight() {
-	res, err := Client.GetHeight()
+	res, err := m.client.GetHeight()
 	if err != nil {
 		log.Error("[POKT MONITOR] Error getting current height: ", err)
 		if log.GetLevel() == log.DebugLevel {
@@ -69,9 +97,10 @@ func (m *PoktMonitorService) UpdateCurrentHeight() {
 	log.Debug("[POKT MONITOR] Current height: ", m.currentHeight)
 }
 
-func (m *PoktMonitorService) HandleInvalidMint(tx *TxResponse) bool {
+func (m *PoktMonitorService) HandleInvalidMint(tx *pocket.TxResponse) bool {
 	doc := models.InvalidMint{
 		Height:          strconv.FormatInt(tx.Height, 10),
+		Confirmations:   "0",
 		TransactionHash: tx.Hash,
 		SenderAddress:   tx.StdTx.Msg.Value.FromAddress,
 		SenderChainId:   app.Config.Pocket.ChainId,
@@ -100,7 +129,7 @@ func (m *PoktMonitorService) HandleInvalidMint(tx *TxResponse) bool {
 	return true
 }
 
-func (m *PoktMonitorService) HandleValidMint(tx *TxResponse, memo models.MintMemo) bool {
+func (m *PoktMonitorService) HandleValidMint(tx *pocket.TxResponse, memo models.MintMemo) bool {
 	doc := models.Mint{
 		Height:              strconv.FormatInt(tx.Height, 10),
 		TransactionHash:     tx.Hash,
@@ -134,7 +163,7 @@ func (m *PoktMonitorService) HandleValidMint(tx *TxResponse, memo models.MintMem
 	return true
 }
 
-func (m *PoktMonitorService) HandleTx(tx *TxResponse) bool {
+func (m *PoktMonitorService) HandleTx(tx *pocket.TxResponse) bool {
 	var memo models.MintMemo
 
 	err := json.Unmarshal([]byte(tx.StdTx.Memo), &memo)
@@ -151,7 +180,7 @@ func (m *PoktMonitorService) HandleTx(tx *TxResponse) bool {
 }
 
 func (m *PoktMonitorService) SyncTxs() bool {
-	txs, err := Client.GetAccountTxsByHeight(m.vaultAddress, int64(m.startHeight))
+	txs, err := m.client.GetAccountTxsByHeight(m.vaultAddress, int64(m.startHeight))
 	if err != nil {
 		log.Error(err)
 		return false
@@ -164,10 +193,10 @@ func (m *PoktMonitorService) SyncTxs() bool {
 	return success
 }
 
-func NewMonitor() models.Service {
+func NewMonitor(wg *sync.WaitGroup) models.Service {
 	if !app.Config.PoktMonitor.Enabled {
 		log.Debug("[POKT MONITOR] Pokt monitor disabled")
-		return models.NewEmptyService()
+		return models.NewEmptyService(wg, "empty-pokt-monitor")
 	}
 
 	log.Debug("[POKT MONITOR] Initializing pokt monitor")
@@ -187,16 +216,19 @@ func NewMonitor() models.Service {
 	log.Debug("[POKT EXECUTOR] Multisig address: ", multisigAddress)
 
 	m := &PoktMonitorService{
+		wg:            wg,
+		name:          "pokt-monitor",
 		interval:      time.Duration(app.Config.PoktMonitor.IntervalSecs) * time.Second,
 		vaultAddress:  multisigAddress,
 		startHeight:   0,
 		currentHeight: 0,
 		stop:          make(chan bool),
+		client:        pocket.NewClient(),
 	}
 
 	m.UpdateCurrentHeight()
-	if app.Config.PoktMonitor.StartHeight > 0 {
-		m.startHeight = uint64(app.Config.PoktMonitor.StartHeight)
+	if app.Config.Pocket.StartHeight > 0 {
+		m.startHeight = uint64(app.Config.Pocket.StartHeight)
 	} else {
 		log.Debug("[POKT MONITOR] Found invalid start height, updating current height")
 		m.startHeight = m.currentHeight

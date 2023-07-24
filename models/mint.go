@@ -14,13 +14,12 @@ type Mint struct {
 	Id                  *primitive.ObjectID `bson:"_id,omitempty"`
 	TransactionHash     string              `bson:"transaction_hash"`
 	Height              string              `bson:"height"`
+	Confirmations       string              `bson:"confirmations"`
 	SenderAddress       string              `bson:"sender_address"`
 	SenderChainId       string              `bson:"sender_chain_id"`
 	RecipientAddress    string              `bson:"recipient_address"`
 	RecipientChainId    string              `bson:"recipient_chain_id"`
 	Amount              string              `bson:"amount"`
-	FinalAmount         string              `bson:"final_amount"`
-	Fee                 string              `bson:"fee"`
 	Nonce               string              `bson:"nonce"`
 	Memo                *MintMemo           `bson:"memo"`
 	CreatedAt           time.Time           `bson:"created_at"`

@@ -5,13 +5,17 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/ethereum"
+	ethClient "github.com/dan13ram/wpokt-backend/ethereum/client"
+	"github.com/dan13ram/wpokt-backend/models"
 
 	"github.com/dan13ram/wpokt-backend/pocket"
+	poktClient "github.com/dan13ram/wpokt-backend/pocket/client"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,28 +51,30 @@ func main() {
 	defer cancel()
 	app.InitDB(dbCtx)
 
-	pocket.Client.ValidateNetwork()
-	ethereum.Client.ValidateNetwork()
+	poktClient.Client.ValidateNetwork()
+	ethClient.Client.ValidateNetwork()
 
-	healthcheck := app.NewHealthCheck()
+	var wg sync.WaitGroup
 
-	poktMonitor := pocket.NewMonitor()
-	poktSigner := pocket.NewSigner()
-	poktExecutor := pocket.NewExecutor()
+	poktMonitor := pocket.NewMonitor(&wg)
+	poktSigner := pocket.NewSigner(&wg)
+	poktExecutor := pocket.NewExecutor(&wg)
 
-	wpoktMonitor := ethereum.NewMonitor()
-	wpoktSigner := ethereum.NewSigner()
-	wpoktExecutor := ethereum.NewExecutor()
+	wpoktMonitor := ethereum.NewMonitor(&wg)
+	wpoktSigner := ethereum.NewSigner(&wg)
+	wpoktExecutor := ethereum.NewExecutor(&wg)
 
-	go healthcheck.Start()
+	services := []models.Service{poktMonitor, poktSigner, poktExecutor, wpoktMonitor, wpoktSigner, wpoktExecutor}
 
-	go poktMonitor.Start()
-	go poktSigner.Start()
-	go poktExecutor.Start()
+	healthcheck := app.NewHealthCheck(services, &wg)
 
-	go wpoktMonitor.Start()
-	go wpoktSigner.Start()
-	go wpoktExecutor.Start()
+	services = append(services, healthcheck)
+
+	wg.Add(len(services))
+
+	for _, service := range services {
+		go service.Start()
+	}
 
 	// Gracefully shut down server
 	gracefulStop := make(chan os.Signal, 1)
@@ -79,15 +85,11 @@ func main() {
 
 	log.Info("[MAIN] Stopping server gracefully")
 
-	wpoktExecutor.Stop()
-	wpoktSigner.Stop()
-	wpoktMonitor.Stop()
+	for _, service := range services {
+		service.Stop()
+	}
 
-	poktMonitor.Stop()
-	poktSigner.Stop()
-	poktExecutor.Stop()
-
-	healthcheck.Stop()
+	wg.Wait()
 
 	app.DB.Disconnect()
 	log.Info("[MAIN] Server stopped")

@@ -1,4 +1,4 @@
-package pocket
+package client
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -294,4 +294,8 @@ func (c *pocketClient) ValidateNetwork() {
 		panic("[POKT] Height mismatch")
 	}
 	log.Debugln("[POKT] Validated network")
+}
+
+func NewClient() PocketClient {
+	return &pocketClient{}
 }

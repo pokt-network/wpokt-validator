@@ -1,8 +1,8 @@
 package app
 
 import (
-	"crypto/ecdsa"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/models"
@@ -12,11 +12,39 @@ import (
 )
 
 type HealthService struct {
-	stop          chan bool
-	poktPublicKey string
-	ethAddress    string
-	hostname      string
-	interval      time.Duration
+	wg               *sync.WaitGroup
+	name             string
+	stop             chan bool
+	poktSigners      []string
+	poktPublicKey    string
+	poktAddress      string
+	poktVaultAddress string
+	ethValidators    []string
+	ethAddress       string
+	hostname         string
+	lastSyncTime     time.Time
+	interval         time.Duration
+	services         []models.Service
+}
+
+func (b *HealthService) EthBlockNumber() string {
+	return ""
+}
+
+func (b *HealthService) PoktHeight() string {
+	return ""
+}
+
+func (b *HealthService) LastSyncTime() time.Time {
+	return b.lastSyncTime
+}
+
+func (b *HealthService) Interval() time.Duration {
+	return b.interval
+}
+
+func (b *HealthService) Name() string {
+	return b.name
 }
 
 func (b *HealthService) Stop() {
@@ -24,13 +52,42 @@ func (b *HealthService) Stop() {
 	b.stop <- true
 }
 
+func (b *HealthService) ServiceHealths() []models.ServiceHealth {
+	var serviceHealths []models.ServiceHealth
+	for _, service := range b.services {
+		var serviceHealth models.ServiceHealth
+		serviceHealth.Name = service.Name()
+		serviceHealth.Healthy = true
+		serviceHealth.LastSyncTime = service.LastSyncTime()
+		serviceHealth.NextSyncTime = service.LastSyncTime().Add(service.Interval())
+		serviceHealth.EthBlockNumber = service.EthBlockNumber()
+		serviceHealth.PoktHeight = service.PoktHeight()
+		serviceHealths = append(serviceHealths, serviceHealth)
+	}
+	serviceHealths = append(serviceHealths, models.ServiceHealth{
+		Name:           "health",
+		Healthy:        true,
+		LastSyncTime:   b.LastSyncTime(),
+		NextSyncTime:   b.LastSyncTime().Add(b.Interval()),
+		EthBlockNumber: b.EthBlockNumber(),
+		PoktHeight:     b.PoktHeight(),
+	})
+	return serviceHealths
+}
+
 func (b *HealthService) PostHealth() bool {
 	log.Debug("[HEALTH] Posting health")
 	health := models.Health{
-		PoktPublicKey: b.poktPublicKey,
-		EthAddress:    b.ethAddress,
-		Hostname:      b.hostname,
-		CreatedAt:     time.Now(),
+		PoktVaultAddress: b.poktVaultAddress,
+		PoktSigners:      b.poktSigners,
+		PoktPublicKey:    b.poktPublicKey,
+		PoktAddress:      b.poktAddress,
+		EthValidators:    b.ethValidators,
+		EthAddress:       b.ethAddress,
+		Hostname:         b.hostname,
+		Healthy:          true,
+		CreatedAt:        time.Now(),
+		ServiceHealths:   b.ServiceHealths(),
 	}
 
 	err := DB.InsertOne(models.CollectionHealthChecks, health)
@@ -47,6 +104,7 @@ func (b *HealthService) Start() {
 	stop := false
 	for !stop {
 		log.Debug("[HEALTH] Starting health sync")
+		b.lastSyncTime = time.Now()
 
 		b.PostHealth()
 
@@ -56,46 +114,60 @@ func (b *HealthService) Start() {
 		select {
 		case <-b.stop:
 			stop = true
+			b.PostHealth()
 			log.Debug("[HEALTH] Stopped health")
+			b.wg.Done()
 		case <-time.After(b.interval):
 		}
 	}
 }
 
-func NewHealthCheck() models.Service {
+func NewHealthCheck(services []models.Service, wg *sync.WaitGroup) models.Service {
 	log.Debug("[HEALTH] Initializing health")
 
-	pk, err := poktCrypto.NewPrivateKey(Config.PoktSigner.PrivateKey)
+	pk, err := poktCrypto.NewPrivateKey(Config.Pocket.PrivateKey)
 	if err != nil {
-		log.Fatal("[POKT SIGNER] Error initializing pokt signer: ", err)
+		log.Fatal("[HEALTH] Error initializing pokt signer: ", err)
 	}
-	log.Debug("[POKT SIGNER] Initialized pokt signer private key")
-	log.Debug("[POKT SIGNER] Pokt signer public key: ", pk.PublicKey().RawString())
-	log.Debug("[POKT SIGNER] Pokt signer address: ", pk.PublicKey().Address().String())
+	log.Debug("[HEALTH] Initialized pokt signer private key")
+	log.Debug("[HEALTH] Pokt signer public key: ", pk.PublicKey().RawString())
+	log.Debug("[HEALTH] Pokt signer address: ", pk.PublicKey().Address().String())
 
-	privateKey, err := ethCrypto.HexToECDSA(Config.WPOKTSigner.PrivateKey)
-	if err != nil {
-		log.Fatal("[WPOKT SIGNER] Error loading private key: ", err)
-	}
-
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatal("[WPOKT SIGNER] Error casting public key to ECDSA")
-	}
-	address := ethCrypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+	ethPK, err := ethCrypto.HexToECDSA(Config.Ethereum.PrivateKey)
+	log.Debug("[HEALTH] Initialized private key")
+	log.Debug("[HEALTH] ETH Address: ", ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex())
 
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatal("[HEALTH] Error getting hostname: ", err)
 	}
 
+	var pks []poktCrypto.PublicKey
+	for _, pk := range Config.Pocket.MultisigPublicKeys {
+		p, err := poktCrypto.NewPublicKey(pk)
+		if err != nil {
+			log.Debug("[HEALTH] Error parsing multisig public key: ", err)
+			continue
+		}
+		pks = append(pks, p)
+	}
+
+	multisigPk := poktCrypto.PublicKeyMultiSignature{PublicKeys: pks}
+	log.Debug("[HEALTH] Multisig address: ", multisigPk.Address().String())
+
 	b := &HealthService{
-		stop:          make(chan bool),
-		interval:      time.Duration(Config.Health.IntervalSecs) * time.Second,
-		poktPublicKey: pk.PublicKey().RawString(),
-		ethAddress:    address,
-		hostname:      hostname,
+		name:             "health",
+		stop:             make(chan bool),
+		interval:         time.Duration(Config.Health.IntervalSecs) * time.Second,
+		poktVaultAddress: multisigPk.Address().String(),
+		poktSigners:      Config.Pocket.MultisigPublicKeys,
+		poktPublicKey:    pk.PublicKey().RawString(),
+		poktAddress:      pk.PublicKey().Address().String(),
+		ethValidators:    Config.Ethereum.ValidatorAddresses,
+		ethAddress:       ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex(),
+		hostname:         hostname,
+		services:         services,
+		wg:               wg,
 	}
 
 	log.Debug("[HEALTH] Initialized health")

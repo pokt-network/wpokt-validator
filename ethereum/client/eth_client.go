@@ -1,4 +1,4 @@
-package ethereum
+package client
 
 import (
 	"context"
@@ -89,4 +89,11 @@ func (c *ethereumClient) GetTransactionByHash(txHash string) (*types.Transaction
 
 	tx, isPending, err := c.client.TransactionByHash(ctx, common.HexToHash(txHash))
 	return tx, isPending, err
+}
+
+func NewClient() (EthereumClient, error) {
+	client, err := ethclient.Dial(app.Config.Ethereum.RPCURL)
+	return &ethereumClient{
+		client: client,
+	}, err
 }

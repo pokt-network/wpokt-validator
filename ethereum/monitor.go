@@ -5,10 +5,12 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dan13ram/wpokt-backend/app"
 	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
+	ethereum "github.com/dan13ram/wpokt-backend/ethereum/client"
 	"github.com/dan13ram/wpokt-backend/models"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,11 +19,27 @@ import (
 )
 
 type WPoktMonitorService struct {
+	wg                 *sync.WaitGroup
+	name               string
 	stop               chan bool
 	startBlockNumber   uint64
 	currentBlockNumber uint64
+	lastSyncTime       time.Time
 	interval           time.Duration
 	wpoktContract      WrappedPocketContract
+	client             ethereum.EthereumClient
+}
+
+func (b *WPoktMonitorService) PoktHeight() string {
+	return ""
+}
+
+func (b *WPoktMonitorService) EthBlockNumber() string {
+	return strconv.FormatUint(b.startBlockNumber, 10)
+}
+
+func (b *WPoktMonitorService) Name() string {
+	return b.name
 }
 
 func (b *WPoktMonitorService) Stop() {
@@ -30,7 +48,7 @@ func (b *WPoktMonitorService) Stop() {
 }
 
 func (b *WPoktMonitorService) UpdateCurrentBlockNumber() {
-	res, err := Client.GetBlockNumber()
+	res, err := b.client.GetBlockNumber()
 	if err != nil {
 		log.Error(err)
 		return
@@ -116,6 +134,7 @@ func (b *WPoktMonitorService) Start() {
 	stop := false
 	for !stop {
 		log.Debug("[WPOKT MONITOR] Starting burn sync")
+		b.lastSyncTime = time.Now()
 
 		b.UpdateCurrentBlockNumber()
 
@@ -138,33 +157,49 @@ func (b *WPoktMonitorService) Start() {
 		case <-time.After(b.interval):
 		}
 	}
+	b.wg.Done()
 }
 
-func NewMonitor() models.Service {
+func (b *WPoktMonitorService) LastSyncTime() time.Time {
+	return b.lastSyncTime
+}
+
+func (b *WPoktMonitorService) Interval() time.Duration {
+	return b.interval
+}
+
+func NewMonitor(wg *sync.WaitGroup) models.Service {
 	if app.Config.WPOKTMonitor.Enabled == false {
 		log.Debug("[WPOKT MONITOR] WPOKT monitor disabled")
-		return models.NewEmptyService()
+		return models.NewEmptyService(wg, "empty-wpokt-monitor")
 	}
 
 	log.Debug("[WPOKT MONITOR] Initializing wpokt monitor")
+	client, err := ethereum.NewClient()
+	if err != nil {
+		log.Fatal("[WPOKT MONITOR] Error initializing ethereum client: ", err)
+	}
 	log.Debug("[WPOKT MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTContractAddress)
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), Client.GetClient())
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTContractAddress), client.GetClient())
 	if err != nil {
 		log.Fatal("[WPOKT MONITOR] Error initializing Wrapped Pocket contract", err)
 	}
 	log.Debug("[WPOKT MONITOR] Connected to wpokt contract")
 
 	b := &WPoktMonitorService{
+		wg:                 wg,
+		name:               "wpokt-monitor",
 		stop:               make(chan bool),
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
 		interval:           time.Duration(app.Config.WPOKTMonitor.IntervalSecs) * time.Second,
 		wpoktContract:      &WrappedPocketContractImpl{contract},
+		client:             client,
 	}
 
 	b.UpdateCurrentBlockNumber()
-	if app.Config.WPOKTMonitor.StartBlockNumber > 0 {
-		b.startBlockNumber = uint64(app.Config.WPOKTMonitor.StartBlockNumber)
+	if app.Config.Ethereum.StartBlockNumber > 0 {
+		b.startBlockNumber = uint64(app.Config.Ethereum.StartBlockNumber)
 	} else {
 		log.Debug("[WPOKT MONITOR] Found invalid start block number, updating to current block number")
 		b.startBlockNumber = b.currentBlockNumber
