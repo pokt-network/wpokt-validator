@@ -8,27 +8,27 @@ type SubmitRawTxResponse struct {
 	TransactionHash string `json:"txhash"`
 }
 
-type TxMsgValue struct {
+type Value struct {
 	FromAddress string `json:"from_address"`
 	ToAddress   string `json:"to_address"`
 	Amount      string `json:"amount"`
 }
 
-type TxMsg struct {
-	Value TxMsgValue `json:"value"`
-	Type  string     `json:"type"`
+type Msg struct {
+	Value Value  `json:"value"`
+	Type  string `json:"type"`
 }
 
-type StdTxParams struct {
+type StdTx struct {
 	Memo string `json:"memo"`
-	Msg  TxMsg  `json:"msg"`
+	Msg  Msg    `json:"msg"`
 }
 
 type TxResponse struct {
-	Hash   string      `json:"hash"`
-	Height int64       `json:"height"`
-	Index  int64       `json:"index"`
-	StdTx  StdTxParams `json:"stdTx"`
+	Hash   string `json:"hash"`
+	Height int64  `json:"height"`
+	Index  int64  `json:"index"`
+	StdTx  StdTx  `json:"stdTx"`
 }
 
 type AccountTxsResponse struct {

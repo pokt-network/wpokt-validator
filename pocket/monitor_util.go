@@ -14,21 +14,24 @@ import (
 
 func createMint(tx *pocket.TxResponse, memo models.MintMemo, wpoktAddress string, vaultAddress string) models.Mint {
 	return models.Mint{
-		Height:           strconv.FormatInt(tx.Height, 10),
-		Confirmations:    "0",
-		TransactionHash:  tx.Hash,
-		SenderAddress:    tx.StdTx.Msg.Value.FromAddress,
-		SenderChainId:    app.Config.Pocket.ChainId,
-		RecipientAddress: memo.Address,
-		RecipientChainId: memo.ChainId,
-		WPOKTAddress:     wpoktAddress,
-		VaultAddress:     vaultAddress,
-		Amount:           tx.StdTx.Msg.Value.Amount,
-		Memo:             &memo,
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
-		Status:           models.StatusPending,
-		Data:             nil,
+		Height:              strconv.FormatInt(tx.Height, 10),
+		Confirmations:       "0",
+		TransactionHash:     tx.Hash,
+		SenderAddress:       tx.StdTx.Msg.Value.FromAddress,
+		SenderChainId:       app.Config.Pocket.ChainId,
+		RecipientAddress:    memo.Address,
+		RecipientChainId:    memo.ChainId,
+		WPOKTAddress:        wpoktAddress,
+		VaultAddress:        vaultAddress,
+		Amount:              tx.StdTx.Msg.Value.Amount,
+		Memo:                &memo,
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
+		Status:              models.StatusPending,
+		Data:                nil,
+		MintTransactionHash: "",
+		Signers:             []string{},
+		Signatures:          []string{},
 	}
 }
 
@@ -36,13 +39,30 @@ func validateMemo(txMemo string) (models.MintMemo, bool) {
 	var memo models.MintMemo
 
 	err := json.Unmarshal([]byte(txMemo), &memo)
+	if err != nil {
+		return memo, false
+	}
 
 	address := common.HexToAddress(memo.Address).Hex()
-
-	if err != nil || memo.ChainId != app.Config.Ethereum.ChainId || strings.ToLower(address) != strings.ToLower(memo.Address) {
+	if strings.ToLower(address) != strings.ToLower(memo.Address) {
 		return memo, false
 	}
 	memo.Address = address
+
+	memoChainId, err := strconv.Atoi(memo.ChainId)
+	if err != nil {
+		return memo, false
+	}
+
+	appChainId, err := strconv.Atoi(app.Config.Ethereum.ChainId)
+	if err != nil {
+		return memo, false
+	}
+
+	if memoChainId != appChainId {
+		return memo, false
+	}
+	memo.ChainId = app.Config.Ethereum.ChainId
 	return memo, true
 }
 

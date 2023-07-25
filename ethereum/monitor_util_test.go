@@ -28,7 +28,7 @@ func TestCreateBurn(t *testing.T) {
 		expectedUpdated time.Duration
 	}{
 		{
-			name: "Valid event",
+			name: "Valid burn",
 			event: &autogen.WrappedPocketBurnAndBridge{
 				Raw: types.Log{
 					BlockNumber: 10,
@@ -51,8 +51,8 @@ func TestCreateBurn(t *testing.T) {
 				RecipientAddress: RECIPIENT_ADDRESS,
 				RecipientChainId: app.Config.Pocket.ChainId,
 				Amount:           "100",
-				CreatedAt:        time.Now(), // We'll use assert.WithinDuration to check if within an acceptable range
-				UpdatedAt:        time.Now(), // We'll use assert.WithinDuration to check if within an acceptable range
+				CreatedAt:        time.Time{}, // We'll use assert.WithinDuration to check if within an acceptable range
+				UpdatedAt:        time.Time{}, // We'll use assert.WithinDuration to check if within an acceptable range
 				Status:           models.StatusPending,
 				Signers:          []string{},
 			},
@@ -67,8 +67,8 @@ func TestCreateBurn(t *testing.T) {
 			assert.WithinDuration(t, time.Now(), result.CreatedAt, tc.expectedUpdated)
 			assert.WithinDuration(t, time.Now(), result.UpdatedAt, tc.expectedUpdated)
 
-			result.CreatedAt = tc.expectedBurn.CreatedAt
-			result.UpdatedAt = tc.expectedBurn.UpdatedAt
+			result.CreatedAt = time.Time{}
+			result.UpdatedAt = time.Time{}
 
 			assert.Equal(t, tc.expectedBurn, result)
 
