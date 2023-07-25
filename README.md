@@ -2,6 +2,33 @@
 
 The wPOKT Validator is a validator node that facilitates the bridging of POKT tokens from the POKT network to wPOKT on the Ethereum Mainnet. It achieves this by monitoring transactions to a specific vault address on the POKT network. Upon receiving transactions with a valid memo, it creates a signed transaction on the Ethereum Mainnet, which is then stored in the MongoDB database. Users can access the signed transaction data through the provided UI and submit it on the Ethereum Mainnet to mint wPOKT. Additionally, the process supports burning wPOKT tokens on the Mainnet.
 
+## How It Works
+
+The wPOKT Validator comprises seven parallel services that enable the bridging of POKT tokens from the POKT network to wPOKT on the Ethereum Mainnet. Each service operates on an interval specified in the configuration. Here's an overview of their roles:
+
+1. **Mint Monitor:**
+   Monitors the Pocket network for transactions to the vault address. It validates transaction memos, inserting both valid `mint` and `invalid mint` transactions into the database.
+
+2. **Mint Signer:**
+   Handles pending and confirmed `mint` transactions. It signs confirmed transactions and updates the database accordingly.
+
+3. **Mint Executor:**
+   Monitors the Ethereum network for `mint` events and marks mints as successful in the database.
+
+4. **Burn Monitor:**
+   Monitors the Ethereum network for `burn` events and records them in the database.
+
+5. **Burn Signer:**
+   Handles pending and confirmed `burn` and `invalid mint` transactions. It signs the transactions and updates the status.
+
+6. **Burn Executor:**
+   Submits signed `burn` and `invalid mint` transactions to the Pocket network and updates the database upon success.
+
+7. **Health:**
+   Periodically reports the health status of the Golang service and sub-services to the database.
+
+Through these services, the wPOKT Validator bridges POKT tokens to wPOKT, providing a secure and efficient validation process for the entire ecosystem.
+
 ## Installation
 
 No specific installation steps are required. Users should have Golang installed locally and access to a MongoDB instance, either running locally or remotely, that they can attach to.
