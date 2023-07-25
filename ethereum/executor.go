@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	MintExecutorName string = "mint-executor"
+	MintExecutorName string = "mint executor"
 )
 
 type MintExecutorService struct {
@@ -38,10 +38,10 @@ type MintExecutorService struct {
 }
 
 func (b *MintExecutorService) Start() {
-	log.Debug("[MINT EXECUTOR] Starting wpokt executor")
+	log.Info("[MINT EXECUTOR] Starting service")
 	stop := false
 	for !stop {
-		log.Debug("[MINT EXECUTOR] Starting mint sync")
+		log.Info("[MINT EXECUTOR] Starting sync")
 		b.lastSyncTime = time.Now()
 
 		b.UpdateCurrentBlockNumber()
@@ -52,16 +52,15 @@ func (b *MintExecutorService) Start() {
 				b.startBlockNumber = b.currentBlockNumber
 			}
 		} else {
-			log.Debug("[MINT EXECUTOR] No new blocks to sync")
+			log.Info("[MINT EXECUTOR] No new blocks to sync")
 		}
 
-		log.Debug("[MINT EXECUTOR] Finished mint sync")
-		log.Debug("[MINT EXECUTOR] Sleeping for ", b.interval)
+		log.Info("[MINT EXECUTOR] Finished sync, Sleeping for ", b.interval)
 
 		select {
 		case <-b.stop:
 			stop = true
-			log.Debug("[MINT EXECUTOR] Stopped wpokt executor")
+			log.Info("[MINT EXECUTOR] Stopped service")
 		case <-time.After(b.interval):
 		}
 	}
@@ -80,7 +79,7 @@ func (m *MintExecutorService) Health() models.ServiceHealth {
 }
 
 func (b *MintExecutorService) Stop() {
-	log.Debug("[MINT EXECUTOR] Stopping wpokt executor")
+	log.Debug("[MINT EXECUTOR] Stopping service")
 	b.stop <- true
 }
 
@@ -88,11 +87,11 @@ func (b *MintExecutorService) InitStartBlockNumber(startBlockNumber int64) {
 	if app.Config.Ethereum.StartBlockNumber > 0 {
 		b.startBlockNumber = int64(app.Config.Ethereum.StartBlockNumber)
 	} else {
-		log.Debug("[MINT EXECUTOR] Found invalid start block number, updating to current block number")
+		log.Warn("[MINT EXECUTOR] Found invalid start block number, updating to current block number")
 		b.startBlockNumber = b.currentBlockNumber
 	}
 
-	log.Debug("[MINT EXECUTOR] Start block number: ", b.startBlockNumber)
+	log.Info("[MINT EXECUTOR] Start block number: ", b.startBlockNumber)
 }
 
 func (b *MintExecutorService) UpdateCurrentBlockNumber() {
@@ -102,14 +101,14 @@ func (b *MintExecutorService) UpdateCurrentBlockNumber() {
 		return
 	}
 	b.currentBlockNumber = int64(res)
-	log.Debug("[MINT EXECUTOR] Current block number: ", b.currentBlockNumber)
+	log.Info("[MINT EXECUTOR] Current block number: ", b.currentBlockNumber)
 }
 
 func (b *MintExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinted) bool {
 	log.Debug("[MINT EXECUTOR] Handling mint event: ", event.Raw.TxHash, " ", event.Raw.Index)
 
 	filter := bson.M{
-		"wpokt_address":     b.wpoktAddress,
+		"mint_address":      b.wpoktAddress,
 		"vault_address":     b.vaultAddress,
 		"recipient_address": event.Recipient.Hex(),
 		"amount":            event.Amount.String(),
@@ -133,7 +132,7 @@ func (b *MintExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinted
 		return false
 	}
 
-	log.Debug("[MINT EXECUTOR] Mint event handled successfully")
+	log.Info("[MINT EXECUTOR] Mint event handled successfully")
 
 	return true
 }
@@ -170,12 +169,12 @@ func (b *MintExecutorService) SyncTxs() bool {
 				endBlockNumber = b.currentBlockNumber
 			}
 
-			log.Debug("[MINT EXECUTOR] Syncing mint txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
+			log.Info("[MINT EXECUTOR] Syncing mint txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
 			success = success && b.SyncBlocks(uint64(i), uint64(endBlockNumber))
 		}
 
 	} else {
-		log.Debug("[MINT EXECUTOR] Syncing mint txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
+		log.Info("[MINT EXECUTOR] Syncing mint txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
 		success = success && b.SyncBlocks(uint64(b.startBlockNumber), uint64(b.currentBlockNumber))
 	}
 	return success
@@ -187,14 +186,14 @@ func newExecutor(wg *sync.WaitGroup) *MintExecutorService {
 		log.Fatal("[MINT EXECUTOR] Error initializing ethereum client", err)
 	}
 
-	log.Debug("[MINT EXECUTOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTAddress)
+	log.Debug("[MINT EXECUTOR] Connecting to mint contract at: ", app.Config.Ethereum.WPOKTAddress)
 
 	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTAddress), client.GetClient())
 	if err != nil {
 		log.Fatal("[MINT EXECUTOR] Error initializing Wrapped Pocket contract", err)
 	}
 
-	log.Debug("[MINT EXECUTOR] Connected to wpokt contract")
+	log.Debug("[MINT EXECUTOR] Connected to mint contract")
 
 	mintControllerAbi, err := autogen.MintControllerMetaData.GetAbi()
 	if err != nil {
@@ -225,7 +224,7 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 		log.Debug("[MINT EXECUTOR] MINT executor disabled")
 		return models.NewEmptyService(wg)
 	}
-	log.Debug("[MINT EXECUTOR] Initializing wpokt executor")
+	log.Debug("[MINT EXECUTOR] Initializing mint executor")
 
 	m := newExecutor(wg)
 
@@ -233,7 +232,7 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 
 	m.InitStartBlockNumber(int64(app.Config.Ethereum.StartBlockNumber))
 
-	log.Debug("[MINT EXECUTOR] Initialized wpokt executor")
+	log.Info("[MINT EXECUTOR] Initialized mint executor")
 
 	return m
 }
@@ -243,7 +242,7 @@ func NewExecutorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHeal
 		log.Debug("[MINT EXECUTOR] MINT executor disabled")
 		return models.NewEmptyService(wg)
 	}
-	log.Debug("[MINT EXECUTOR] Initializing wpokt executor with last health")
+	log.Debug("[MINT EXECUTOR] Initializing mint executor with last health")
 
 	m := newExecutor(wg)
 
@@ -257,7 +256,7 @@ func NewExecutorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHeal
 
 	m.InitStartBlockNumber(lastBlockNumber)
 
-	log.Debug("[MINT EXECUTOR] Initialized wpokt executor")
+	log.Info("[MINT EXECUTOR] Initialized mint executor")
 
 	return m
 }

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	MintSignerName = "mint-signer"
+	MintSignerName = "mint signer"
 )
 
 type MintSignerService struct {
@@ -46,22 +46,21 @@ type MintSignerService struct {
 }
 
 func (m *MintSignerService) Start() {
-	log.Debug("[MINT SIGNER] Starting wpokt signer")
+	log.Info("[MINT SIGNER] Starting service")
 	stop := false
 	for !stop {
-		log.Debug("[MINT SIGNER] Starting wpokt signer sync")
+		log.Info("[MINT SIGNER] Starting sync")
 		m.lastSyncTime = time.Now()
 
 		m.UpdateBlocks()
 		m.SyncTxs()
 
-		log.Debug("[MINT SIGNER] Finished wpokt signer sync")
-		log.Debug("[MINT SIGNER] Sleeping for ", m.interval)
+		log.Info("[MINT SIGNER] Finished sync, Sleeping for ", m.interval)
 
 		select {
 		case <-m.stop:
 			stop = true
-			log.Debug("[MINT SIGNER] Stopped wpokt signer")
+			log.Info("[MINT SIGNER] Stopped service")
 		case <-time.After(m.interval):
 		}
 	}
@@ -80,7 +79,7 @@ func (m *MintSignerService) Health() models.ServiceHealth {
 }
 
 func (m *MintSignerService) Stop() {
-	log.Debug("[MINT SIGNER] Stopping wpokt signer")
+	log.Debug("[MINT SIGNER] Stopping service")
 	m.stop <- true
 }
 
@@ -108,7 +107,7 @@ func (m *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 	}
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
-		log.Debug("[MINT SIGNER] Mint nonce not set, fetching from contract")
+		log.Info("[MINT SIGNER] Mint nonce not set, fetching from contract")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 		defer cancel()
 		opts := &bind.CallOpts{Context: ctx, Pending: false}
@@ -244,7 +243,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 		log.Error("[MINT SIGNER] Error updating mint: ", err)
 		return false
 	}
-	log.Debug("[MINT SIGNER] Mint updated with signature")
+	log.Info("[MINT SIGNER] Mint updated with signature")
 
 	return true
 }
@@ -285,14 +284,14 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 		return models.NewEmptyService(wg)
 	}
 
-	log.Debug("[MINT SIGNER] Initializing wpokt signer")
+	log.Debug("[MINT SIGNER] Initializing mint signer")
 
 	privateKey, err := crypto.HexToECDSA(app.Config.Ethereum.PrivateKey)
 	if err != nil {
 		log.Fatal("[MINT SIGNER] Error loading private key: ", err)
 	}
 	address := crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
-	log.Debug("[MINT SIGNER] Loaded private key for address: ", address)
+	log.Info("[MINT SIGNER] ETH signer address: ", address)
 
 	ethClient, err := ethereum.NewClient()
 	if err != nil {
@@ -314,7 +313,6 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 	log.Debug("[MINT SIGNER] Connected to mint controller contract")
 
 	log.Debug("[MINT SIGNER] Fetching mint controller domain data")
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 	defer cancel()
 	opts := &bind.CallOpts{Context: ctx, Pending: false}
@@ -342,7 +340,7 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 		poktClient:             pocket.NewClient(),
 	}
 
-	log.Debug("[MINT SIGNER] Initialized wpokt signer")
+	log.Info("[MINT SIGNER] Initialized mint signer")
 
 	return b
 }

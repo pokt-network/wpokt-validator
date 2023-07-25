@@ -37,13 +37,39 @@ type HealthServiceInterface interface {
 
 func (b *HealthService) Health() models.ServiceHealth {
 	return models.ServiceHealth{
-		Name:           b.Name(),
-		LastSyncTime:   b.LastSyncTime(),
-		NextSyncTime:   b.LastSyncTime().Add(b.Interval()),
+		Name:           b.name,
+		LastSyncTime:   b.lastSyncTime,
+		NextSyncTime:   b.lastSyncTime.Add(b.interval),
 		PoktHeight:     "",
 		EthBlockNumber: "",
 		Healthy:        true,
 	}
+}
+func (b *HealthService) Start() {
+	log.Info("[HEALTH] Starting service")
+	stop := false
+	for !stop {
+		log.Info("[HEALTH] Starting sync")
+		b.lastSyncTime = time.Now()
+
+		b.PostHealth()
+
+		log.Info("[HEALTH] Finished sync, Sleeping for ", b.interval)
+
+		select {
+		case <-b.stop:
+			stop = true
+			b.PostHealth()
+			log.Info("[HEALTH] Stopped service")
+			b.wg.Done()
+		case <-time.After(b.interval):
+		}
+	}
+}
+
+func (b *HealthService) Stop() {
+	log.Debug("[HEALTH] Stopping health")
+	b.stop <- true
 }
 
 func (b *HealthService) FindLastHealth() (models.Health, error) {
@@ -51,23 +77,6 @@ func (b *HealthService) FindLastHealth() (models.Health, error) {
 	filter := bson.M{"hostname": b.hostname}
 	err := DB.FindOne(models.CollectionHealthChecks, filter, &health)
 	return health, err
-}
-
-func (b *HealthService) LastSyncTime() time.Time {
-	return b.lastSyncTime
-}
-
-func (b *HealthService) Interval() time.Duration {
-	return b.interval
-}
-
-func (b *HealthService) Name() string {
-	return b.name
-}
-
-func (b *HealthService) Stop() {
-	log.Debug("[HEALTH] Stopping health")
-	b.stop <- true
 }
 
 func (b *HealthService) ServiceHealths() []models.ServiceHealth {
@@ -112,29 +121,6 @@ func (b *HealthService) PostHealth() bool {
 	return true
 }
 
-func (b *HealthService) Start() {
-	log.Debug("[HEALTH] Starting health")
-	stop := false
-	for !stop {
-		log.Debug("[HEALTH] Starting health sync")
-		b.lastSyncTime = time.Now()
-
-		b.PostHealth()
-
-		log.Debug("[HEALTH] Finished health sync")
-		log.Debug("[HEALTH] Sleeping for ", b.interval)
-
-		select {
-		case <-b.stop:
-			stop = true
-			b.PostHealth()
-			log.Debug("[HEALTH] Stopped health")
-			b.wg.Done()
-		case <-time.After(b.interval):
-		}
-	}
-}
-
 func (b *HealthService) SetServices(services []models.Service) {
 	b.services = services
 }
@@ -163,7 +149,7 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 	for _, pk := range Config.Pocket.MultisigPublicKeys {
 		p, err := poktCrypto.NewPublicKey(pk)
 		if err != nil {
-			log.Debug("[HEALTH] Error parsing multisig public key: ", err)
+			log.Error("[HEALTH] Error parsing multisig public key: ", err)
 			continue
 		}
 		pks = append(pks, p)
@@ -190,7 +176,7 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 		wg:               wg,
 	}
 
-	log.Debug("[HEALTH] Initialized health")
+	log.Info("[HEALTH] Initialized health")
 
 	return b
 }

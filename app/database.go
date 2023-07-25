@@ -40,12 +40,11 @@ func (d *mongoDatabase) Connect(ctx context.Context) error {
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(Config.MongoDB.URI).SetWriteConcern(wcMajority))
 	if err != nil {
-		log.Debug("[DB] URI: ", Config.MongoDB.URI)
 		return err
 	}
 	d.db = client.Database(Config.MongoDB.Database)
 
-	log.Debug("[DB] Connected to mongo database: ", Config.MongoDB.Database)
+	log.Info("[DB] Connected to mongo database: ", Config.MongoDB.Database)
 	return nil
 }
 
@@ -89,7 +88,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 		return err
 	}
 
-	log.Debug("[DB] Indexes setup")
+	log.Info("[DB] Indexes setup")
 
 	return nil
 }
@@ -100,7 +99,7 @@ func (d *mongoDatabase) Disconnect() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	err := d.db.Client().Disconnect(ctx)
-	log.Debug("[DB] Disconnected from database")
+	log.Info("[DB] Disconnected from database")
 	return err
 }
 

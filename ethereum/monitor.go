@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,7 +18,7 @@ import (
 )
 
 const (
-	BurnMonitorName         = "burn-monitor"
+	BurnMonitorName         = "burn monitor"
 	MAX_QUERY_BLOCKS int64  = 100000
 	ZERO_ADDRESS     string = "0x0000000000000000000000000000000000000000"
 )
@@ -37,10 +36,10 @@ type BurnMonitorService struct {
 }
 
 func (b *BurnMonitorService) Start() {
-	log.Debug("[BURN MONITOR] Starting wpokt monitor")
+	log.Info("[BURN MONITOR] Starting service")
 	stop := false
 	for !stop {
-		log.Debug("[BURN MONITOR] Starting burn sync")
+		log.Info("[BURN MONITOR] Starting sync")
 		b.lastSyncTime = time.Now()
 
 		b.UpdateCurrentBlockNumber()
@@ -51,16 +50,15 @@ func (b *BurnMonitorService) Start() {
 				b.startBlockNumber = b.currentBlockNumber
 			}
 		} else {
-			log.Debug("[BURN MONITOR] No new blocks to sync")
+			log.Info("[BURN MONITOR] No new blocks to sync")
 		}
 
-		log.Debug("[BURN MONITOR] Finished burn sync")
-		log.Debug("[BURN MONITOR] Sleeping for ", b.interval)
+		log.Info("[BURN MONITOR] Finished sync, Sleeping for ", b.interval)
 
 		select {
 		case <-b.stop:
 			stop = true
-			log.Debug("[BURN MONITOR] Stopped wpokt monitor")
+			log.Info("[BURN MONITOR] Stopped service")
 		case <-time.After(b.interval):
 		}
 	}
@@ -79,7 +77,7 @@ func (b *BurnMonitorService) Health() models.ServiceHealth {
 }
 
 func (b *BurnMonitorService) Stop() {
-	log.Debug("[BURN MONITOR] Stopping wpokt monitor")
+	log.Debug("[BURN MONITOR] Stopping service")
 	b.stop <- true
 }
 
@@ -87,11 +85,11 @@ func (b *BurnMonitorService) InitStartBlockNumber(startBlockNumber int64) {
 	if app.Config.Ethereum.StartBlockNumber > 0 {
 		b.startBlockNumber = int64(app.Config.Ethereum.StartBlockNumber)
 	} else {
-		log.Debug("[BURN MONITOR] Found invalid start block number, updating to current block number")
+		log.Warn("[BURN MONITOR] Found invalid start block number, updating to current block number")
 		b.startBlockNumber = b.currentBlockNumber
 	}
 
-	log.Debug("[BURN EXECUTOR] Start block number: ", b.startBlockNumber)
+	log.Info("[BURN EXECUTOR] Start block number: ", b.startBlockNumber)
 }
 
 func (b *BurnMonitorService) UpdateCurrentBlockNumber() {
@@ -101,26 +99,11 @@ func (b *BurnMonitorService) UpdateCurrentBlockNumber() {
 		return
 	}
 	b.currentBlockNumber = int64(res)
-	log.Debug("[BURN MONITOR] Current block number: ", b.currentBlockNumber)
+	log.Info("[BURN MONITOR] Current block number: ", b.currentBlockNumber)
 }
 
 func (b *BurnMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAndBridge) bool {
-	doc := models.Burn{
-		BlockNumber:      strconv.FormatInt(int64(event.Raw.BlockNumber), 10),
-		Confirmations:    "0",
-		TransactionHash:  event.Raw.TxHash.String(),
-		LogIndex:         strconv.FormatInt(int64(event.Raw.Index), 10),
-		WPOKTAddress:     event.Raw.Address.String(),
-		SenderAddress:    event.From.String(),
-		SenderChainId:    app.Config.Ethereum.ChainId,
-		RecipientAddress: strings.Split(event.PoktAddress.String(), "0x")[1],
-		RecipientChainId: app.Config.Pocket.ChainId,
-		Amount:           event.Amount.String(),
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
-		Status:           models.StatusPending,
-		Signers:          []string{},
-	}
+	doc := createBurn(event)
 
 	// each event is a combination of transaction hash and log index
 	log.Debug("[BURN MONITOR] Handling burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
@@ -128,14 +111,14 @@ func (b *BurnMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAnd
 	err := app.DB.InsertOne(models.CollectionBurns, doc)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			log.Debug("[BURN MONITOR] Found duplicate burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
+			log.Info("[BURN MONITOR] Found duplicate burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
 			return true
 		}
 		log.Error("[BURN MONITOR] Error while storing burn event in db: ", err)
 		return false
 	}
 
-	log.Debug("[BURN MONITOR] Stored burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
+	log.Info("[BURN MONITOR] Stored burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
 	return true
 }
 
@@ -167,11 +150,11 @@ func (b *BurnMonitorService) SyncTxs() bool {
 			if endBlockNumber > b.currentBlockNumber {
 				endBlockNumber = b.currentBlockNumber
 			}
-			log.Debug("[BURN MONITOR] Syncing burn txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
+			log.Info("[BURN MONITOR] Syncing burn txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
 			success = success && b.SyncBlocks(uint64(i), uint64(endBlockNumber))
 		}
 	} else {
-		log.Debug("[BURN MONITOR] Syncing burn txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
+		log.Info("[BURN MONITOR] Syncing burn txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
 		success = success && b.SyncBlocks(uint64(b.startBlockNumber), uint64(b.currentBlockNumber))
 	}
 	return success
@@ -209,7 +192,7 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 		return models.NewEmptyService(wg)
 	}
 
-	log.Debug("[BURN MONITOR] Initializing wpokt monitor")
+	log.Debug("[BURN MONITOR] Initializing burn monitor")
 
 	m := newMonitor(wg)
 
@@ -217,7 +200,7 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 
 	m.InitStartBlockNumber(int64(app.Config.Ethereum.StartBlockNumber))
 
-	log.Debug("[BURN MONITOR] Initialized wpokt monitor")
+	log.Info("[BURN MONITOR] Initialized burn monitor")
 
 	return m
 }
@@ -228,7 +211,7 @@ func NewMonitorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealt
 		return models.NewEmptyService(wg)
 	}
 
-	log.Debug("[BURN MONITOR] Initializing wpokt monitor")
+	log.Debug("[BURN MONITOR] Initializing burn monitor")
 
 	m := newMonitor(wg)
 
@@ -242,7 +225,7 @@ func NewMonitorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealt
 
 	m.InitStartBlockNumber(lastBlockNumber)
 
-	log.Debug("[BURN MONITOR] Initialized wpokt monitor")
+	log.Info("[BURN MONITOR] Initialized burn monitor")
 
 	return m
 }

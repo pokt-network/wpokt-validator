@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	BurnSignerName = "burn-signer"
+	BurnSignerName = "burn signer"
 )
 
 type BurnSignerService struct {
@@ -36,23 +36,22 @@ type BurnSignerService struct {
 }
 
 func (m *BurnSignerService) Start() {
-	log.Debug("[BURN SIGNER] Starting pokt signer")
+	log.Info("[BURN SIGNER] Starting service")
 	stop := false
 	for !stop {
-		log.Debug("[BURN SIGNER] Starting pokt signer sync")
+		log.Info("[BURN SIGNER] Starting sync")
 		m.lastSyncTime = time.Now()
 
 		m.UpdateBlocks()
 
 		m.SyncTxs()
 
-		log.Debug("[BURN SIGNER] Finished pokt signer sync")
-		log.Debug("[BURN SIGNER] Sleeping for ", m.interval)
+		log.Info("[BURN SIGNER] Finished sync, Sleeping for ", m.interval)
 
 		select {
 		case <-m.stop:
 			stop = true
-			log.Debug("[BURN SIGNER] Stopped pokt signer")
+			log.Info("[BURN SIGNER] Stopped service")
 		case <-time.After(m.interval):
 		}
 	}
@@ -71,7 +70,7 @@ func (m *BurnSignerService) Health() models.ServiceHealth {
 }
 
 func (m *BurnSignerService) Stop() {
-	log.Debug("[BURN SIGNER] Stopping pokt signer")
+	log.Debug("[BURN SIGNER] Stopping service")
 	m.stop <- true
 }
 
@@ -92,11 +91,11 @@ func (m *BurnSignerService) UpdateBlocks() {
 	}
 	m.ethBlockNumber = int64(ethBlockNumber)
 
-	log.Debug("[BURN SIGNER] Updated blocks")
+	log.Info("[BURN SIGNER] Updated blocks")
 }
 
 func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
-	log.Debug("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
+	log.Info("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
 
 	doc, err := updateStatusAndConfirmationsForInvalidMint(doc, m.poktHeight)
 	if err != nil {
@@ -142,7 +141,7 @@ func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 		log.Error("[BURN SIGNER] Error updating invalid mint: ", err)
 		return false
 	}
-	log.Debug("[BURN SIGNER] Updated invalid mint")
+	log.Info("[BURN SIGNER] Updated invalid mint")
 	return true
 }
 
@@ -192,13 +191,13 @@ func (m *BurnSignerService) HandleBurn(doc models.Burn) bool {
 		log.Error("[BURN SIGNER] Error updating burn: ", err)
 		return false
 	}
-	log.Debug("[BURN SIGNER] Updated burn")
+	log.Info("[BURN SIGNER] Updated burn")
 
 	return true
 }
 
 func (m *BurnSignerService) SyncTxs() bool {
-	log.Debug("[BURN SIGNER] Syncing txs")
+	log.Info("[BURN SIGNER] Syncing txs")
 	filter := bson.M{
 		"vault_address": m.vaultAddress,
 		"status":        bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
@@ -211,7 +210,7 @@ func (m *BurnSignerService) SyncTxs() bool {
 		log.Error("[BURN SIGNER] Error fetching invalid mints: ", err)
 		return false
 	}
-	log.Debug("[BURN SIGNER] Found invalid mints: ", len(invalidMints))
+	log.Info("[BURN SIGNER] Found invalid mints: ", len(invalidMints))
 
 	var success bool = true
 	for _, doc := range invalidMints {
@@ -230,11 +229,11 @@ func (m *BurnSignerService) SyncTxs() bool {
 		log.Error("[BURN SIGNER] Error fetching burns: ", err)
 		return false
 	}
-	log.Debug("[BURN SIGNER] Found burns: ", len(burns))
+	log.Info("[BURN SIGNER] Found burns: ", len(burns))
 	for _, doc := range burns {
 		success = m.HandleBurn(doc) && success
 	}
-	log.Debug("[BURN SIGNER] Synced txs")
+	log.Info("[BURN SIGNER] Synced txs")
 
 	return success
 }
@@ -245,21 +244,21 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 		return models.NewEmptyService(wg)
 	}
 
-	log.Debug("[BURN SIGNER] Initializing pokt signer")
+	log.Debug("[BURN SIGNER] Initializing burn signer")
 
 	pk, err := crypto.NewPrivateKey(app.Config.Pocket.PrivateKey)
 	if err != nil {
-		log.Fatal("[BURN SIGNER] Error initializing pokt signer: ", err)
+		log.Fatal("[BURN SIGNER] Error initializing burn signer: ", err)
 	}
-	log.Debug("[BURN SIGNER] Initialized pokt signer private key")
-	log.Debug("[BURN SIGNER] Pokt signer public key: ", pk.PublicKey().RawString())
-	log.Debug("[BURN SIGNER] Pokt signer address: ", pk.PublicKey().Address().String())
+	log.Info("[BURN SIGNER] POKT signer public key: ", pk.PublicKey().RawString())
+	log.Debug("[BURN SIGNER] POKT signer address: ", pk.PublicKey().Address().String())
+	log.Debug("[BURN SIGNER] Initialized burn signer private key")
 
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			log.Debug("[BURN SIGNER] Error parsing multisig public key: ", err)
+			log.Error("[BURN SIGNER] Error parsing multisig public key: ", err)
 			continue
 		}
 		pks = append(pks, p)
@@ -290,7 +289,7 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 
 	m.UpdateBlocks()
 
-	log.Debug("[BURN SIGNER] Initialized pokt signer")
+	log.Info("[BURN SIGNER] Initialized burn signer")
 
 	return m
 }

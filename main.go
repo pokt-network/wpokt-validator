@@ -82,13 +82,14 @@ func main() {
 		absEnvPath, _ = filepath.Abs(os.Args[2])
 	}
 
-	log.Info("[MAIN] Starting server")
+	log.Debug("[MAIN] Starting server")
 	app.InitConfig(absConfigPath, absEnvPath)
 	if absEnvPath != "" {
-		log.Info("[MAIN] Env loaded from: ", absEnvPath, " and merged with config from: ", absConfigPath)
+		log.Debug("[MAIN] Env loaded from: ", absEnvPath, " and merged with config from: ", absConfigPath)
 	} else {
-		log.Info("[MAIN] Config loaded from: ", absConfigPath)
+		log.Debug("[MAIN] Config loaded from: ", absConfigPath)
 	}
+	log.Info("[MAIN] Config initialized")
 	app.InitLogger()
 	log.Info("[MAIN] Logger initialized")
 
@@ -106,7 +107,7 @@ func main() {
 	lastHealth, err := healthcheck.FindLastHealth()
 	serviceHealthMap := make(map[string]models.ServiceHealth)
 	if err != nil {
-		log.Error("[MAIN] Error getting last health: ", err)
+		log.Warn("[MAIN] Error getting last health: ", err)
 	} else {
 		for _, serviceHealth := range lastHealth.ServiceHealths {
 			serviceHealthMap[serviceHealth.Name] = serviceHealth
@@ -134,7 +135,7 @@ func main() {
 	go waitForExitSignals(gracefulStop, done)
 	<-done
 
-	log.Info("[MAIN] Stopping server gracefully")
+	log.Debug("[MAIN] Stopping server gracefully")
 
 	for _, service := range services {
 		service.Stop()
@@ -148,6 +149,6 @@ func main() {
 
 func waitForExitSignals(gracefulStop chan os.Signal, done chan bool) {
 	sig := <-gracefulStop
-	log.Info("[MAIN] Caught signal: ", sig)
+	log.Debug("[MAIN] Caught signal: ", sig)
 	done <- true
 }

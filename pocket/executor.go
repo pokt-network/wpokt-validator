@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	BurnExecutorName = "burn-executor"
+	BurnExecutorName = "burn executor"
 )
 
 type BurnExecutorService struct {
@@ -29,21 +29,20 @@ type BurnExecutorService struct {
 }
 
 func (m *BurnExecutorService) Start() {
-	log.Debug("[BURN EXECUTOR] Starting pokt executor")
+	log.Info("[BURN EXECUTOR] Starting service")
 	stop := false
 	for !stop {
-		log.Debug("[BURN EXECUTOR] Starting pokt executor sync")
+		log.Info("[BURN EXECUTOR] Starting sync")
 		m.lastSyncTime = time.Now()
 
 		m.SyncTxs()
 
-		log.Debug("[BURN EXECUTOR] Finished pokt executor sync")
-		log.Debug("[BURN EXECUTOR] Sleeping for ", m.interval)
+		log.Info("[BURN EXECUTOR] Finished sync, Sleeping for ", m.interval)
 
 		select {
 		case <-m.stop:
 			stop = true
-			log.Debug("[BURN EXECUTOR] Stopped pokt executor")
+			log.Info("[BURN EXECUTOR] Stopped service")
 		case <-time.After(m.interval):
 		}
 	}
@@ -62,7 +61,7 @@ func (m *BurnExecutorService) Health() models.ServiceHealth {
 }
 
 func (m *BurnExecutorService) Stop() {
-	log.Debug("[BURN EXECUTOR] Stopping pokt executor")
+	log.Debug("[BURN EXECUTOR] Stopping service")
 	m.stop <- true
 }
 
@@ -110,7 +109,7 @@ func (m *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 		log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
 		return false
 	}
-	log.Debug("[BURN EXECUTOR] Handled invalid mint")
+	log.Info("[BURN EXECUTOR] Handled invalid mint")
 
 	return true
 }
@@ -160,7 +159,7 @@ func (m *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 		log.Error("[BURN EXECUTOR] Error updating burn: ", err)
 		return false
 	}
-	log.Debug("[BURN EXECUTOR] Handled burn")
+	log.Info("[BURN EXECUTOR] Handled burn")
 	return true
 }
 
@@ -182,7 +181,7 @@ func (m *BurnExecutorService) SyncTxs() bool {
 		return false
 	}
 
-	log.Debug("[BURN EXECUTOR] Found invalid mints: ", len(invalidMints))
+	log.Info("[BURN EXECUTOR] Found invalid mints: ", len(invalidMints))
 
 	var success bool = true
 	for _, doc := range invalidMints {
@@ -206,7 +205,7 @@ func (m *BurnExecutorService) SyncTxs() bool {
 		return false
 	}
 
-	log.Debug("[BURN EXECUTOR] Found burns: ", len(burns))
+	log.Info("[BURN EXECUTOR] Found burns: ", len(burns))
 
 	for _, doc := range burns {
 		success = m.HandleBurn(doc) && success
@@ -221,7 +220,7 @@ func newExecutor(wg *sync.WaitGroup) models.Service {
 		return models.NewEmptyService(wg)
 	}
 
-	log.Debug("[BURN EXECUTOR] Initializing pokt executor")
+	log.Debug("[BURN EXECUTOR] Initializing burn executor")
 
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
@@ -250,7 +249,7 @@ func newExecutor(wg *sync.WaitGroup) models.Service {
 		client:          pocket.NewClient(),
 	}
 
-	log.Debug("[BURN EXECUTOR] Initialized pokt executor")
+	log.Info("[BURN EXECUTOR] Initialized burn executor")
 
 	return m
 }

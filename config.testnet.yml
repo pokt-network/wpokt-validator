@@ -43,15 +43,15 @@ mint_executor:
   enabled: true
   interval_secs: 300
 
+burn_monitor:
+  enabled: true
+  interval_secs: 300
+
 burn_signer:
   enabled: true
   interval_secs: 300
 
 burn_executor:
-  enabled: true
-  interval_secs: 300
-
-burn_monitor:
   enabled: true
   interval_secs: 300
 

@@ -268,32 +268,27 @@ func (c *pocketClient) ValidateNetwork() {
 	log.Debugln("[POKT] URL", app.Config.Pocket.RPCURL)
 	res, err := c.GetBlock()
 	if err != nil {
-		log.Errorln("[POKT] Error getting block", err)
-		panic(err)
+		log.Fatalln("[POKT] Error getting block", err)
 	}
 	height, err := c.GetHeight()
 	if err != nil {
-		log.Errorln("[POKT] Error getting height", err)
-		panic(err)
+		log.Fatalln("[POKT] Error getting height", err)
 	}
 	log.Debugln("[POKT] Validating network", "chainId", res.Block.Header.ChainID)
 
 	if res.Block.Header.ChainID != app.Config.Pocket.ChainId {
-		log.Debugln("[POKT] Chain ID mismatch", "expected", app.Config.Pocket.ChainId, "got", res.Block.Header.ChainID)
-		panic("[POKT] Chain ID mismatch")
+		log.Fatalln("[POKT] Chain ID mismatch", "expected", app.Config.Pocket.ChainId, "got", res.Block.Header.ChainID)
 	}
 
 	log.Debugln("[POKT] Validating network", "height", res.Block.Header.Height)
 	blockHeight, err := strconv.Atoi(res.Block.Header.Height)
 	if err != nil {
-		log.Errorln("[POKT] Error parsing height", err)
-		panic(err)
+		log.Fatalln("[POKT] Error parsing height", err)
 	}
 	if height.Height-int64(blockHeight) > 3 {
-		log.Debugln("[POKT] Height mismatch", "expected", height.Height, "got", res.Block.Header.Height)
-		panic("[POKT] Height mismatch")
+		log.Fatalln("[POKT] Height mismatch", "expected", height.Height, "got", res.Block.Header.Height)
 	}
-	log.Debugln("[POKT] Validated network")
+	log.Infoln("[POKT] Validated network")
 }
 
 func NewClient() PocketClient {
