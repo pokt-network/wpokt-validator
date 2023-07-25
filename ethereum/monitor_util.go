@@ -26,6 +26,8 @@ func createBurn(event *autogen.WrappedPocketBurnAndBridge) models.Burn {
 		UpdatedAt:        time.Now(),
 		Status:           models.StatusPending,
 		Signers:          []string{},
+		ReturnTxHash:     "",
+		ReturnTx:         "",
 	}
 	return doc
 }
