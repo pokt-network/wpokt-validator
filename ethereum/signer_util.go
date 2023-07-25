@@ -159,7 +159,7 @@ func updateStatusAndConfirmationsForMint(mint models.Mint, poktHeight int64) (mo
 			if err != nil {
 				return mint, err
 			}
-			confirmations := poktHeight - mintHeight
+			confirmations = poktHeight - mintHeight
 			if confirmations >= app.Config.Pocket.Confirmations {
 				status = models.StatusConfirmed
 			}
