@@ -84,6 +84,27 @@ func buildMultiSigTxAndSign(
 	return txEncoder(tx, -1)
 }
 
+func decodeTx(txHex string, chainID string) (authTypes.StdTx, []byte, error) {
+	bz, err := hex.DecodeString(txHex)
+	if err != nil {
+		return authTypes.StdTx{}, nil, err
+	}
+
+	t, err := txDecoder(bz, -1)
+	if err != nil {
+		return authTypes.StdTx{}, nil, err
+	}
+
+	tx := t.(authTypes.StdTx)
+
+	bytesToSign, err := authTypes.StdSignBytes(chainID, tx.GetEntropy(), tx.GetFee(), tx.GetMsg(), tx.GetMemo())
+	if err != nil {
+		return authTypes.StdTx{}, nil, err
+	}
+
+	return tx, bytesToSign, nil
+}
+
 func signMultisigTx(
 	txHex string,
 	chainID string,
@@ -91,19 +112,7 @@ func signMultisigTx(
 	multisigKey crypto.PublicKeyMultiSig,
 ) ([]byte, error) {
 
-	bz, err := hex.DecodeString(txHex)
-	if err != nil {
-		return nil, err
-	}
-
-	t, err := txDecoder(bz, -1)
-	if err != nil {
-		return nil, err
-	}
-
-	tx := t.(authTypes.StdTx)
-
-	bytesToSign, err := authTypes.StdSignBytes(chainID, tx.GetEntropy(), tx.GetFee(), tx.GetMsg(), tx.GetMemo())
+	tx, bytesToSign, err := decodeTx(txHex, chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +168,7 @@ func updateStatusAndConfirmationsForInvalidMint(doc models.InvalidMint, currentH
 			if err != nil {
 				return doc, err
 			}
-			confirmations := currentHeight - mintHeight
+			confirmations = currentHeight - mintHeight
 			if confirmations >= app.Config.Pocket.Confirmations {
 				status = models.StatusConfirmed
 			}
@@ -181,8 +190,9 @@ func signInvalidMint(
 	returnTx := doc.ReturnTx
 	signers := doc.Signers
 
-	if signers == nil {
+	if signers == nil || returnTx == "" || len(signers) == 0 {
 		signers = []string{}
+		returnTx = ""
 	}
 
 	if returnTx == "" {
@@ -221,7 +231,7 @@ func signInvalidMint(
 
 	signers = append(signers, privateKey.PublicKey().RawString())
 
-	if len(signers) == numSigners && doc.Status == models.StatusConfirmed {
+	if len(signers) == numSigners {
 		doc.Status = models.StatusSigned
 	}
 
@@ -248,8 +258,8 @@ func updateStatusAndConfirmationsForBurn(doc models.Burn, blockNumber int64) (mo
 				return doc, err
 			}
 
-			confirmations := blockNumber - burnBlockNumber
-			if confirmations >= app.Config.Pocket.Confirmations {
+			confirmations = blockNumber - burnBlockNumber
+			if confirmations >= app.Config.Ethereum.Confirmations {
 				status = models.StatusConfirmed
 			}
 		}
@@ -260,7 +270,8 @@ func updateStatusAndConfirmationsForBurn(doc models.Burn, blockNumber int64) (mo
 	return doc, nil
 }
 
-func signBurn(doc models.Burn,
+func signBurn(
+	doc models.Burn,
 	privateKey crypto.PrivateKey,
 	multisigPubKey crypto.PublicKeyMultiSig,
 	numSigners int,
@@ -269,8 +280,9 @@ func signBurn(doc models.Burn,
 	signers := doc.Signers
 	returnTx := doc.ReturnTx
 
-	if signers == nil {
+	if signers == nil || returnTx == "" || len(signers) == 0 {
 		signers = []string{}
+		returnTx = ""
 	}
 
 	if returnTx == "" {
