@@ -21,6 +21,7 @@ type Database interface {
 	FindOne(collection string, filter interface{}, result interface{}) error
 	FindMany(collection string, filter interface{}, result interface{}) error
 	UpdateOne(collection string, filter interface{}, update interface{}) error
+	UpsertOne(collection string, filter interface{}, update interface{}) error
 }
 
 // mongoDatabase is a wrapper around the mongo database
@@ -149,5 +150,15 @@ func (d *mongoDatabase) UpdateOne(collection string, filter interface{}, update 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
 	defer cancel()
 	_, err := d.db.Collection(collection).UpdateOne(ctx, filter, update)
+	return err
+}
+
+//method for upsert single value in a collection
+func (d *mongoDatabase) UpsertOne(collection string, filter interface{}, update interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	defer cancel()
+
+	opts := options.Update().SetUpsert(true)
+	_, err := d.db.Collection(collection).UpdateOne(ctx, filter, update, opts)
 	return err
 }

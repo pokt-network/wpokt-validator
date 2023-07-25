@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const MAX_QUERY_BLOCKS uint64 = 100000
+const MAX_QUERY_BLOCKS int64 = 100000
 const ZERO_ADDRESS string = "0x0000000000000000000000000000000000000000"
 
 type BurnAndBridgeIterator interface {

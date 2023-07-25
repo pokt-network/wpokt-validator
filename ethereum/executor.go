@@ -18,12 +18,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+const (
+	WPoktExecutorName = "wpokt-executor"
+)
+
 type WPoktExecutorService struct {
 	wg                 *sync.WaitGroup
 	name               string
 	stop               chan bool
-	startBlockNumber   uint64
-	currentBlockNumber uint64
+	startBlockNumber   int64
+	currentBlockNumber int64
 	lastSyncTime       time.Time
 	interval           time.Duration
 	wpoktContract      WrappedPocketContract
@@ -49,7 +53,7 @@ func (b *WPoktExecutorService) PoktHeight() string {
 }
 
 func (b *WPoktExecutorService) EthBlockNumber() string {
-	return strconv.FormatUint(b.startBlockNumber, 10)
+	return strconv.FormatInt(b.startBlockNumber, 10)
 }
 
 func (b *WPoktExecutorService) LastSyncTime() time.Time {
@@ -75,7 +79,7 @@ func (b *WPoktExecutorService) UpdateCurrentBlockNumber() {
 		log.Error(err)
 		return
 	}
-	b.currentBlockNumber = res
+	b.currentBlockNumber = int64(res)
 	log.Debug("[WPOKT EXECUTOR] Current block number: ", b.currentBlockNumber)
 }
 
@@ -146,11 +150,11 @@ func (b *WPoktExecutorService) SyncTxs() bool {
 				endBlockNumber = b.currentBlockNumber
 			}
 			log.Debug("[WPOKT EXECUTOR] Syncing mint txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
-			success = success && b.SyncBlocks(i, endBlockNumber)
+			success = success && b.SyncBlocks(uint64(i), uint64(endBlockNumber))
 		}
 	} else {
 		log.Debug("[WPOKT EXECUTOR] Syncing mint txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
-		success = success && b.SyncBlocks(b.startBlockNumber, b.currentBlockNumber)
+		success = success && b.SyncBlocks(uint64(b.startBlockNumber), uint64(b.currentBlockNumber))
 	}
 	return success
 }
@@ -186,13 +190,19 @@ func (b *WPoktExecutorService) Start() {
 	b.wg.Done()
 }
 
-func NewExecutor(wg *sync.WaitGroup) models.Service {
-	if app.Config.WPOKTExecutor.Enabled == false {
-		log.Debug("[WPOKT EXECUTOR] WPOKT executor disabled")
-		return models.NewEmptyService(wg, "empty-wpokt-executor")
+func (b *WPoktExecutorService) InitStartBlockNumber(startBlockNumber int64) {
+	b.UpdateCurrentBlockNumber()
+	if app.Config.Ethereum.StartBlockNumber > 0 {
+		b.startBlockNumber = int64(app.Config.Ethereum.StartBlockNumber)
+	} else {
+		log.Debug("[WPOKT EXECUTOR] Found invalid start block number, updating to current block number")
+		b.startBlockNumber = b.currentBlockNumber
 	}
 
-	log.Debug("[WPOKT EXECUTOR] Initializing wpokt executor")
+	log.Debug("[WPOKT EXECUTOR] Start block number: ", b.startBlockNumber)
+}
+
+func newExecutor(wg *sync.WaitGroup) *WPoktExecutorService {
 	client, err := ethereum.NewClient()
 	if err != nil {
 		log.Fatal("[WPOKT EXECUTOR] Error initializing ethereum client", err)
@@ -213,7 +223,7 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 
 	b := &WPoktExecutorService{
 		wg:                 wg,
-		name:               "wpokt-executor",
+		name:               WPoktExecutorName,
 		stop:               make(chan bool),
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
@@ -225,16 +235,41 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 		vaultAddress:       app.Config.Pocket.VaultAddress,
 	}
 
-	b.UpdateCurrentBlockNumber()
-	if app.Config.Ethereum.StartBlockNumber > 0 {
-		b.startBlockNumber = uint64(app.Config.Ethereum.StartBlockNumber)
-	} else {
-		log.Debug("[WPOKT EXECUTOR] Found invalid start block number, updating to current block number")
-		b.startBlockNumber = b.currentBlockNumber
-	}
+	return b
+}
 
-	log.Debug("[WPOKT EXECUTOR] Start block number: ", b.startBlockNumber)
+func NewExecutor(wg *sync.WaitGroup) models.Service {
+	if app.Config.WPOKTExecutor.Enabled == false {
+		log.Debug("[WPOKT EXECUTOR] WPOKT executor disabled")
+		return models.NewEmptyService(wg, "empty-wpokt-executor")
+	}
+	log.Debug("[WPOKT EXECUTOR] Initializing wpokt executor")
+
+	m := newExecutor(wg)
+
+	m.InitStartBlockNumber(int64(app.Config.Ethereum.StartBlockNumber))
 	log.Debug("[WPOKT EXECUTOR] Initialized wpokt executor")
 
-	return b
+	return m
+}
+
+func NewExecutorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+	if app.Config.WPOKTExecutor.Enabled == false {
+		log.Debug("[WPOKT EXECUTOR] WPOKT executor disabled")
+		return models.NewEmptyService(wg, "empty-wpokt-executor")
+	}
+	log.Debug("[WPOKT EXECUTOR] Initializing wpokt executor with last health")
+
+	m := newExecutor(wg)
+
+	lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64)
+	if err != nil {
+		log.Error("[WPOKT EXECUTOR] Error parsing last block number from last health", err)
+		lastBlockNumber = app.Config.Ethereum.StartBlockNumber
+	}
+
+	m.InitStartBlockNumber(lastBlockNumber)
+	log.Debug("[WPOKT EXECUTOR] Initialized wpokt executor")
+
+	return m
 }

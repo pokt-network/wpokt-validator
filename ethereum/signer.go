@@ -23,6 +23,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+const (
+	WPoktSignerName = "wpokt-signer"
+)
+
 type WPoktSignerService struct {
 	wg                     *sync.WaitGroup
 	name                   string
@@ -343,7 +347,7 @@ func privateKeyToAddress(privateKey *ecdsa.PrivateKey) string {
 	return address
 }
 
-func NewSigner(wg *sync.WaitGroup) models.Service {
+func newSigner(wg *sync.WaitGroup) models.Service {
 	if app.Config.WPOKTSigner.Enabled == false {
 		log.Debug("[WPOKT SIGNER] WPOKT signer disabled")
 		return models.NewEmptyService(wg, "empty-wpokt-signer")
@@ -391,7 +395,7 @@ func NewSigner(wg *sync.WaitGroup) models.Service {
 
 	b := &WPoktSignerService{
 		wg:                     wg,
-		name:                   "wpokt-signer",
+		name:                   WPoktSignerName,
 		stop:                   make(chan bool),
 		interval:               time.Duration(app.Config.WPOKTSigner.IntervalSecs) * time.Second,
 		privateKey:             privateKey,
@@ -419,4 +423,12 @@ func sortAddresses(addresses []string) []string {
 		return common.HexToAddress(addresses[i]).Big().Cmp(common.HexToAddress(addresses[j]).Big()) == -1
 	})
 	return addresses
+}
+
+func NewSigner(wg *sync.WaitGroup) models.Service {
+	return newSigner(wg)
+}
+
+func NewSignerWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+	return newSigner(wg)
 }

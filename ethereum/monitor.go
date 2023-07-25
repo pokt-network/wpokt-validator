@@ -18,12 +18,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+const (
+	WPoktMonitorName = "wpokt-monitor"
+)
+
 type WPoktMonitorService struct {
 	wg                 *sync.WaitGroup
 	name               string
 	stop               chan bool
-	startBlockNumber   uint64
-	currentBlockNumber uint64
+	startBlockNumber   int64
+	currentBlockNumber int64
 	lastSyncTime       time.Time
 	interval           time.Duration
 	wpoktContract      WrappedPocketContract
@@ -46,7 +50,7 @@ func (b *WPoktMonitorService) PoktHeight() string {
 }
 
 func (b *WPoktMonitorService) EthBlockNumber() string {
-	return strconv.FormatUint(b.startBlockNumber, 10)
+	return strconv.FormatInt(b.startBlockNumber, 10)
 }
 
 func (b *WPoktMonitorService) Name() string {
@@ -64,7 +68,7 @@ func (b *WPoktMonitorService) UpdateCurrentBlockNumber() {
 		log.Error(err)
 		return
 	}
-	b.currentBlockNumber = res
+	b.currentBlockNumber = int64(res)
 	log.Debug("[WPOKT MONITOR] Current block number: ", b.currentBlockNumber)
 }
 
@@ -133,11 +137,11 @@ func (b *WPoktMonitorService) SyncTxs() bool {
 				endBlockNumber = b.currentBlockNumber
 			}
 			log.Debug("[WPOKT MONITOR] Syncing burn txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
-			success = success && b.SyncBlocks(i, endBlockNumber)
+			success = success && b.SyncBlocks(uint64(i), uint64(endBlockNumber))
 		}
 	} else {
 		log.Debug("[WPOKT MONITOR] Syncing burn txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
-		success = success && b.SyncBlocks(b.startBlockNumber, b.currentBlockNumber)
+		success = success && b.SyncBlocks(uint64(b.startBlockNumber), uint64(b.currentBlockNumber))
 	}
 	return success
 }
@@ -181,13 +185,7 @@ func (b *WPoktMonitorService) Interval() time.Duration {
 	return b.interval
 }
 
-func NewMonitor(wg *sync.WaitGroup) models.Service {
-	if app.Config.WPOKTMonitor.Enabled == false {
-		log.Debug("[WPOKT MONITOR] WPOKT monitor disabled")
-		return models.NewEmptyService(wg, "empty-wpokt-monitor")
-	}
-
-	log.Debug("[WPOKT MONITOR] Initializing wpokt monitor")
+func newMonitor(wg *sync.WaitGroup) *WPoktMonitorService {
 	client, err := ethereum.NewClient()
 	if err != nil {
 		log.Fatal("[WPOKT MONITOR] Error initializing ethereum client: ", err)
@@ -201,7 +199,7 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 
 	b := &WPoktMonitorService{
 		wg:                 wg,
-		name:               "wpokt-monitor",
+		name:               WPoktMonitorName,
 		stop:               make(chan bool),
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
@@ -210,16 +208,55 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 		client:             client,
 	}
 
+	return b
+}
+
+func (b *WPoktMonitorService) InitStartBlockNumber(startBlockNumber int64) {
 	b.UpdateCurrentBlockNumber()
 	if app.Config.Ethereum.StartBlockNumber > 0 {
-		b.startBlockNumber = uint64(app.Config.Ethereum.StartBlockNumber)
+		b.startBlockNumber = int64(app.Config.Ethereum.StartBlockNumber)
 	} else {
 		log.Debug("[WPOKT MONITOR] Found invalid start block number, updating to current block number")
 		b.startBlockNumber = b.currentBlockNumber
 	}
 
-	log.Debug("[WPOKT MONITOR] Start block number: ", b.startBlockNumber)
+	log.Debug("[WPOKT EXECUTOR] Start block number: ", b.startBlockNumber)
+}
+
+func NewMonitor(wg *sync.WaitGroup) models.Service {
+	if app.Config.WPOKTMonitor.Enabled == false {
+		log.Debug("[WPOKT MONITOR] WPOKT monitor disabled")
+		return models.NewEmptyService(wg, "empty-wpokt-monitor")
+	}
+
+	log.Debug("[WPOKT MONITOR] Initializing wpokt monitor")
+
+	m := newMonitor(wg)
+
+	m.InitStartBlockNumber(int64(app.Config.Ethereum.StartBlockNumber))
 	log.Debug("[WPOKT MONITOR] Initialized wpokt monitor")
 
-	return b
+	return m
+}
+
+func NewMonitorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+	if app.Config.WPOKTMonitor.Enabled == false {
+		log.Debug("[WPOKT MONITOR] WPOKT monitor disabled")
+		return models.NewEmptyService(wg, "empty-wpokt-monitor")
+	}
+
+	log.Debug("[WPOKT MONITOR] Initializing wpokt monitor")
+
+	m := newMonitor(wg)
+
+	lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64)
+	if err != nil {
+		log.Error("[WPOKT EXECUTOR] Error parsing last block number from last health", err)
+		lastBlockNumber = app.Config.Ethereum.StartBlockNumber
+	}
+
+	m.InitStartBlockNumber(lastBlockNumber)
+	log.Debug("[WPOKT MONITOR] Initialized wpokt monitor")
+
+	return m
 }

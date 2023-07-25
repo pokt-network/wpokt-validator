@@ -15,6 +15,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+const (
+	PoktSignerName = "pokt-signer"
+)
+
 type PoktSignerService struct {
 	wg             *sync.WaitGroup
 	name           string
@@ -390,12 +394,7 @@ func (m *PoktSignerService) SyncTxs() bool {
 	return success
 }
 
-func NewSigner(wg *sync.WaitGroup) models.Service {
-	if !app.Config.PoktSigner.Enabled {
-		log.Debug("[POKT SIGNER] Pokt signer disabled")
-		return models.NewEmptyService(wg, "empty-pokt-signer")
-	}
-
+func newSigner(wg *sync.WaitGroup) models.Service {
 	log.Debug("[POKT SIGNER] Initializing pokt signer")
 
 	pk, err := crypto.NewPrivateKey(app.Config.Pocket.PrivateKey)
@@ -427,7 +426,7 @@ func NewSigner(wg *sync.WaitGroup) models.Service {
 
 	m := &PoktSignerService{
 		wg:             wg,
-		name:           "pokt-signer",
+		name:           PoktSignerName,
 		interval:       time.Duration(app.Config.PoktSigner.IntervalSecs) * time.Second,
 		stop:           make(chan bool),
 		privateKey:     pk,
@@ -444,4 +443,12 @@ func NewSigner(wg *sync.WaitGroup) models.Service {
 	log.Debug("[POKT SIGNER] Initialized pokt signer")
 
 	return m
+}
+
+func NewSigner(wg *sync.WaitGroup) models.Service {
+	return newSigner(wg)
+}
+
+func NewSignerWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+	return newSigner(wg)
 }

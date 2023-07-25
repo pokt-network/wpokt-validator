@@ -9,6 +9,7 @@ import (
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	poktCrypto "github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type HealthService struct {
@@ -28,6 +29,12 @@ type HealthService struct {
 	services         []models.Service
 }
 
+type HealthServiceInterface interface {
+	models.Service
+	FindLastHealth() (models.Health, error)
+	SetServices(services []models.Service)
+}
+
 func (b *HealthService) Health() models.ServiceHealth {
 	return models.ServiceHealth{
 		Name:           b.Name(),
@@ -37,6 +44,13 @@ func (b *HealthService) Health() models.ServiceHealth {
 		EthBlockNumber: "",
 		Healthy:        true,
 	}
+}
+
+func (b *HealthService) FindLastHealth() (models.Health, error) {
+	var health models.Health
+	filter := bson.M{"hostname": b.hostname}
+	err := DB.FindOne(models.CollectionHealthChecks, filter, &health)
+	return health, err
 }
 
 func (b *HealthService) LastSyncTime() time.Time {
@@ -61,12 +75,14 @@ func (b *HealthService) ServiceHealths() []models.ServiceHealth {
 	for _, service := range b.services {
 		serviceHealths = append(serviceHealths, service.Health())
 	}
-	serviceHealths = append(serviceHealths, b.Health())
 	return serviceHealths
 }
 
 func (b *HealthService) PostHealth() bool {
 	log.Debug("[HEALTH] Posting health")
+
+	filter := bson.M{"hostname": b.hostname}
+
 	health := models.Health{
 		PoktVaultAddress: b.poktVaultAddress,
 		PoktSigners:      b.poktSigners,
@@ -81,7 +97,9 @@ func (b *HealthService) PostHealth() bool {
 		ServiceHealths:   b.ServiceHealths(),
 	}
 
-	err := DB.InsertOne(models.CollectionHealthChecks, health)
+	update := bson.M{"$set": health}
+
+	err := DB.UpsertOne(models.CollectionHealthChecks, filter, update)
 
 	if err != nil {
 		log.Error("[HEALTH] Error posting health: ", err)
@@ -113,7 +131,12 @@ func (b *HealthService) Start() {
 	}
 }
 
-func NewHealthCheck(services []models.Service, wg *sync.WaitGroup) models.Service {
+// set services
+func (b *HealthService) SetServices(services []models.Service) {
+	b.services = services
+}
+
+func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 	log.Debug("[HEALTH] Initializing health")
 
 	pk, err := poktCrypto.NewPrivateKey(Config.Pocket.PrivateKey)
@@ -161,7 +184,6 @@ func NewHealthCheck(services []models.Service, wg *sync.WaitGroup) models.Servic
 		ethAddress:       ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex(),
 		wpoktAddress:     Config.Ethereum.WPOKTAddress,
 		hostname:         hostname,
-		services:         services,
 		wg:               wg,
 	}
 

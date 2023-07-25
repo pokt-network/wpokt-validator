@@ -16,6 +16,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+const (
+	PoktMonitorName = "pokt-monitor"
+)
+
 type PoktMonitorService struct {
 	wg            *sync.WaitGroup
 	name          string
@@ -25,8 +29,8 @@ type PoktMonitorService struct {
 	vaultAddress  string
 	lastSyncTime  time.Time
 	interval      time.Duration
-	startHeight   uint64
-	currentHeight uint64
+	startHeight   int64
+	currentHeight int64
 }
 
 func (m *PoktMonitorService) Health() models.ServiceHealth {
@@ -40,8 +44,19 @@ func (m *PoktMonitorService) Health() models.ServiceHealth {
 	}
 }
 
+func (m *PoktMonitorService) InitStartHeight(height int64) {
+	m.UpdateCurrentHeight()
+	if height > 0 {
+		m.startHeight = height
+	} else {
+		log.Debug("[POKT MONITOR] Found invalid start height, updating current height")
+		m.startHeight = m.currentHeight
+	}
+	log.Debug("[POKT MONITOR] Start height: ", m.startHeight)
+}
+
 func (m *PoktMonitorService) PoktHeight() string {
-	return strconv.FormatUint(m.startHeight, 10)
+	return strconv.FormatInt(m.startHeight, 10)
 }
 
 func (m *PoktMonitorService) LastSyncTime() time.Time {
@@ -102,7 +117,7 @@ func (m *PoktMonitorService) UpdateCurrentHeight() {
 		}
 		return
 	}
-	m.currentHeight = uint64(res.Height)
+	m.currentHeight = res.Height
 	log.Debug("[POKT MONITOR] Current height: ", m.currentHeight)
 }
 
@@ -209,14 +224,7 @@ func (m *PoktMonitorService) SyncTxs() bool {
 	return success
 }
 
-func NewMonitor(wg *sync.WaitGroup) models.Service {
-	if !app.Config.PoktMonitor.Enabled {
-		log.Debug("[POKT MONITOR] Pokt monitor disabled")
-		return models.NewEmptyService(wg, "empty-pokt-monitor")
-	}
-
-	log.Debug("[POKT MONITOR] Initializing pokt monitor")
-
+func newMonitor(wg *sync.WaitGroup) *PoktMonitorService {
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
@@ -233,7 +241,7 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 
 	m := &PoktMonitorService{
 		wg:            wg,
-		name:          "pokt-monitor",
+		name:          PoktMonitorName,
 		interval:      time.Duration(app.Config.PoktMonitor.IntervalSecs) * time.Second,
 		vaultAddress:  multisigAddress,
 		wpoktAddress:  app.Config.Ethereum.WPOKTAddress,
@@ -243,15 +251,44 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 		client:        pocket.NewClient(),
 	}
 
-	m.UpdateCurrentHeight()
-	if app.Config.Pocket.StartHeight > 0 {
-		m.startHeight = uint64(app.Config.Pocket.StartHeight)
-	} else {
-		log.Debug("[POKT MONITOR] Found invalid start height, updating current height")
-		m.startHeight = m.currentHeight
+	return m
+}
+
+func NewMonitor(wg *sync.WaitGroup) models.Service {
+	if !app.Config.PoktMonitor.Enabled {
+		log.Debug("[POKT MONITOR] Pokt monitor disabled")
+		return models.NewEmptyService(wg, "empty-pokt-monitor")
 	}
 
-	log.Debug("[POKT MONITOR] Start height: ", m.startHeight)
+	log.Debug("[POKT MONITOR] Initializing pokt monitor")
+
+	m := newMonitor(wg)
+
+	m.InitStartHeight(app.Config.Pocket.StartHeight)
+
+	log.Debug("[POKT MONITOR] Initialized pokt monitor")
+
+	return m
+}
+
+func NewMonitorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+	if !app.Config.PoktMonitor.Enabled {
+		log.Debug("[POKT MONITOR] Pokt monitor disabled")
+		return models.NewEmptyService(wg, "empty-pokt-monitor")
+	}
+
+	log.Debug("[POKT MONITOR] Initializing pokt monitor with last health")
+
+	m := newMonitor(wg)
+
+	lastHeight, err := strconv.ParseInt(lastHealth.PoktHeight, 10, 64)
+	if err != nil {
+		log.Error("[POKT MONITOR] Error parsing last height: ", err)
+		lastHeight = app.Config.Pocket.StartHeight
+	}
+
+	m.InitStartHeight(lastHeight)
+
 	log.Debug("[POKT MONITOR] Initialized pokt monitor")
 
 	return m

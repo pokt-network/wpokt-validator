@@ -19,6 +19,51 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func createService(
+	wg *sync.WaitGroup,
+	serviceName string,
+	serviceHealthMap map[string]models.ServiceHealth,
+	serviceWithoutHealth func(*sync.WaitGroup) models.Service,
+	serviceWithHealth func(*sync.WaitGroup, models.ServiceHealth) models.Service,
+) models.Service {
+	serviceHealth, ok := serviceHealthMap[serviceName]
+	if ok {
+		return serviceWithHealth(wg, serviceHealth)
+	} else {
+		return serviceWithoutHealth(wg)
+	}
+}
+
+var SERVICES = map[string]struct {
+	serviceWithoutHealth func(*sync.WaitGroup) models.Service
+	serviceWithHealth    func(*sync.WaitGroup, models.ServiceHealth) models.Service
+}{
+	pocket.PoktMonitorName: {
+		serviceWithoutHealth: pocket.NewMonitor,
+		serviceWithHealth:    pocket.NewMonitorWithLastHealth,
+	},
+	pocket.PoktSignerName: {
+		serviceWithoutHealth: pocket.NewSigner,
+		serviceWithHealth:    pocket.NewSignerWithLastHealth,
+	},
+	pocket.PoktExecutorName: {
+		serviceWithoutHealth: pocket.NewExecutor,
+		serviceWithHealth:    pocket.NewExecutorWithLastHealth,
+	},
+	ethereum.WPoktMonitorName: {
+		serviceWithoutHealth: ethereum.NewMonitor,
+		serviceWithHealth:    ethereum.NewMonitorWithLastHealth,
+	},
+	ethereum.WPoktSignerName: {
+		serviceWithoutHealth: ethereum.NewSigner,
+		serviceWithHealth:    ethereum.NewSignerWithLastHealth,
+	},
+	ethereum.WPoktExecutorName: {
+		serviceWithoutHealth: ethereum.NewExecutor,
+		serviceWithHealth:    ethereum.NewExecutorWithLastHealth,
+	},
+}
+
 func main() {
 
 	log.SetLevel(log.InfoLevel)
@@ -56,19 +101,25 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	poktMonitor := pocket.NewMonitor(&wg)
-	poktSigner := pocket.NewSigner(&wg)
-	poktExecutor := pocket.NewExecutor(&wg)
+	healthcheck := app.NewHealthCheck(&wg)
 
-	wpoktMonitor := ethereum.NewMonitor(&wg)
-	wpoktSigner := ethereum.NewSigner(&wg)
-	wpoktExecutor := ethereum.NewExecutor(&wg)
+	lastHealth, err := healthcheck.FindLastHealth()
+	serviceHealthMap := make(map[string]models.ServiceHealth)
+	if err != nil {
+		log.Error("[MAIN] Error getting last health: ", err)
+	} else {
+		for _, serviceHealth := range lastHealth.ServiceHealths {
+			serviceHealthMap[serviceHealth.Name] = serviceHealth
+		}
+	}
 
-	services := []models.Service{poktMonitor, poktSigner, poktExecutor, wpoktMonitor, wpoktSigner, wpoktExecutor}
+	services := []models.Service{healthcheck}
 
-	healthcheck := app.NewHealthCheck(services, &wg)
+	for serviceName, service := range SERVICES {
+		services = append(services, createService(&wg, serviceName, serviceHealthMap, service.serviceWithoutHealth, service.serviceWithHealth))
+	}
 
-	services = append(services, healthcheck)
+	healthcheck.SetServices(services)
 
 	wg.Add(len(services))
 

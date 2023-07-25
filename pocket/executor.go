@@ -13,6 +13,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+const (
+	PoktExecutorName = "pokt-executor"
+)
+
 type PoktExecutorService struct {
 	wg              *sync.WaitGroup
 	name            string
@@ -226,7 +230,7 @@ func (m *PoktExecutorService) SyncTxs() bool {
 	return success
 }
 
-func NewExecutor(wg *sync.WaitGroup) models.Service {
+func newExecutor(wg *sync.WaitGroup) models.Service {
 	if !app.Config.PoktExecutor.Enabled {
 		log.Debug("[POKT EXECUTOR] Pokt executor disabled")
 		return models.NewEmptyService(wg, "empty-pokt-executor")
@@ -253,7 +257,7 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 
 	m := &PoktExecutorService{
 		wg:              wg,
-		name:            "pokt-executor",
+		name:            PoktExecutorName,
 		interval:        time.Duration(app.Config.PoktExecutor.IntervalSecs) * time.Second,
 		stop:            make(chan bool),
 		multisigAddress: multisigAddress,
@@ -264,4 +268,12 @@ func NewExecutor(wg *sync.WaitGroup) models.Service {
 	log.Debug("[POKT EXECUTOR] Initialized pokt executor")
 
 	return m
+}
+
+func NewExecutor(wg *sync.WaitGroup) models.Service {
+	return newExecutor(wg)
+}
+
+func NewExecutorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+	return newExecutor(wg)
 }
