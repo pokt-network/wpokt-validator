@@ -56,7 +56,7 @@ burn_monitor:
   interval_secs: 300
 
 logger:
-  level: "debug"
+  level: "info"
 
 health:
   interval_secs: 300

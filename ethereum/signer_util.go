@@ -18,16 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
-func privateKeyToAddress(privateKey *ecdsa.PrivateKey) (string, bool) {
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return "", false
-	}
-	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
-	return address, true
-}
-
 func sortAddresses(addresses []string) []string {
 	for i, address := range addresses {
 		addresses[i] = common.HexToAddress(address).Hex()
@@ -176,7 +166,6 @@ func signMint(
 	data autogen.MintControllerMintData,
 	domain DomainData,
 	privateKey *ecdsa.PrivateKey,
-	address string,
 	numSigners int,
 ) (models.Mint, error) {
 	signature, err := signTypedData(domain, data, privateKey)
@@ -185,8 +174,14 @@ func signMint(
 	}
 
 	signatureEncoded := "0x" + hex.EncodeToString(signature)
+	if mint.Signatures == nil {
+		mint.Signatures = []string{}
+	}
+	if mint.Signers == nil {
+		mint.Signers = []string{}
+	}
 	signatures := append(mint.Signatures, signatureEncoded)
-	signers := append(mint.Signers, address)
+	signers := append(mint.Signers, crypto.PubkeyToAddress(privateKey.PublicKey).Hex())
 	sortedSigners := sortAddresses(signers)
 
 	sortedSignatures := make([]string, len(signatures))

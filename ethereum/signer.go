@@ -202,7 +202,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 	if mint.Status == models.StatusConfirmed {
 		log.Debug("[MINT SIGNER] Mint confirmed, signing")
 
-		mint, err := signMint(mint, data, m.domain, m.privateKey, m.address, m.numSigners)
+		mint, err := signMint(mint, data, m.domain, m.privateKey, m.numSigners)
 		if err != nil {
 			log.Error("[MINT SIGNER] Error signing mint: ", err)
 			return false
@@ -291,12 +291,9 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 	if err != nil {
 		log.Fatal("[MINT SIGNER] Error loading private key: ", err)
 	}
-
-	address, ok := privateKeyToAddress(privateKey)
-	if !ok {
-		log.Fatal("[MINT SIGNER] Error converting private key to address")
-	}
+	address := crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
 	log.Debug("[MINT SIGNER] Loaded private key for address: ", address)
+
 	ethClient, err := ethereum.NewClient()
 	if err != nil {
 		log.Fatal("[MINT SIGNER] Error initializing ethereum client: ", err)

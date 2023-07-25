@@ -1,13 +1,19 @@
 package ethereum
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/dan13ram/wpokt-backend/app"
+	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
 	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
+
 	testCases := []struct {
 		name                  string
 		initialMint           models.Mint
@@ -108,4 +114,109 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 			}
 		})
 	}
+
+}
+
+func TestSignMint(t *testing.T) {
+
+	testDomain := DomainData{
+		Name:              "Test",
+		Version:           "1",
+		ChainId:           big.NewInt(1),
+		VerifyingContract: common.HexToAddress(ZERO_ADDRESS),
+	}
+
+	testPrivateKey, _ := crypto.HexToECDSA("1395eeb9c36ef43e9e05692c9ee34034c00a9bef301135a96d082b2a65fd1680")
+	testSignature := "0x6b170e88743324cb571398f279d58a235e41d16efb7b4a90db7e86a6ddf5eb472d5b791c00aaa59c7755305cc3fb20c407a8d1fbbeacdd7032d509ce7c48cebd1b"
+	testData := autogen.MintControllerMintData{
+		Recipient: common.HexToAddress(ZERO_ADDRESS),
+		Amount:    big.NewInt(100),
+		Nonce:     big.NewInt(1),
+	}
+
+	testAddress := crypto.PubkeyToAddress(testPrivateKey.PublicKey).Hex()
+
+	testCases := []struct {
+		name         string
+		initialMint  models.Mint
+		numSigners   int
+		expectedMint models.Mint
+		expectedErr  bool
+	}{
+		{
+			name: "Single signer, mint not signed",
+			initialMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: nil,
+				Signers:    nil,
+			},
+			numSigners: 1,
+			expectedMint: models.Mint{
+				Status:     models.StatusSigned,
+				Signatures: []string{testSignature},
+				Signers:    []string{testAddress},
+			},
+			expectedErr: false,
+		},
+		{
+			name: "Multiple signers, mint not signed",
+			initialMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: nil,
+				Signers:    nil,
+			},
+			numSigners: 2,
+			expectedMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: []string{testSignature},
+				Signers:    []string{testAddress},
+			},
+			expectedErr: false,
+		},
+		{
+			name: "Multiple signers, mint signed",
+			initialMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: []string{"0x..."},
+				Signers:    []string{ZERO_ADDRESS},
+			},
+			numSigners: 2,
+			expectedMint: models.Mint{
+				Status:     models.StatusSigned,
+				Signatures: []string{"0x...", testSignature},
+				Signers:    []string{ZERO_ADDRESS, testAddress},
+			},
+			expectedErr: false,
+		},
+		{
+			name: "Multiple signers, mint signed",
+			initialMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: []string{"0x..."},
+				Signers:    []string{ZERO_ADDRESS},
+			},
+			numSigners: 3,
+			expectedMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: []string{"0x...", testSignature},
+				Signers:    []string{ZERO_ADDRESS, testAddress},
+			},
+			expectedErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := signMint(tc.initialMint, testData, testDomain, testPrivateKey, tc.numSigners)
+
+			if tc.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedMint, result)
+			}
+
+		})
+	}
+
 }
