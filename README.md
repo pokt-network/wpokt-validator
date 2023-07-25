@@ -1,6 +1,6 @@
 # wPOKT Validator
 
-The wPOKT Validator is a validator node that facilitates the bridging of POKT tokens from the POKT network to wPOKT on the Ethereum Mainnet. It achieves this by monitoring transactions to a specific vault address on the POKT network. Upon receiving transactions with a valid memo, it creates a signed transaction on the Ethereum Mainnet, which is then stored in the MongoDB database. Users can access the signed transaction data through the provided UI and submit it on the Ethereum Mainnet to mint wPOKT. Additionally, the process supports burning wPOKT tokens on the Mainnet.
+The wPOKT Validator is a validator node that facilitates the bridging of POKT tokens from the POKT network to wPOKT on the Ethereum Mainnet. 
 
 ## How It Works
 
