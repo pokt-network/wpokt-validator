@@ -38,27 +38,27 @@ var SERVICES = map[string]struct {
 	serviceWithoutHealth func(*sync.WaitGroup) models.Service
 	serviceWithHealth    func(*sync.WaitGroup, models.ServiceHealth) models.Service
 }{
-	pocket.PoktMonitorName: {
+	pocket.MintMonitorName: {
 		serviceWithoutHealth: pocket.NewMonitor,
 		serviceWithHealth:    pocket.NewMonitorWithLastHealth,
 	},
-	pocket.PoktSignerName: {
+	pocket.BurnSignerName: {
 		serviceWithoutHealth: pocket.NewSigner,
 		serviceWithHealth:    pocket.NewSignerWithLastHealth,
 	},
-	pocket.PoktExecutorName: {
+	pocket.BurnExecutorName: {
 		serviceWithoutHealth: pocket.NewExecutor,
 		serviceWithHealth:    pocket.NewExecutorWithLastHealth,
 	},
-	ethereum.WPoktMonitorName: {
+	ethereum.BurnMonitorName: {
 		serviceWithoutHealth: ethereum.NewMonitor,
 		serviceWithHealth:    ethereum.NewMonitorWithLastHealth,
 	},
-	ethereum.WPoktSignerName: {
+	ethereum.MintSignerName: {
 		serviceWithoutHealth: ethereum.NewSigner,
 		serviceWithHealth:    ethereum.NewSignerWithLastHealth,
 	},
-	ethereum.WPoktExecutorName: {
+	ethereum.MintExecutorName: {
 		serviceWithoutHealth: ethereum.NewExecutor,
 		serviceWithHealth:    ethereum.NewExecutorWithLastHealth,
 	},

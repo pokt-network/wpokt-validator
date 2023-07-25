@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	PoktExecutorName = "pokt-executor"
+	BurnExecutorName = "burn-executor"
 )
 
-type PoktExecutorService struct {
+type BurnExecutorService struct {
 	wg              *sync.WaitGroup
 	name            string
 	client          pocket.PocketClient
@@ -28,7 +28,7 @@ type PoktExecutorService struct {
 	multisigAddress string
 }
 
-func (m *PoktExecutorService) Health() models.ServiceHealth {
+func (m *BurnExecutorService) Health() models.ServiceHealth {
 	return models.ServiceHealth{
 		Name:           m.Name(),
 		LastSyncTime:   m.LastSyncTime(),
@@ -39,47 +39,47 @@ func (m *PoktExecutorService) Health() models.ServiceHealth {
 	}
 }
 
-func (m *PoktExecutorService) LastSyncTime() time.Time {
+func (m *BurnExecutorService) LastSyncTime() time.Time {
 	return m.lastSyncTime
 }
 
-func (m *PoktExecutorService) Interval() time.Duration {
+func (m *BurnExecutorService) Interval() time.Duration {
 	return m.interval
 }
 
-func (m *PoktExecutorService) Name() string {
+func (m *BurnExecutorService) Name() string {
 	return m.name
 }
 
-func (m *PoktExecutorService) Start() {
-	log.Debug("[POKT EXECUTOR] Starting pokt executor")
+func (m *BurnExecutorService) Start() {
+	log.Debug("[BURN EXECUTOR] Starting pokt executor")
 	stop := false
 	for !stop {
-		log.Debug("[POKT EXECUTOR] Starting pokt executor sync")
+		log.Debug("[BURN EXECUTOR] Starting pokt executor sync")
 		m.lastSyncTime = time.Now()
 
 		m.SyncTxs()
 
-		log.Debug("[POKT EXECUTOR] Finished pokt executor sync")
-		log.Debug("[POKT EXECUTOR] Sleeping for ", m.interval)
+		log.Debug("[BURN EXECUTOR] Finished pokt executor sync")
+		log.Debug("[BURN EXECUTOR] Sleeping for ", m.interval)
 
 		select {
 		case <-m.stop:
 			stop = true
-			log.Debug("[POKT EXECUTOR] Stopped pokt executor")
+			log.Debug("[BURN EXECUTOR] Stopped pokt executor")
 		case <-time.After(m.interval):
 		}
 	}
 	m.wg.Done()
 }
 
-func (m *PoktExecutorService) Stop() {
-	log.Debug("[POKT EXECUTOR] Stopping pokt executor")
+func (m *BurnExecutorService) Stop() {
+	log.Debug("[BURN EXECUTOR] Stopping pokt executor")
 	m.stop <- true
 }
 
-func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
-	log.Debug("[POKT EXECUTOR] Handling invalid mint: ", doc.TransactionHash)
+func (m *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
+	log.Debug("[BURN EXECUTOR] Handling invalid mint: ", doc.TransactionHash)
 	if doc.Status == models.StatusSigned {
 		p := rpc.SendRawTxParams{
 			Addr:        m.multisigAddress,
@@ -88,7 +88,7 @@ func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 
 		res, err := m.client.SubmitRawTx(p)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error submitting transaction: ", err)
+			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
 			return false
 		}
 
@@ -104,15 +104,15 @@ func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 		err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error updating invalid mint: ", err)
+			log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
 			return false
 		}
-		log.Debug("[POKT EXECUTOR] Submitted tx for invalid mint")
+		log.Debug("[BURN EXECUTOR] Submitted tx for invalid mint")
 
 	} else if doc.Status == models.StatusSubmitted {
 		_, err := m.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error fetching transaction: ", err)
+			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
 		}
 		filter := bson.M{
@@ -126,17 +126,17 @@ func (m *PoktExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 		err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error updating invalid mint: ", err)
+			log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
 			return false
 		}
-		log.Debug("[POKT EXECUTOR] Executed return tx for invalid mint")
+		log.Debug("[BURN EXECUTOR] Executed return tx for invalid mint")
 	}
 
 	return true
 }
 
-func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
-	log.Debug("[POKT EXECUTOR] Handling burn: ", doc.TransactionHash)
+func (m *BurnExecutorService) HandleBurn(doc models.Burn) bool {
+	log.Debug("[BURN EXECUTOR] Handling burn: ", doc.TransactionHash)
 	if doc.Status == models.StatusSigned {
 		p := rpc.SendRawTxParams{
 			Addr:        m.multisigAddress,
@@ -145,7 +145,7 @@ func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
 
 		res, err := m.client.SubmitRawTx(p)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error submitting transaction: ", err)
+			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
 			return false
 		}
 
@@ -161,15 +161,15 @@ func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
 		}
 		err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error updating burn: ", err)
+			log.Error("[BURN EXECUTOR] Error updating burn: ", err)
 			return false
 		}
-		log.Debug("[POKT EXECUTOR] Submitted tx for burn")
+		log.Debug("[BURN EXECUTOR] Submitted tx for burn")
 
 	} else if doc.Status == models.StatusSubmitted {
 		_, err := m.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error fetching transaction: ", err)
+			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
 		}
 		filter := bson.M{
@@ -183,15 +183,15 @@ func (m *PoktExecutorService) HandleBurn(doc models.Burn) bool {
 		}
 		err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error updating burn: ", err)
+			log.Error("[BURN EXECUTOR] Error updating burn: ", err)
 			return false
 		}
-		log.Debug("[POKT EXECUTOR] Executed return tx for burn")
+		log.Debug("[BURN EXECUTOR] Executed return tx for burn")
 	}
 	return true
 }
 
-func (m *PoktExecutorService) SyncTxs() bool {
+func (m *BurnExecutorService) SyncTxs() bool {
 	// filter for status signed or status submitted
 	filter := bson.M{
 		"status": bson.M{
@@ -204,10 +204,10 @@ func (m *PoktExecutorService) SyncTxs() bool {
 	invalidMints := []models.InvalidMint{}
 	err := app.DB.FindMany(models.CollectionInvalidMints, filter, &invalidMints)
 	if err != nil {
-		log.Error("[POKT EXECUTOR] Error fetching invalid mints: ", err)
+		log.Error("[BURN EXECUTOR] Error fetching invalid mints: ", err)
 		return false
 	}
-	log.Debug("[POKT EXECUTOR] Found invalid mints: ", len(invalidMints))
+	log.Debug("[BURN EXECUTOR] Found invalid mints: ", len(invalidMints))
 
 	var success bool = true
 	for _, doc := range invalidMints {
@@ -217,11 +217,11 @@ func (m *PoktExecutorService) SyncTxs() bool {
 	burns := []models.Burn{}
 	err = app.DB.FindMany(models.CollectionBurns, filter, &burns)
 	if err != nil {
-		log.Error("[POKT EXECUTOR] Error fetching burns: ", err)
+		log.Error("[BURN EXECUTOR] Error fetching burns: ", err)
 		return false
 	}
 
-	log.Debug("[POKT EXECUTOR] Found burns: ", len(burns))
+	log.Debug("[BURN EXECUTOR] Found burns: ", len(burns))
 
 	for _, doc := range burns {
 		success = m.HandleBurn(doc) && success
@@ -231,18 +231,18 @@ func (m *PoktExecutorService) SyncTxs() bool {
 }
 
 func newExecutor(wg *sync.WaitGroup) models.Service {
-	if !app.Config.PoktExecutor.Enabled {
-		log.Debug("[POKT EXECUTOR] Pokt executor disabled")
+	if !app.Config.BurnExecutor.Enabled {
+		log.Debug("[BURN EXECUTOR] Pokt executor disabled")
 		return models.NewEmptyService(wg, "empty-pokt-executor")
 	}
 
-	log.Debug("[POKT EXECUTOR] Initializing pokt executor")
+	log.Debug("[BURN EXECUTOR] Initializing pokt executor")
 
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			log.Error("[POKT EXECUTOR] Error parsing multisig public key: ", err)
+			log.Error("[BURN EXECUTOR] Error parsing multisig public key: ", err)
 			continue
 		}
 		pks = append(pks, p)
@@ -250,22 +250,22 @@ func newExecutor(wg *sync.WaitGroup) models.Service {
 
 	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
 	multisigAddress := multisigPk.Address().String()
-	log.Debug("[POKT EXECUTOR] Multisig address: ", multisigAddress)
+	log.Debug("[BURN EXECUTOR] Multisig address: ", multisigAddress)
 	if multisigAddress != app.Config.Pocket.VaultAddress {
-		log.Fatal("[POKT EXECUTOR] Multisig address does not match vault address")
+		log.Fatal("[BURN EXECUTOR] Multisig address does not match vault address")
 	}
 
-	m := &PoktExecutorService{
+	m := &BurnExecutorService{
 		wg:              wg,
-		name:            PoktExecutorName,
-		interval:        time.Duration(app.Config.PoktExecutor.IntervalSecs) * time.Second,
+		name:            BurnExecutorName,
+		interval:        time.Duration(app.Config.BurnExecutor.IntervalSecs) * time.Second,
 		stop:            make(chan bool),
 		multisigAddress: multisigAddress,
 		wpoktAddress:    app.Config.Ethereum.WPOKTAddress,
 		client:          pocket.NewClient(),
 	}
 
-	log.Debug("[POKT EXECUTOR] Initialized pokt executor")
+	log.Debug("[BURN EXECUTOR] Initialized pokt executor")
 
 	return m
 }

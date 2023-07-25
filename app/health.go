@@ -131,7 +131,6 @@ func (b *HealthService) Start() {
 	}
 }
 
-// set services
 func (b *HealthService) SetServices(services []models.Service) {
 	b.services = services
 }

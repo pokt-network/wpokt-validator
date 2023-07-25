@@ -1,17 +1,17 @@
 package models
 
 type Config struct {
-	Health        HealthConfig   `yaml:"health" json:"health"`
-	Logger        LoggerConfig   `yaml:"logger" json:"logger"`
-	MongoDB       MongoConfig    `yaml:"mongodb" json:"mongo_db"`
-	Ethereum      EthereumConfig `yaml:"ethereum" json:"ethereum"`
-	WPOKTMonitor  ServiceConfig  `yaml:"wpokt_monitor" json:"wpokt_monitor"`
-	WPOKTSigner   ServiceConfig  `yaml:"wpokt_signer" json:"wpokt_signer"`
-	WPOKTExecutor ServiceConfig  `yaml:"wpokt_executor" json:"wpokt_executor"`
-	Pocket        PocketConfig   `yaml:"pocket" json:"pocket"`
-	PoktMonitor   ServiceConfig  `yaml:"pokt_monitor" json:"pokt_monitor"`
-	PoktSigner    ServiceConfig  `yaml:"pokt_signer" json:"pokt_signer"`
-	PoktExecutor  ServiceConfig  `yaml:"pokt_executor" json:"pokt_executor"`
+	Health       HealthConfig   `yaml:"health" json:"health"`
+	Logger       LoggerConfig   `yaml:"logger" json:"logger"`
+	MongoDB      MongoConfig    `yaml:"mongodb" json:"mongo_db"`
+	Ethereum     EthereumConfig `yaml:"ethereum" json:"ethereum"`
+	Pocket       PocketConfig   `yaml:"pocket" json:"pocket"`
+	MintMonitor  ServiceConfig  `yaml:"mint_monitor" json:"mint_monitor"`
+	MintSigner   ServiceConfig  `yaml:"mint_signer" json:"mint_signer"`
+	MintExecutor ServiceConfig  `yaml:"mint_executor" json:"mint_executor"`
+	BurnMonitor  ServiceConfig  `yaml:"burn_monitor" json:"burn_monitor"`
+	BurnSigner   ServiceConfig  `yaml:"burn_signer" json:"burn_signer"`
+	BurnExecutor ServiceConfig  `yaml:"burn_executor" json:"burn_executor"`
 }
 
 type HealthConfig struct {

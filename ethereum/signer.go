@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	WPoktSignerName = "wpokt-signer"
+	MintSignerName = "mint-signer"
 )
 
-type WPoktSignerService struct {
+type MintSignerService struct {
 	wg                     *sync.WaitGroup
 	name                   string
 	stop                   chan bool
@@ -46,7 +46,7 @@ type WPoktSignerService struct {
 	poktHeight             int64
 }
 
-func (b *WPoktSignerService) Health() models.ServiceHealth {
+func (b *MintSignerService) Health() models.ServiceHealth {
 	return models.ServiceHealth{
 		Name:           b.Name(),
 		LastSyncTime:   b.LastSyncTime(),
@@ -57,60 +57,60 @@ func (b *WPoktSignerService) Health() models.ServiceHealth {
 	}
 }
 
-func (b *WPoktSignerService) PoktHeight() string {
+func (b *MintSignerService) PoktHeight() string {
 	return strconv.FormatInt(b.poktHeight, 10)
 }
 
-func (b *WPoktSignerService) LastSyncTime() time.Time {
+func (b *MintSignerService) LastSyncTime() time.Time {
 	return b.lastSyncTime
 }
 
-func (b *WPoktSignerService) Interval() time.Duration {
+func (b *MintSignerService) Interval() time.Duration {
 	return b.interval
 }
 
-func (b *WPoktSignerService) Name() string {
+func (b *MintSignerService) Name() string {
 	return b.name
 }
 
-func (b *WPoktSignerService) Stop() {
-	log.Debug("[WPOKT SIGNER] Stopping wpokt signer")
+func (b *MintSignerService) Stop() {
+	log.Debug("[BURN SIGNER] Stopping wpokt signer")
 	b.stop <- true
 }
 
-func (b *WPoktSignerService) UpdateBlocks() {
-	log.Debug("[WPOKT SIGNER] Updating blocks")
+func (b *MintSignerService) UpdateBlocks() {
+	log.Debug("[BURN SIGNER] Updating blocks")
 	poktHeight, err := b.poktClient.GetHeight()
 	if err != nil {
-		log.Error("[WPOKT SIGNER] Error fetching pokt block height: ", err)
+		log.Error("[BURN SIGNER] Error fetching pokt block height: ", err)
 		return
 	}
 	b.poktHeight = poktHeight.Height
 }
 
 // finds nonce for mint transaction
-func (b *WPoktSignerService) FindNonce(mint *models.Mint) (*big.Int, error) {
-	log.Debug("[WPOKT SIGNER] Finding nonce for mint: ", mint.TransactionHash)
+func (b *MintSignerService) FindNonce(mint *models.Mint) (*big.Int, error) {
+	log.Debug("[BURN SIGNER] Finding nonce for mint: ", mint.TransactionHash)
 	var nonce *big.Int
 
 	if mint.Nonce != "" {
 		mintNonce, ok := new(big.Int).SetString(mint.Nonce, 10)
 		if !ok {
-			log.Error("[WPOKT SIGNER] Error converting decimal to big int")
+			log.Error("[BURN SIGNER] Error converting decimal to big int")
 			return nil, errors.New("error converting decimal to big int")
 		}
 		nonce = mintNonce
 	}
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
-		log.Debug("[WPOKT SIGNER] Mint nonce not set, fetching from contract")
+		log.Debug("[BURN SIGNER] Mint nonce not set, fetching from contract")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 		defer cancel()
 		opts := &bind.CallOpts{Context: ctx, Pending: false}
 		currentNonce, err := b.wpoktContract.GetUserNonce(opts, common.HexToAddress(mint.RecipientAddress))
 
 		if err != nil {
-			log.Error("[WPOKT SIGNER] Error fetching nonce from contract: ", err)
+			log.Error("[BURN SIGNER] Error fetching nonce from contract: ", err)
 			return nil, err
 		}
 
@@ -124,7 +124,7 @@ func (b *WPoktSignerService) FindNonce(mint *models.Mint) (*big.Int, error) {
 		}
 		err = app.DB.FindMany(models.CollectionMints, filter, &pendingMints)
 		if err != nil {
-			log.Error("[WPOKT SIGNER] Error fetching pending mints: ", err)
+			log.Error("[BURN SIGNER] Error fetching pending mints: ", err)
 			return nil, err
 		}
 
@@ -135,7 +135,7 @@ func (b *WPoktSignerService) FindNonce(mint *models.Mint) (*big.Int, error) {
 				if pendingMint.Data != nil {
 					nonce, err := strconv.ParseInt(pendingMint.Data.Nonce, 10, 64)
 					if err != nil {
-						log.Error("[WPOKT SIGNER] Error converting nonce to int: ", err)
+						log.Error("[BURN SIGNER] Error converting nonce to int: ", err)
 						continue
 					}
 					nonces = append(nonces, nonce)
@@ -156,25 +156,25 @@ func (b *WPoktSignerService) FindNonce(mint *models.Mint) (*big.Int, error) {
 	return nonce, nil
 }
 
-func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
-	log.Debug("[WPOKT SIGNER] Handling mint: ", mint.TransactionHash)
+func (b *MintSignerService) HandleMint(mint *models.Mint) bool {
+	log.Debug("[BURN SIGNER] Handling mint: ", mint.TransactionHash)
 
 	address := common.HexToAddress(mint.RecipientAddress)
 	amount, ok := new(big.Int).SetString(mint.Amount, 10)
 	if !ok {
-		log.Error("[WPOKT SIGNER] Error converting decimal to big int")
+		log.Error("[BURN SIGNER] Error converting decimal to big int")
 		return false
 	}
 
 	nonce, err := b.FindNonce(mint)
 
 	if err != nil {
-		log.Error("[WPOKT SIGNER] Error fetching nonce: ", err)
+		log.Error("[BURN SIGNER] Error fetching nonce: ", err)
 		return false
 	}
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
-		log.Error("[WPOKT SIGNER] Error fetching nonce")
+		log.Error("[BURN SIGNER] Error fetching nonce")
 		return false
 	}
 
@@ -194,10 +194,10 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		if app.Config.Pocket.Confirmations == 0 {
 			status = models.StatusConfirmed
 		} else {
-			log.Debug("[WPOKT SIGNER] Mint pending confirmation")
+			log.Debug("[BURN SIGNER] Mint pending confirmation")
 			mintHeight, err := strconv.ParseInt(mint.Height, 10, 64)
 			if err != nil {
-				log.Error("[WPOKT SIGNER] Error converting mint height to int: ", err)
+				log.Error("[BURN SIGNER] Error converting mint height to int: ", err)
 				return false
 			}
 			totalConfirmations := b.poktHeight - mintHeight
@@ -210,14 +210,14 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 
 	var update bson.M
 	if status == models.StatusConfirmed {
-		log.Debug("[WPOKT SIGNER] Mint confirmed")
+		log.Debug("[BURN SIGNER] Mint confirmed")
 		signature, err := SignTypedData(b.domain, data, b.privateKey)
 		if err != nil {
-			log.Error("[WPOKT SIGNER] Error signing typed data: ", err)
+			log.Error("[BURN SIGNER] Error signing typed data: ", err)
 			return false
 		}
 
-		log.Debug("[WPOKT SIGNER] Mint signed")
+		log.Debug("[BURN SIGNER] Mint signed")
 
 		signatureEncoded := "0x" + hex.EncodeToString(signature)
 		signatures := append(mint.Signatures, signatureEncoded)
@@ -239,7 +239,7 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		}
 
 		if len(sortedSignatures) == len(b.validators) {
-			log.Debug("[WPOKT SIGNER] Mint fully signed")
+			log.Debug("[BURN SIGNER] Mint fully signed")
 			status = models.StatusSigned
 		}
 
@@ -259,7 +259,7 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 		}
 
 	} else {
-		log.Debug("[WPOKT SIGNER] Mint pending confirmation")
+		log.Debug("[BURN SIGNER] Mint pending confirmation")
 		update = bson.M{
 			"$set": bson.M{
 				"status":        status,
@@ -276,16 +276,16 @@ func (b *WPoktSignerService) HandleMint(mint *models.Mint) bool {
 
 	err = app.DB.UpdateOne(models.CollectionMints, filter, update)
 	if err != nil {
-		log.Error("[WPOKT SIGNER] Error updating mint: ", err)
+		log.Error("[BURN SIGNER] Error updating mint: ", err)
 		return false
 	}
-	log.Debug("[WPOKT SIGNER] Mint updated with signature")
+	log.Debug("[BURN SIGNER] Mint updated with signature")
 
 	return true
 }
 
-func (b *WPoktSignerService) SyncTxs() bool {
-	log.Debug("[WPOKT SIGNER] Syncing pending txs")
+func (b *MintSignerService) SyncTxs() bool {
+	log.Debug("[BURN SIGNER] Syncing pending txs")
 
 	filter := bson.M{
 		"wpokt_address": b.wpoktAddress,
@@ -300,7 +300,7 @@ func (b *WPoktSignerService) SyncTxs() bool {
 
 	err := app.DB.FindMany(models.CollectionMints, filter, &results)
 	if err != nil {
-		log.Error("[WPOKT SIGNER] Error fetching pending mints: ", err)
+		log.Error("[BURN SIGNER] Error fetching pending mints: ", err)
 		return false
 	}
 
@@ -310,27 +310,27 @@ func (b *WPoktSignerService) SyncTxs() bool {
 
 	}
 
-	log.Debug("[WPOKT SIGNER] Finished syncing pending txs")
+	log.Debug("[BURN SIGNER] Finished syncing pending txs")
 	return success
 }
 
-func (b *WPoktSignerService) Start() {
-	log.Debug("[WPOKT SIGNER] Starting wpokt signer")
+func (b *MintSignerService) Start() {
+	log.Debug("[BURN SIGNER] Starting wpokt signer")
 	stop := false
 	for !stop {
-		log.Debug("[WPOKT SIGNER] Starting wpokt signer sync")
+		log.Debug("[BURN SIGNER] Starting wpokt signer sync")
 		b.lastSyncTime = time.Now()
 
 		b.UpdateBlocks()
 		b.SyncTxs()
 
-		log.Debug("[WPOKT SIGNER] Finished wpokt signer sync")
-		log.Debug("[WPOKT SIGNER] Sleeping for ", b.interval)
+		log.Debug("[BURN SIGNER] Finished wpokt signer sync")
+		log.Debug("[BURN SIGNER] Sleeping for ", b.interval)
 
 		select {
 		case <-b.stop:
 			stop = true
-			log.Debug("[WPOKT SIGNER] Stopped wpokt signer")
+			log.Debug("[BURN SIGNER] Stopped wpokt signer")
 		case <-time.After(b.interval):
 		}
 	}
@@ -341,47 +341,47 @@ func privateKeyToAddress(privateKey *ecdsa.PrivateKey) string {
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		log.Fatal("[WPOKT SIGNER] Error casting public key to ECDSA")
+		log.Fatal("[BURN SIGNER] Error casting public key to ECDSA")
 	}
 	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
 	return address
 }
 
 func newSigner(wg *sync.WaitGroup) models.Service {
-	if app.Config.WPOKTSigner.Enabled == false {
-		log.Debug("[WPOKT SIGNER] WPOKT signer disabled")
+	if app.Config.MintSigner.Enabled == false {
+		log.Debug("[BURN SIGNER] BURN signer disabled")
 		return models.NewEmptyService(wg, "empty-wpokt-signer")
 	}
 
-	log.Debug("[WPOKT SIGNER] Initializing wpokt signer")
+	log.Debug("[BURN SIGNER] Initializing wpokt signer")
 
 	privateKey, err := crypto.HexToECDSA(app.Config.Ethereum.PrivateKey)
 	if err != nil {
-		log.Fatal("[WPOKT SIGNER] Error loading private key: ", err)
+		log.Fatal("[BURN SIGNER] Error loading private key: ", err)
 	}
 
 	address := privateKeyToAddress(privateKey)
-	log.Debug("[WPOKT SIGNER] Loaded private key for address: ", address)
+	log.Debug("[BURN SIGNER] Loaded private key for address: ", address)
 	ethClient, err := ethereum.NewClient()
 	if err != nil {
-		log.Fatal("[WPOKT SIGNER] Error initializing ethereum client: ", err)
+		log.Fatal("[BURN SIGNER] Error initializing ethereum client: ", err)
 	}
 
-	log.Debug("[WPOKT SIGNER] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTAddress)
+	log.Debug("[BURN SIGNER] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTAddress)
 	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTAddress), ethClient.GetClient())
 	if err != nil {
-		log.Fatal("[WPOKT SIGNER] Error initializing Wrapped Pocket contract", err)
+		log.Fatal("[BURN SIGNER] Error initializing Wrapped Pocket contract", err)
 	}
-	log.Debug("[WPOKT SIGNER] Connected to wpokt contract")
+	log.Debug("[BURN SIGNER] Connected to wpokt contract")
 
-	log.Debug("[WPOKT SIGNER] Connecting to mint controller contract at: ", app.Config.Ethereum.MintControllerAddress)
+	log.Debug("[BURN SIGNER] Connecting to mint controller contract at: ", app.Config.Ethereum.MintControllerAddress)
 	mintControllerContract, err := autogen.NewMintController(common.HexToAddress(app.Config.Ethereum.MintControllerAddress), ethClient.GetClient())
 	if err != nil {
-		log.Fatal("[WPOKT SIGNER] Error initializing Mint Controller contract", err)
+		log.Fatal("[BURN SIGNER] Error initializing Mint Controller contract", err)
 	}
-	log.Debug("[WPOKT SIGNER] Connected to mint controller contract")
+	log.Debug("[BURN SIGNER] Connected to mint controller contract")
 
-	log.Debug("[WPOKT SIGNER] Fetching mint controller domain data")
+	log.Debug("[BURN SIGNER] Fetching mint controller domain data")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
 	defer cancel()
@@ -389,15 +389,15 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 	domain, err := mintControllerContract.Eip712Domain(opts)
 
 	if err != nil {
-		log.Fatal("[WPOKT SIGNER] Error fetching mint controller domain data: ", err)
+		log.Fatal("[BURN SIGNER] Error fetching mint controller domain data: ", err)
 	}
-	log.Debug("[WPOKT SIGNER] Fetched mint controller domain data")
+	log.Debug("[BURN SIGNER] Fetched mint controller domain data")
 
-	b := &WPoktSignerService{
+	b := &MintSignerService{
 		wg:                     wg,
-		name:                   WPoktSignerName,
+		name:                   MintSignerName,
 		stop:                   make(chan bool),
-		interval:               time.Duration(app.Config.WPOKTSigner.IntervalSecs) * time.Second,
+		interval:               time.Duration(app.Config.MintSigner.IntervalSecs) * time.Second,
 		privateKey:             privateKey,
 		address:                address,
 		wpoktAddress:           app.Config.Ethereum.WPOKTAddress,
@@ -410,7 +410,7 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 		poktClient:             pocket.NewClient(),
 	}
 
-	log.Debug("[WPOKT SIGNER] Initialized wpokt signer")
+	log.Debug("[BURN SIGNER] Initialized wpokt signer")
 
 	return b
 }
