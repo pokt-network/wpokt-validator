@@ -28,29 +28,6 @@ type BurnExecutorService struct {
 	multisigAddress string
 }
 
-func (m *BurnExecutorService) Health() models.ServiceHealth {
-	return models.ServiceHealth{
-		Name:           m.Name(),
-		LastSyncTime:   m.LastSyncTime(),
-		NextSyncTime:   m.LastSyncTime().Add(m.Interval()),
-		PoktHeight:     "",
-		EthBlockNumber: "",
-		Healthy:        true,
-	}
-}
-
-func (m *BurnExecutorService) LastSyncTime() time.Time {
-	return m.lastSyncTime
-}
-
-func (m *BurnExecutorService) Interval() time.Duration {
-	return m.interval
-}
-
-func (m *BurnExecutorService) Name() string {
-	return m.name
-}
-
 func (m *BurnExecutorService) Start() {
 	log.Debug("[BURN EXECUTOR] Starting pokt executor")
 	stop := false
@@ -73,6 +50,17 @@ func (m *BurnExecutorService) Start() {
 	m.wg.Done()
 }
 
+func (m *BurnExecutorService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
+		Name:           m.name,
+		LastSyncTime:   m.lastSyncTime,
+		NextSyncTime:   m.lastSyncTime.Add(m.interval),
+		PoktHeight:     "",
+		EthBlockNumber: "",
+		Healthy:        true,
+	}
+}
+
 func (m *BurnExecutorService) Stop() {
 	log.Debug("[BURN EXECUTOR] Stopping pokt executor")
 	m.stop <- true
@@ -80,7 +68,12 @@ func (m *BurnExecutorService) Stop() {
 
 func (m *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 	log.Debug("[BURN EXECUTOR] Handling invalid mint: ", doc.TransactionHash)
+
+	filter := bson.M{"_id": doc.Id}
+	var update bson.M
+
 	if doc.Status == models.StatusSigned {
+		log.Debug("[BURN EXECUTOR] Submitting invalid mint")
 		p := rpc.SendRawTxParams{
 			Addr:        m.multisigAddress,
 			RawHexBytes: doc.ReturnTx,
@@ -92,52 +85,44 @@ func (m *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 			return false
 		}
 
-		filter := bson.M{
-			"_id":           doc.Id,
-			"vault_address": m.multisigAddress,
-		}
-		update := bson.M{
+		update = bson.M{
 			"$set": bson.M{
 				"status":         models.StatusSubmitted,
 				"return_tx_hash": res.TransactionHash,
 			},
 		}
-		err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
-			return false
-		}
-		log.Debug("[BURN EXECUTOR] Submitted tx for invalid mint")
-
 	} else if doc.Status == models.StatusSubmitted {
+		log.Debug("[BURN EXECUTOR] Checking invalid mint")
 		_, err := m.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
 		}
-		filter := bson.M{
-			"_id":           doc.Id,
-			"vault_address": m.multisigAddress,
-		}
-		update := bson.M{
+		update = bson.M{
 			"$set": bson.M{
 				"status": models.StatusSuccess,
 			},
 		}
-		err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
-			return false
-		}
-		log.Debug("[BURN EXECUTOR] Executed return tx for invalid mint")
 	}
+
+	err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
+	if err != nil {
+		log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
+		return false
+	}
+	log.Debug("[BURN EXECUTOR] Handled invalid mint")
 
 	return true
 }
 
 func (m *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 	log.Debug("[BURN EXECUTOR] Handling burn: ", doc.TransactionHash)
+
+	filter := bson.M{"_id": doc.Id}
+	var update bson.M
+
 	if doc.Status == models.StatusSigned {
+		log.Debug("[BURN EXECUTOR] Submitting burn")
 		p := rpc.SendRawTxParams{
 			Addr:        m.multisigAddress,
 			RawHexBytes: doc.ReturnTx,
@@ -149,50 +134,37 @@ func (m *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 			return false
 		}
 
-		filter := bson.M{
-			"_id":           doc.Id,
-			"wpokt_address": m.wpoktAddress,
-		}
-		update := bson.M{
+		update = bson.M{
 			"$set": bson.M{
 				"status":         models.StatusSubmitted,
 				"return_tx_hash": res.TransactionHash,
 			},
 		}
-		err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error updating burn: ", err)
-			return false
-		}
-		log.Debug("[BURN EXECUTOR] Submitted tx for burn")
-
 	} else if doc.Status == models.StatusSubmitted {
+		log.Debug("[BURN EXECUTOR] Checking burn")
 		_, err := m.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
 		}
-		filter := bson.M{
-			"_id":           doc.Id,
-			"wpokt_address": m.wpoktAddress,
-		}
-		update := bson.M{
+
+		update = bson.M{
 			"$set": bson.M{
 				"status": models.StatusSuccess,
 			},
 		}
-		err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error updating burn: ", err)
-			return false
-		}
-		log.Debug("[BURN EXECUTOR] Executed return tx for burn")
 	}
+
+	err := app.DB.UpdateOne(models.CollectionBurns, filter, update)
+	if err != nil {
+		log.Error("[BURN EXECUTOR] Error updating burn: ", err)
+		return false
+	}
+	log.Debug("[BURN EXECUTOR] Handled burn")
 	return true
 }
 
 func (m *BurnExecutorService) SyncTxs() bool {
-	// filter for status signed or status submitted
 	filter := bson.M{
 		"status": bson.M{
 			"$in": []string{
@@ -200,13 +172,16 @@ func (m *BurnExecutorService) SyncTxs() bool {
 				string(models.StatusSubmitted),
 			},
 		},
+		"vault_address": m.multisigAddress,
 	}
 	invalidMints := []models.InvalidMint{}
+
 	err := app.DB.FindMany(models.CollectionInvalidMints, filter, &invalidMints)
 	if err != nil {
 		log.Error("[BURN EXECUTOR] Error fetching invalid mints: ", err)
 		return false
 	}
+
 	log.Debug("[BURN EXECUTOR] Found invalid mints: ", len(invalidMints))
 
 	var success bool = true
@@ -214,7 +189,17 @@ func (m *BurnExecutorService) SyncTxs() bool {
 		success = m.HandleInvalidMint(doc) && success
 	}
 
+	filter = bson.M{
+		"status": bson.M{
+			"$in": []string{
+				string(models.StatusSigned),
+				string(models.StatusSubmitted),
+			},
+		},
+		"wpokt_address": m.wpoktAddress,
+	}
 	burns := []models.Burn{}
+
 	err = app.DB.FindMany(models.CollectionBurns, filter, &burns)
 	if err != nil {
 		log.Error("[BURN EXECUTOR] Error fetching burns: ", err)
@@ -233,7 +218,7 @@ func (m *BurnExecutorService) SyncTxs() bool {
 func newExecutor(wg *sync.WaitGroup) models.Service {
 	if !app.Config.BurnExecutor.Enabled {
 		log.Debug("[BURN EXECUTOR] Pokt executor disabled")
-		return models.NewEmptyService(wg, "empty-pokt-executor")
+		return models.NewEmptyService(wg)
 	}
 
 	log.Debug("[BURN EXECUTOR] Initializing pokt executor")

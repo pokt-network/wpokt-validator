@@ -19,7 +19,9 @@ import (
 )
 
 const (
-	BurnMonitorName = "burn-monitor"
+	BurnMonitorName         = "burn-monitor"
+	MAX_QUERY_BLOCKS int64  = 100000
+	ZERO_ADDRESS     string = "0x0000000000000000000000000000000000000000"
 )
 
 type BurnMonitorService struct {
@@ -30,36 +32,66 @@ type BurnMonitorService struct {
 	currentBlockNumber int64
 	lastSyncTime       time.Time
 	interval           time.Duration
-	wpoktContract      WrappedPocketContract
+	wpoktContract      *autogen.WrappedPocket
 	client             ethereum.EthereumClient
+}
+
+func (b *BurnMonitorService) Start() {
+	log.Debug("[BURN MONITOR] Starting wpokt monitor")
+	stop := false
+	for !stop {
+		log.Debug("[BURN MONITOR] Starting burn sync")
+		b.lastSyncTime = time.Now()
+
+		b.UpdateCurrentBlockNumber()
+
+		if (b.currentBlockNumber - b.startBlockNumber) > 0 {
+			success := b.SyncTxs()
+			if success {
+				b.startBlockNumber = b.currentBlockNumber
+			}
+		} else {
+			log.Debug("[BURN MONITOR] No new blocks to sync")
+		}
+
+		log.Debug("[BURN MONITOR] Finished burn sync")
+		log.Debug("[BURN MONITOR] Sleeping for ", b.interval)
+
+		select {
+		case <-b.stop:
+			stop = true
+			log.Debug("[BURN MONITOR] Stopped wpokt monitor")
+		case <-time.After(b.interval):
+		}
+	}
+	b.wg.Done()
 }
 
 func (b *BurnMonitorService) Health() models.ServiceHealth {
 	return models.ServiceHealth{
-		Name:           b.Name(),
-		LastSyncTime:   b.LastSyncTime(),
-		NextSyncTime:   b.LastSyncTime().Add(b.Interval()),
-		PoktHeight:     b.PoktHeight(),
-		EthBlockNumber: b.EthBlockNumber(),
+		Name:           b.name,
+		LastSyncTime:   b.lastSyncTime,
+		NextSyncTime:   b.lastSyncTime.Add(b.interval),
+		PoktHeight:     "",
+		EthBlockNumber: strconv.FormatInt(b.startBlockNumber, 10),
 		Healthy:        true,
 	}
-}
-
-func (b *BurnMonitorService) PoktHeight() string {
-	return ""
-}
-
-func (b *BurnMonitorService) EthBlockNumber() string {
-	return strconv.FormatInt(b.startBlockNumber, 10)
-}
-
-func (b *BurnMonitorService) Name() string {
-	return b.name
 }
 
 func (b *BurnMonitorService) Stop() {
 	log.Debug("[BURN MONITOR] Stopping wpokt monitor")
 	b.stop <- true
+}
+
+func (b *BurnMonitorService) InitStartBlockNumber(startBlockNumber int64) {
+	if app.Config.Ethereum.StartBlockNumber > 0 {
+		b.startBlockNumber = int64(app.Config.Ethereum.StartBlockNumber)
+	} else {
+		log.Debug("[BURN MONITOR] Found invalid start block number, updating to current block number")
+		b.startBlockNumber = b.currentBlockNumber
+	}
+
+	log.Debug("[BURN EXECUTOR] Start block number: ", b.startBlockNumber)
 }
 
 func (b *BurnMonitorService) UpdateCurrentBlockNumber() {
@@ -121,8 +153,7 @@ func (b *BurnMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 
 	var success bool = true
 	for filter.Next() {
-		event := filter.Event()
-		success = success && b.HandleBurnEvent(event)
+		success = success && b.HandleBurnEvent(filter.Event)
 	}
 	return success
 }
@@ -146,45 +177,6 @@ func (b *BurnMonitorService) SyncTxs() bool {
 	return success
 }
 
-func (b *BurnMonitorService) Start() {
-	log.Debug("[BURN MONITOR] Starting wpokt monitor")
-	stop := false
-	for !stop {
-		log.Debug("[BURN MONITOR] Starting burn sync")
-		b.lastSyncTime = time.Now()
-
-		b.UpdateCurrentBlockNumber()
-
-		if (b.currentBlockNumber - b.startBlockNumber) > 0 {
-			success := b.SyncTxs()
-			if success {
-				b.startBlockNumber = b.currentBlockNumber
-			}
-		} else {
-			log.Debug("[BURN MONITOR] No new blocks to sync")
-		}
-
-		log.Debug("[BURN MONITOR] Finished burn sync")
-		log.Debug("[BURN MONITOR] Sleeping for ", b.interval)
-
-		select {
-		case <-b.stop:
-			stop = true
-			log.Debug("[BURN MONITOR] Stopped wpokt monitor")
-		case <-time.After(b.interval):
-		}
-	}
-	b.wg.Done()
-}
-
-func (b *BurnMonitorService) LastSyncTime() time.Time {
-	return b.lastSyncTime
-}
-
-func (b *BurnMonitorService) Interval() time.Duration {
-	return b.interval
-}
-
 func newMonitor(wg *sync.WaitGroup) *BurnMonitorService {
 	client, err := ethereum.NewClient()
 	if err != nil {
@@ -204,36 +196,27 @@ func newMonitor(wg *sync.WaitGroup) *BurnMonitorService {
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
 		interval:           time.Duration(app.Config.BurnMonitor.IntervalSecs) * time.Second,
-		wpoktContract:      &WrappedPocketContractImpl{contract},
+		wpoktContract:      contract,
 		client:             client,
 	}
 
 	return b
 }
 
-func (b *BurnMonitorService) InitStartBlockNumber(startBlockNumber int64) {
-	b.UpdateCurrentBlockNumber()
-	if app.Config.Ethereum.StartBlockNumber > 0 {
-		b.startBlockNumber = int64(app.Config.Ethereum.StartBlockNumber)
-	} else {
-		log.Debug("[BURN MONITOR] Found invalid start block number, updating to current block number")
-		b.startBlockNumber = b.currentBlockNumber
-	}
-
-	log.Debug("[BURN EXECUTOR] Start block number: ", b.startBlockNumber)
-}
-
 func NewMonitor(wg *sync.WaitGroup) models.Service {
 	if app.Config.BurnMonitor.Enabled == false {
 		log.Debug("[BURN MONITOR] BURN monitor disabled")
-		return models.NewEmptyService(wg, "empty-wpokt-monitor")
+		return models.NewEmptyService(wg)
 	}
 
 	log.Debug("[BURN MONITOR] Initializing wpokt monitor")
 
 	m := newMonitor(wg)
 
+	m.UpdateCurrentBlockNumber()
+
 	m.InitStartBlockNumber(int64(app.Config.Ethereum.StartBlockNumber))
+
 	log.Debug("[BURN MONITOR] Initialized wpokt monitor")
 
 	return m
@@ -242,7 +225,7 @@ func NewMonitor(wg *sync.WaitGroup) models.Service {
 func NewMonitorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
 	if app.Config.BurnMonitor.Enabled == false {
 		log.Debug("[BURN MONITOR] BURN monitor disabled")
-		return models.NewEmptyService(wg, "empty-wpokt-monitor")
+		return models.NewEmptyService(wg)
 	}
 
 	log.Debug("[BURN MONITOR] Initializing wpokt monitor")
@@ -255,7 +238,10 @@ func NewMonitorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealt
 		lastBlockNumber = app.Config.Ethereum.StartBlockNumber
 	}
 
+	m.UpdateCurrentBlockNumber()
+
 	m.InitStartBlockNumber(lastBlockNumber)
+
 	log.Debug("[BURN MONITOR] Initialized wpokt monitor")
 
 	return m

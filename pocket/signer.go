@@ -1,7 +1,6 @@
 package pocket
 
 import (
-	"encoding/hex"
 	"strconv"
 	"sync"
 	"time"
@@ -36,37 +35,6 @@ type BurnSignerService struct {
 	wpoktAddress   string
 }
 
-func (m *BurnSignerService) Health() models.ServiceHealth {
-	return models.ServiceHealth{
-		Name:           m.Name(),
-		LastSyncTime:   m.LastSyncTime(),
-		NextSyncTime:   m.LastSyncTime().Add(m.Interval()),
-		PoktHeight:     m.PoktHeight(),
-		EthBlockNumber: m.EthBlockNumber(),
-		Healthy:        true,
-	}
-}
-
-func (m *BurnSignerService) PoktHeight() string {
-	return strconv.FormatInt(m.poktHeight, 10)
-}
-
-func (m *BurnSignerService) EthBlockNumber() string {
-	return strconv.FormatInt(m.ethBlockNumber, 10)
-}
-
-func (m *BurnSignerService) LastSyncTime() time.Time {
-	return m.lastSyncTime
-}
-
-func (m *BurnSignerService) Interval() time.Duration {
-	return m.interval
-}
-
-func (m *BurnSignerService) Name() string {
-	return m.name
-}
-
 func (m *BurnSignerService) Start() {
 	log.Debug("[BURN SIGNER] Starting pokt signer")
 	stop := false
@@ -91,6 +59,22 @@ func (m *BurnSignerService) Start() {
 	m.wg.Done()
 }
 
+func (m *BurnSignerService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
+		Name:           m.name,
+		LastSyncTime:   m.lastSyncTime,
+		NextSyncTime:   m.lastSyncTime.Add(m.interval),
+		PoktHeight:     strconv.FormatInt(m.poktHeight, 10),
+		EthBlockNumber: strconv.FormatInt(m.ethBlockNumber, 10),
+		Healthy:        true,
+	}
+}
+
+func (m *BurnSignerService) Stop() {
+	log.Debug("[BURN SIGNER] Stopping pokt signer")
+	m.stop <- true
+}
+
 func (m *BurnSignerService) UpdateBlocks() {
 	log.Debug("[BURN SIGNER] Updating blocks")
 
@@ -109,112 +93,42 @@ func (m *BurnSignerService) UpdateBlocks() {
 	m.ethBlockNumber = int64(ethBlockNumber)
 
 	log.Debug("[BURN SIGNER] Updated blocks")
-
-}
-
-func (m *BurnSignerService) Stop() {
-	log.Debug("[BURN SIGNER] Stopping pokt signer")
-	m.stop <- true
 }
 
 func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 	log.Debug("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
 
-	signers := doc.Signers
-	returnTx := doc.ReturnTx
-
-	if signers == nil {
-		signers = []string{}
-	}
-
-	status := doc.Status
-	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
+	doc, err := updateStatusAndConfirmationsForInvalidMint(doc, m.poktHeight)
 	if err != nil {
-		confirmations = 0
-	}
-
-	if status == models.StatusPending {
-		if app.Config.Pocket.Confirmations == 0 {
-			status = models.StatusConfirmed
-		} else {
-			log.Debug("[BURN SIGNER] Checking confirmations for invalid mint")
-			mintHeight, err := strconv.ParseInt(doc.Height, 10, 64)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error parsing height for invalid mint: ", err)
-				return false
-			}
-			totalConfirmations := m.poktHeight - mintHeight
-			if totalConfirmations >= app.Config.Pocket.Confirmations {
-				status = models.StatusConfirmed
-			}
-			confirmations = totalConfirmations
-		}
+		log.Error("[BURN SIGNER] Error getting invalid mint status: ", err)
+		return false
 	}
 
 	var update bson.M
 
-	if status == models.StatusConfirmed {
-		if returnTx == "" {
-			log.Debug("[BURN SIGNER] Creating returnTx for invalid mint")
-			amountWithFees, err := strconv.ParseInt(doc.Amount, 10, 64)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error parsing amount for invalid mint: ", err)
-				return false
-			}
-			amount := amountWithFees - app.Config.Pocket.Fees
-			memo := doc.TransactionHash
+	if doc.Status == models.StatusConfirmed {
+		log.Debug("[BURN SIGNER] Signing invalid mint")
 
-			returnTxBytes, err := BuildMultiSigTxAndSign(
-				doc.SenderAddress,
-				memo,
-				app.Config.Pocket.ChainId,
-				amount,
-				app.Config.Pocket.Fees,
-				m.privateKey,
-				m.multisigPubKey,
-			)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error creating tx for invalid mint: ", err)
-				return false
-			}
-			returnTx = hex.EncodeToString(returnTxBytes)
-			log.Debug("[BURN SIGNER] Created tx for invalid mint")
-
-		} else {
-			log.Debug("[BURN SIGNER] Signing tx for invalid mint")
-
-			returnTxBytes, err := SignMultisigTx(
-				returnTx,
-				app.Config.Pocket.ChainId,
-				m.privateKey,
-				m.multisigPubKey,
-			)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error signing tx for invalid mint: ", err)
-				return false
-			}
-			returnTx = hex.EncodeToString(returnTxBytes)
-			log.Debug("[BURN SIGNER] Signed tx for invalid mint")
-
+		doc, err = signInvalidMint(doc, m.privateKey, m.multisigPubKey, m.numSigners)
+		if err != nil {
+			log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
+			return false
 		}
-		signers = append(signers, m.privateKey.PublicKey().RawString())
-		if len(signers) == m.numSigners && status == models.StatusConfirmed {
-			status = models.StatusSigned
-			log.Debug("[BURN SIGNER] Invalid mint fully signed")
-		}
+
 		update = bson.M{
 			"$set": bson.M{
-				"return_tx":     returnTx,
-				"signers":       signers,
-				"status":        status,
-				"confirmations": strconv.FormatInt(confirmations, 10),
+				"return_tx":     doc.ReturnTx,
+				"signers":       doc.Signers,
+				"status":        doc.Status,
+				"confirmations": doc.Confirmations,
 			},
 		}
 	} else {
+		log.Debug("[BURN SIGNER] Not signing invalid mint")
 		update = bson.M{
 			"$set": bson.M{
-				"status":        status,
-				"confirmations": strconv.FormatInt(confirmations, 10),
+				"status":        doc.Status,
+				"confirmations": doc.Confirmations,
 			},
 		}
 	}
@@ -235,105 +149,36 @@ func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 func (m *BurnSignerService) HandleBurn(doc models.Burn) bool {
 	log.Debug("[BURN SIGNER] Handling burn: ", doc.TransactionHash)
 
-	signers := doc.Signers
-	returnTx := doc.ReturnTx
-
-	if signers == nil {
-		signers = []string{}
-	}
-
-	status := doc.Status
-	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
+	doc, err := updateStatusAndConfirmationsForBurn(doc, m.ethBlockNumber)
 	if err != nil {
-		confirmations = 0
-	}
-
-	if status == models.StatusPending {
-		if app.Config.Ethereum.Confirmations == 0 {
-			status = models.StatusConfirmed
-		} else {
-			log.Debug("[BURN SIGNER] Checking confirmations for burn")
-			burnBlockNumber, err := strconv.ParseInt(doc.BlockNumber, 10, 64)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error parsing block number for burn: ", err)
-				return false
-			}
-			totalConfirmations := m.ethBlockNumber - burnBlockNumber
-			if totalConfirmations >= app.Config.Pocket.Confirmations {
-				status = models.StatusConfirmed
-			}
-			confirmations = totalConfirmations
-		}
+		log.Error("[BURN SIGNER] Error getting burn status: ", err)
+		return false
 	}
 
 	var update bson.M
 
-	if status == models.StatusConfirmed {
-		if returnTx == "" {
-			log.Debug("[BURN SIGNER] Creating returnTx for burn")
-			amountWithFees, err := strconv.ParseInt(doc.Amount, 10, 64)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error parsing amount for burn: ", err)
-				return false
-			}
-			amount := amountWithFees - app.Config.Pocket.Fees
-			memo := doc.TransactionHash
-
-			returnTxBytes, err := BuildMultiSigTxAndSign(
-				doc.RecipientAddress,
-				memo,
-				app.Config.Pocket.ChainId,
-				amount,
-				app.Config.Pocket.Fees,
-				m.privateKey,
-				m.multisigPubKey,
-			)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error creating tx for burn: ", err)
-				return false
-			}
-			returnTx = hex.EncodeToString(returnTxBytes)
-			log.Debug("[BURN SIGNER] Created tx for burn")
-
-		} else {
-
-			log.Debug("[BURN SIGNER] Signing tx for burn")
-
-			returnTxBytes, err := SignMultisigTx(
-				returnTx,
-				app.Config.Pocket.ChainId,
-				m.privateKey,
-				m.multisigPubKey,
-			)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error signing tx for burn: ", err)
-				return false
-			}
-			returnTx = hex.EncodeToString(returnTxBytes)
-			log.Debug("[BURN SIGNER] Signed tx for burn")
-
-		}
-
-		signers = append(signers, m.privateKey.PublicKey().RawString())
-
-		if len(signers) == m.numSigners {
-			status = models.StatusSigned
-			log.Debug("[BURN SIGNER] Invalid burn fully signed")
+	if doc.Status == models.StatusConfirmed {
+		log.Debug("[BURN SIGNER] Signing burn")
+		doc, err = signBurn(doc, m.privateKey, m.multisigPubKey, m.numSigners)
+		if err != nil {
+			log.Error("[BURN SIGNER] Error signing burn: ", err)
+			return false
 		}
 
 		update = bson.M{
 			"$set": bson.M{
-				"return_tx":     returnTx,
-				"signers":       signers,
-				"status":        status,
-				"confirmations": strconv.FormatInt(confirmations, 10),
+				"return_tx":     doc.ReturnTx,
+				"signers":       doc.Signers,
+				"status":        doc.Status,
+				"confirmations": doc.Confirmations,
 			},
 		}
 	} else {
+		log.Debug("[BURN SIGNER] Not signing burn")
 		update = bson.M{
 			"$set": bson.M{
-				"status":        status,
-				"confirmations": strconv.FormatInt(confirmations, 10),
+				"status":        doc.Status,
+				"confirmations": doc.Confirmations,
 			},
 		}
 	}
@@ -395,6 +240,11 @@ func (m *BurnSignerService) SyncTxs() bool {
 }
 
 func newSigner(wg *sync.WaitGroup) models.Service {
+	if app.Config.BurnSigner.Enabled == false {
+		log.Debug("[BURN SIGNER] BURN signer disabled")
+		return models.NewEmptyService(wg)
+	}
+
 	log.Debug("[BURN SIGNER] Initializing pokt signer")
 
 	pk, err := crypto.NewPrivateKey(app.Config.Pocket.PrivateKey)

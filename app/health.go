@@ -73,7 +73,11 @@ func (b *HealthService) Stop() {
 func (b *HealthService) ServiceHealths() []models.ServiceHealth {
 	var serviceHealths []models.ServiceHealth
 	for _, service := range b.services {
-		serviceHealths = append(serviceHealths, service.Health())
+		health := service.Health()
+		if health.Name == models.EmptyServiceName {
+			continue
+		}
+		serviceHealths = append(serviceHealths, health)
 	}
 	return serviceHealths
 }
