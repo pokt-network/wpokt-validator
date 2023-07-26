@@ -1,6 +1,6 @@
 # wPOKT Validator
 
-The wPOKT Validator is a validator node that facilitates the bridging of POKT tokens from the POKT network to wPOKT on the Ethereum Mainnet. 
+The wPOKT Validator is a validator node that facilitates the bridging of POKT tokens from the POKT network to wPOKT on the Ethereum Mainnet.
 
 ## How It Works
 
@@ -56,13 +56,19 @@ No specific installation steps are required. Users should have Golang installed 
 2. **Run the application:**
    Users can execute the program in the following ways:
 
-    a. Using environment variables:
+    a. With config updated with the necessary information:
+
+    ```bash
+    $ go run main.go config.local.yml
+    ```
+
+    b. Using environment variables:
 
     ```bash
     $ ETH_PRIVATE_KEY="your_eth_private_key" ETH_RPC_URL="your_eth_rpc_url" ... go run main.go config.testnet.yml
     ```
 
-    b. Using a `.env` file:
+    c. Using a `.env` file:
 
     - Create a `.env` file and add the environment variables in the format `VARIABLE_NAME=VALUE`.
     - Run the app:
@@ -71,13 +77,13 @@ No specific installation steps are required. Users should have Golang installed 
     $ go run main.go config.testnet.yml .env
     ```
 
-    c. Running in a Docker container:
+    d. Running in a Docker container:
 
     - Set the environment variables in the environment or use a file.
     - Execute the following command in the project directory with the `docker-compose.yml` file:
 
     ```bash
-    $ docker-compose up
+    $ docker-compose -f docker-compose.testnet.yml up
     ```
 
 ## Valid Memo
@@ -98,7 +104,7 @@ Transactions with memos not conforming to this format will not be processed by t
 The wPOKT Validator is also available as a Docker image hosted on Docker Hub. You can run the validator in a Docker container using the following command:
 
 ```bash
-docker run -d --env-file .env docker.io/dan13ram/wpokt-validator:latest
+docker run -d --env-file .env docker.io/dan13ram/wpokt-validator-testnet:latest
 ```
 
 Ensure you have set the required environment variables in the `.env` file or directly in the command above.
