@@ -121,6 +121,7 @@ func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 				"signers":       doc.Signers,
 				"status":        doc.Status,
 				"confirmations": doc.Confirmations,
+				"updated_at":    time.Now(),
 			},
 		}
 	} else {
@@ -129,6 +130,7 @@ func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 			"$set": bson.M{
 				"status":        doc.Status,
 				"confirmations": doc.Confirmations,
+				"updated_at":    time.Now(),
 			},
 		}
 	}
@@ -168,6 +170,7 @@ func (m *BurnSignerService) HandleBurn(doc models.Burn) bool {
 				"signers":       doc.Signers,
 				"status":        doc.Status,
 				"confirmations": doc.Confirmations,
+				"updated_at":    time.Now(),
 			},
 		}
 	} else {
@@ -176,6 +179,7 @@ func (m *BurnSignerService) HandleBurn(doc models.Burn) bool {
 			"$set": bson.M{
 				"status":        doc.Status,
 				"confirmations": doc.Confirmations,
+				"updated_at":    time.Now(),
 			},
 		}
 	}

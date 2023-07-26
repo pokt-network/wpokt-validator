@@ -122,6 +122,7 @@ func (b *MintExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinted
 		"$set": bson.M{
 			"status":       models.StatusSuccess,
 			"mint_tx_hash": event.Raw.TxHash.String(),
+			"updated_at":   time.Now(),
 		},
 	}
 

@@ -222,6 +222,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 				"signers":       mint.Signers,
 				"status":        mint.Status,
 				"confirmations": mint.Confirmations,
+				"updated_at":    time.Now(),
 			},
 		}
 
@@ -231,6 +232,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 			"$set": bson.M{
 				"status":        mint.Status,
 				"confirmations": mint.Confirmations,
+				"updated_at":    time.Now(),
 			},
 		}
 	}

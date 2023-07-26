@@ -88,6 +88,7 @@ func (m *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 			"$set": bson.M{
 				"status":         models.StatusSubmitted,
 				"return_tx_hash": res.TransactionHash,
+				"updated_at":     time.Now(),
 			},
 		}
 	} else if doc.Status == models.StatusSubmitted {
@@ -99,7 +100,8 @@ func (m *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 		update = bson.M{
 			"$set": bson.M{
-				"status": models.StatusSuccess,
+				"status":     models.StatusSuccess,
+				"updated_at": time.Now(),
 			},
 		}
 	}
@@ -137,6 +139,7 @@ func (m *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 			"$set": bson.M{
 				"status":         models.StatusSubmitted,
 				"return_tx_hash": res.TransactionHash,
+				"updated_at":     time.Now(),
 			},
 		}
 	} else if doc.Status == models.StatusSubmitted {
@@ -149,7 +152,8 @@ func (m *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 
 		update = bson.M{
 			"$set": bson.M{
-				"status": models.StatusSuccess,
+				"status":     models.StatusSuccess,
+				"updated_at": time.Now(),
 			},
 		}
 	}
