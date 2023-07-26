@@ -1,12 +1,12 @@
-package pocket
+package pokt
 
 import (
 	"sync"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/models"
-	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/models"
+	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/pokt-network/pocket-core/app/cmd/rpc"
 	"github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
@@ -20,7 +20,7 @@ const (
 type BurnExecutorService struct {
 	wg              *sync.WaitGroup
 	name            string
-	client          pocket.PocketClient
+	client          pokt.PocketClient
 	wpoktAddress    string
 	stop            chan bool
 	lastSyncTime    time.Time
@@ -246,7 +246,7 @@ func newExecutor(wg *sync.WaitGroup) models.Service {
 		stop:            make(chan bool),
 		multisigAddress: multisigAddress,
 		wpoktAddress:    app.Config.Ethereum.WPOKTAddress,
-		client:          pocket.NewClient(),
+		client:          pokt.NewClient(),
 	}
 
 	log.Info("[BURN EXECUTOR] Initialized burn executor")

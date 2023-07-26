@@ -9,13 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/ethereum"
-	ethClient "github.com/dan13ram/wpokt-backend/ethereum/client"
-	"github.com/dan13ram/wpokt-backend/models"
-
-	"github.com/dan13ram/wpokt-backend/pocket"
-	poktClient "github.com/dan13ram/wpokt-backend/pocket/client"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/eth"
+	ethClient "github.com/dan13ram/wpokt-validator/eth/client"
+	"github.com/dan13ram/wpokt-validator/models"
+	"github.com/dan13ram/wpokt-validator/pokt"
+	poktClient "github.com/dan13ram/wpokt-validator/pokt/client"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -38,29 +37,29 @@ var SERVICES = map[string]struct {
 	serviceWithoutHealth func(*sync.WaitGroup) models.Service
 	serviceWithHealth    func(*sync.WaitGroup, models.ServiceHealth) models.Service
 }{
-	pocket.MintMonitorName: {
-		serviceWithoutHealth: pocket.NewMonitor,
-		serviceWithHealth:    pocket.NewMonitorWithLastHealth,
+	pokt.MintMonitorName: {
+		serviceWithoutHealth: pokt.NewMonitor,
+		serviceWithHealth:    pokt.NewMonitorWithLastHealth,
 	},
-	pocket.BurnSignerName: {
-		serviceWithoutHealth: pocket.NewSigner,
-		serviceWithHealth:    pocket.NewSignerWithLastHealth,
+	pokt.BurnSignerName: {
+		serviceWithoutHealth: pokt.NewSigner,
+		serviceWithHealth:    pokt.NewSignerWithLastHealth,
 	},
-	pocket.BurnExecutorName: {
-		serviceWithoutHealth: pocket.NewExecutor,
-		serviceWithHealth:    pocket.NewExecutorWithLastHealth,
+	pokt.BurnExecutorName: {
+		serviceWithoutHealth: pokt.NewExecutor,
+		serviceWithHealth:    pokt.NewExecutorWithLastHealth,
 	},
-	ethereum.BurnMonitorName: {
-		serviceWithoutHealth: ethereum.NewMonitor,
-		serviceWithHealth:    ethereum.NewMonitorWithLastHealth,
+	eth.BurnMonitorName: {
+		serviceWithoutHealth: eth.NewMonitor,
+		serviceWithHealth:    eth.NewMonitorWithLastHealth,
 	},
-	ethereum.MintSignerName: {
-		serviceWithoutHealth: ethereum.NewSigner,
-		serviceWithHealth:    ethereum.NewSignerWithLastHealth,
+	eth.MintSignerName: {
+		serviceWithoutHealth: eth.NewSigner,
+		serviceWithHealth:    eth.NewSignerWithLastHealth,
 	},
-	ethereum.MintExecutorName: {
-		serviceWithoutHealth: ethereum.NewExecutor,
-		serviceWithHealth:    ethereum.NewExecutorWithLastHealth,
+	eth.MintExecutorName: {
+		serviceWithoutHealth: eth.NewExecutor,
+		serviceWithHealth:    eth.NewExecutorWithLastHealth,
 	},
 }
 
@@ -76,7 +75,6 @@ func main() {
 	}
 	absConfigPath, _ := filepath.Abs(os.Args[1])
 
-	// check 2 argument, if it exists set it as absEnvPath
 	absEnvPath := ""
 	if len(os.Args) == 3 {
 		absEnvPath, _ = filepath.Abs(os.Args[2])
@@ -128,7 +126,6 @@ func main() {
 		go service.Start()
 	}
 
-	// Gracefully shut down server
 	gracefulStop := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
 	signal.Notify(gracefulStop, syscall.SIGINT, syscall.SIGTERM)

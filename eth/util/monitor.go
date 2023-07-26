@@ -1,16 +1,16 @@
-package ethereum
+package util
 
 import (
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	"github.com/dan13ram/wpokt-validator/models"
 )
 
-func createBurn(event *autogen.WrappedPocketBurnAndBridge) models.Burn {
+func CreateBurn(event *autogen.WrappedPocketBurnAndBridge) models.Burn {
 	doc := models.Burn{
 		BlockNumber:      strconv.FormatInt(int64(event.Raw.BlockNumber), 10),
 		Confirmations:    "0",

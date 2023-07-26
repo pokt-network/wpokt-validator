@@ -1,11 +1,11 @@
-package pocket
+package util
 
 import (
 	"encoding/hex"
 	"strconv"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/dchest/uniuri"
 	pokt "github.com/pokt-network/pocket-core/app"
 	"github.com/pokt-network/pocket-core/crypto"
@@ -152,7 +152,7 @@ func signMultisigTx(
 	return txEncoder(tx, -1)
 }
 
-func updateStatusAndConfirmationsForInvalidMint(doc models.InvalidMint, currentHeight int64) (models.InvalidMint, error) {
+func UpdateStatusAndConfirmationsForInvalidMint(doc models.InvalidMint, currentHeight int64) (models.InvalidMint, error) {
 	status := doc.Status
 	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
 	if err != nil || confirmations < 0 {
@@ -181,7 +181,7 @@ func updateStatusAndConfirmationsForInvalidMint(doc models.InvalidMint, currentH
 	return doc, nil
 }
 
-func signInvalidMint(
+func SignInvalidMint(
 	doc models.InvalidMint,
 	privateKey crypto.PrivateKey,
 	multisigPubKey crypto.PublicKeyMultiSig,
@@ -241,7 +241,7 @@ func signInvalidMint(
 	return doc, nil
 }
 
-func updateStatusAndConfirmationsForBurn(doc models.Burn, blockNumber int64) (models.Burn, error) {
+func UpdateStatusAndConfirmationsForBurn(doc models.Burn, blockNumber int64) (models.Burn, error) {
 	status := doc.Status
 	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
 	if err != nil || confirmations < 0 {
@@ -270,7 +270,7 @@ func updateStatusAndConfirmationsForBurn(doc models.Burn, blockNumber int64) (mo
 	return doc, nil
 }
 
-func signBurn(
+func SignBurn(
 	doc models.Burn,
 	privateKey crypto.PrivateKey,
 	multisigPubKey crypto.PublicKeyMultiSig,

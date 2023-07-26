@@ -1,4 +1,4 @@
-package ethereum
+package eth
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
-	ethereum "github.com/dan13ram/wpokt-backend/ethereum/client"
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	eth "github.com/dan13ram/wpokt-validator/eth/client"
+	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,7 +32,7 @@ type MintExecutorService struct {
 	interval           time.Duration
 	wpoktContract      *autogen.WrappedPocket
 	mintControllerAbi  *abi.ABI
-	client             ethereum.EthereumClient
+	client             eth.EthereumClient
 	vaultAddress       string
 	wpoktAddress       string
 }
@@ -160,11 +160,11 @@ func (b *MintExecutorService) SyncBlocks(startBlockNumber uint64, endBlockNumber
 func (b *MintExecutorService) SyncTxs() bool {
 	var success bool = true
 
-	if (b.currentBlockNumber - b.startBlockNumber) > MAX_QUERY_BLOCKS {
+	if (b.currentBlockNumber - b.startBlockNumber) > eth.MAX_QUERY_BLOCKS {
 		log.Debug("[MINT EXECUTOR] Syncing mint txs in chunks")
 
-		for i := b.startBlockNumber; i < b.currentBlockNumber; i += MAX_QUERY_BLOCKS {
-			endBlockNumber := i + MAX_QUERY_BLOCKS
+		for i := b.startBlockNumber; i < b.currentBlockNumber; i += eth.MAX_QUERY_BLOCKS {
+			endBlockNumber := i + eth.MAX_QUERY_BLOCKS
 			if endBlockNumber > b.currentBlockNumber {
 				endBlockNumber = b.currentBlockNumber
 			}
@@ -181,7 +181,7 @@ func (b *MintExecutorService) SyncTxs() bool {
 }
 
 func newExecutor(wg *sync.WaitGroup) *MintExecutorService {
-	client, err := ethereum.NewClient()
+	client, err := eth.NewClient()
 	if err != nil {
 		log.Fatal("[MINT EXECUTOR] Error initializing ethereum client", err)
 	}

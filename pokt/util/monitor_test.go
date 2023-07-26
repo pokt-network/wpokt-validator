@@ -1,4 +1,4 @@
-package pocket
+package util
 
 import (
 	"fmt"
@@ -9,16 +9,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/models"
-	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/models"
+	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 )
 
 func TestCreateMint(t *testing.T) {
 	app.Config.Pocket.ChainId = "0001"
 	testCases := []struct {
 		name            string
-		tx              *pocket.TxResponse
+		tx              *pokt.TxResponse
 		memo            models.MintMemo
 		wpoktAddress    string
 		vaultAddress    string
@@ -28,12 +28,12 @@ func TestCreateMint(t *testing.T) {
 	}{
 		{
 			name: "Valid Mint",
-			tx: &pocket.TxResponse{
+			tx: &pokt.TxResponse{
 				Height: 12345,
 				Hash:   "0x1234567890abcdef",
-				StdTx: pocket.StdTx{
-					Msg: pocket.Msg{
-						Value: pocket.Value{
+				StdTx: pokt.StdTx{
+					Msg: pokt.Msg{
+						Value: pokt.Value{
 							FromAddress: "0xabcdef",
 							Amount:      "100",
 						},
@@ -77,7 +77,7 @@ func TestCreateMint(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			result := createMint(tc.tx, tc.memo, tc.wpoktAddress, tc.vaultAddress)
+			result := CreateMint(tc.tx, tc.memo, tc.wpoktAddress, tc.vaultAddress)
 
 			assert.WithinDuration(t, time.Now(), result.CreatedAt, tc.expectedUpdated)
 			assert.WithinDuration(t, time.Now(), result.UpdatedAt, tc.expectedUpdated)
@@ -93,7 +93,7 @@ func TestCreateMint(t *testing.T) {
 func TestCreateInvalidMint(t *testing.T) {
 	testCases := []struct {
 		name                string
-		tx                  *pocket.TxResponse
+		tx                  *pokt.TxResponse
 		vaultAddress        string
 		expectedInvalidMint models.InvalidMint
 		expectedErr         bool
@@ -101,12 +101,12 @@ func TestCreateInvalidMint(t *testing.T) {
 	}{
 		{
 			name: "Valid Invalid Mint",
-			tx: &pocket.TxResponse{
+			tx: &pokt.TxResponse{
 				Height: 12345,
 				Hash:   "0x1234567890abcdef",
-				StdTx: pocket.StdTx{
-					Msg: pocket.Msg{
-						Value: pocket.Value{
+				StdTx: pokt.StdTx{
+					Msg: pokt.Msg{
+						Value: pokt.Value{
 							FromAddress: "0xabcdef",
 							Amount:      "100",
 						},
@@ -140,7 +140,7 @@ func TestCreateInvalidMint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Pocket.ChainId = "0001"
 
-			result := createInvalidMint(tc.tx, tc.vaultAddress)
+			result := CreateInvalidMint(tc.tx, tc.vaultAddress)
 
 			assert.WithinDuration(t, time.Now(), result.CreatedAt, tc.expectedUpdated)
 			assert.WithinDuration(t, time.Now(), result.UpdatedAt, tc.expectedUpdated)
@@ -211,7 +211,7 @@ func TestValidateMemo(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			result, valid := validateMemo(tc.txMemo)
+			result, valid := ValidateMemo(tc.txMemo)
 			assert.Equal(t, tc.expectedValid, valid)
 
 			if valid {

@@ -1,14 +1,15 @@
-package pocket
+package pokt
 
 import (
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	ethereum "github.com/dan13ram/wpokt-backend/ethereum/client"
-	"github.com/dan13ram/wpokt-backend/models"
-	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
+	"github.com/dan13ram/wpokt-validator/app"
+	eth "github.com/dan13ram/wpokt-validator/eth/client"
+	"github.com/dan13ram/wpokt-validator/models"
+	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
+	"github.com/dan13ram/wpokt-validator/pokt/util"
 	"github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -27,8 +28,8 @@ type BurnSignerService struct {
 	privateKey     crypto.PrivateKey
 	multisigPubKey crypto.PublicKeyMultiSig
 	numSigners     int
-	ethClient      ethereum.EthereumClient
-	poktClient     pocket.PocketClient
+	ethClient      eth.EthereumClient
+	poktClient     pokt.PocketClient
 	poktHeight     int64
 	ethBlockNumber int64
 	vaultAddress   string
@@ -97,7 +98,7 @@ func (m *BurnSignerService) UpdateBlocks() {
 func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 	log.Info("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
 
-	doc, err := updateStatusAndConfirmationsForInvalidMint(doc, m.poktHeight)
+	doc, err := util.UpdateStatusAndConfirmationsForInvalidMint(doc, m.poktHeight)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error getting invalid mint status: ", err)
 		return false
@@ -108,7 +109,7 @@ func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 	if doc.Status == models.StatusConfirmed {
 		log.Debug("[BURN SIGNER] Signing invalid mint")
 
-		doc, err = signInvalidMint(doc, m.privateKey, m.multisigPubKey, m.numSigners)
+		doc, err = util.SignInvalidMint(doc, m.privateKey, m.multisigPubKey, m.numSigners)
 		if err != nil {
 			log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
 			return false
@@ -148,7 +149,7 @@ func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 func (m *BurnSignerService) HandleBurn(doc models.Burn) bool {
 	log.Debug("[BURN SIGNER] Handling burn: ", doc.TransactionHash)
 
-	doc, err := updateStatusAndConfirmationsForBurn(doc, m.ethBlockNumber)
+	doc, err := util.UpdateStatusAndConfirmationsForBurn(doc, m.ethBlockNumber)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error getting burn status: ", err)
 		return false
@@ -158,7 +159,7 @@ func (m *BurnSignerService) HandleBurn(doc models.Burn) bool {
 
 	if doc.Status == models.StatusConfirmed {
 		log.Debug("[BURN SIGNER] Signing burn")
-		doc, err = signBurn(doc, m.privateKey, m.multisigPubKey, m.numSigners)
+		doc, err = util.SignBurn(doc, m.privateKey, m.multisigPubKey, m.numSigners)
 		if err != nil {
 			log.Error("[BURN SIGNER] Error signing burn: ", err)
 			return false
@@ -267,8 +268,8 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
 	log.Debug("[BURN SIGNER] Multisig address: ", multisigPk.Address().String())
 
-	poktClient := pocket.NewClient()
-	ethClient, err := ethereum.NewClient()
+	poktClient := pokt.NewClient()
+	ethClient, err := eth.NewClient()
 	if err != nil {
 		log.Fatal("[BURN SIGNER] Error initializing ethereum client: ", err)
 	}

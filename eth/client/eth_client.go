@@ -6,12 +6,16 @@ import (
 
 	"math/big"
 
-	"github.com/dan13ram/wpokt-backend/app"
+	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	MAX_QUERY_BLOCKS int64 = 100000
 )
 
 type EthereumClient interface {

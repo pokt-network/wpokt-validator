@@ -1,4 +1,4 @@
-package ethereum
+package util
 
 import (
 	"crypto/ecdsa"
@@ -11,9 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
@@ -27,6 +27,8 @@ func sortAddresses(addresses []string) []string {
 	})
 	return addresses
 }
+
+const primaryType = "MintData"
 
 var typesStandard = apitypes.Types{
 	"EIP712Domain": {
@@ -62,17 +64,6 @@ var typesStandard = apitypes.Types{
 		},
 	},
 }
-
-func getDomain(chainId int64, verifyingContract string) apitypes.TypedDataDomain {
-	return apitypes.TypedDataDomain{
-		Name:              "MintController",
-		Version:           "1",
-		ChainId:           math.NewHexOrDecimal256(chainId),
-		VerifyingContract: verifyingContract,
-	}
-}
-
-const primaryType = "MintData"
 
 type DomainData struct {
 	Fields            [1]byte
@@ -133,7 +124,7 @@ func signTypedData(
 	return signature, nil
 }
 
-func updateStatusAndConfirmationsForMint(mint models.Mint, poktHeight int64) (models.Mint, error) {
+func UpdateStatusAndConfirmationsForMint(mint models.Mint, poktHeight int64) (models.Mint, error) {
 	status := mint.Status
 	confirmations, err := strconv.ParseInt(mint.Confirmations, 10, 64)
 	if err != nil || confirmations < 0 {
@@ -161,7 +152,7 @@ func updateStatusAndConfirmationsForMint(mint models.Mint, poktHeight int64) (mo
 	return mint, nil
 }
 
-func signMint(
+func SignMint(
 	mint models.Mint,
 	data autogen.MintControllerMintData,
 	domain DomainData,

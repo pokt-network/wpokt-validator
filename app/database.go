@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/models"
 	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/bson"

@@ -1,13 +1,14 @@
-package pocket
+package pokt
 
 import (
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/models"
-	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/models"
+	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
+	"github.com/dan13ram/wpokt-validator/pokt/util"
 	"github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -20,7 +21,7 @@ const (
 type MintMonitorService struct {
 	wg            *sync.WaitGroup
 	name          string
-	client        pocket.PocketClient
+	client        pokt.PocketClient
 	stop          chan bool
 	wpoktAddress  string
 	vaultAddress  string
@@ -97,8 +98,8 @@ func (m *MintMonitorService) UpdateCurrentHeight() {
 	log.Info("[MINT MONITOR] Current height: ", m.currentHeight)
 }
 
-func (m *MintMonitorService) HandleInvalidMint(tx *pocket.TxResponse) bool {
-	doc := createInvalidMint(tx, m.vaultAddress)
+func (m *MintMonitorService) HandleInvalidMint(tx *pokt.TxResponse) bool {
+	doc := util.CreateInvalidMint(tx, m.vaultAddress)
 
 	log.Debug("[MINT MONITOR] Storing invalid mint tx")
 	err := app.DB.InsertOne(models.CollectionInvalidMints, doc)
@@ -115,8 +116,8 @@ func (m *MintMonitorService) HandleInvalidMint(tx *pocket.TxResponse) bool {
 	return true
 }
 
-func (m *MintMonitorService) HandleValidMint(tx *pocket.TxResponse, memo models.MintMemo) bool {
-	doc := createMint(tx, memo, m.wpoktAddress, m.vaultAddress)
+func (m *MintMonitorService) HandleValidMint(tx *pokt.TxResponse, memo models.MintMemo) bool {
+	doc := util.CreateMint(tx, memo, m.wpoktAddress, m.vaultAddress)
 
 	log.Debug("[MINT MONITOR] Storing mint tx")
 	err := app.DB.InsertOne(models.CollectionMints, doc)
@@ -142,7 +143,7 @@ func (m *MintMonitorService) SyncTxs() bool {
 	log.Info("[MINT MONITOR] Found ", len(txs), " txs to sync")
 	var success bool = true
 	for _, tx := range txs {
-		memo, ok := validateMemo(tx.StdTx.Memo)
+		memo, ok := util.ValidateMemo(tx.StdTx.Memo)
 
 		if !ok {
 			log.Info("[MINT MONITOR] Found invalid mint tx: ", tx.Hash, " with memo: ", "\""+tx.StdTx.Memo+"\"")
@@ -180,7 +181,7 @@ func newMonitor(wg *sync.WaitGroup) *MintMonitorService {
 		startHeight:   0,
 		currentHeight: 0,
 		stop:          make(chan bool),
-		client:        pocket.NewClient(),
+		client:        pokt.NewClient(),
 	}
 
 	return m

@@ -1,13 +1,13 @@
-package ethereum
+package util
 
 import (
 	"math/big"
 	"testing"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +19,7 @@ func TestCreateBurn(t *testing.T) {
 	TX_HASH := "0x0000000000000000000000000000000000000000000000001234567890abcdef"
 	SENDER_ADDRESS := "0x0000000000000000000000000000000000abcDeF"
 	RECIPIENT_ADDRESS := "0000000000000000000000000000001234567890"
+	ZERO_ADDRESS := "0x0000000000000000000000000000000000000000"
 
 	testCases := []struct {
 		name            string
@@ -63,7 +64,7 @@ func TestCreateBurn(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			result := createBurn(tc.event)
+			result := CreateBurn(tc.event)
 			assert.WithinDuration(t, time.Now(), result.CreatedAt, tc.expectedUpdated)
 			assert.WithinDuration(t, time.Now(), result.UpdatedAt, tc.expectedUpdated)
 

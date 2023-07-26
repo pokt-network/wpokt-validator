@@ -1,4 +1,4 @@
-package pocket
+package util
 
 import (
 	"strconv"
@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/pokt-network/pocket-core/crypto"
 	"github.com/pokt-network/pocket-core/types"
 	nodeTypes "github.com/pokt-network/pocket-core/x/nodes/types"
@@ -109,7 +109,7 @@ func TestUpdateStatusAndConfirmationsForInvalidMint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Pocket.Confirmations = tc.requiredConfirmations
 
-			result, err := updateStatusAndConfirmationsForInvalidMint(tc.doc, tc.currentHeight)
+			result, err := UpdateStatusAndConfirmationsForInvalidMint(tc.doc, tc.currentHeight)
 
 			if tc.expectedErr {
 				assert.Error(t, err)
@@ -217,7 +217,7 @@ func TestUpdateStatusAndConfirmationsForBurn(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Ethereum.Confirmations = tc.requiredConfirmations
 
-			result, err := updateStatusAndConfirmationsForBurn(tc.doc, tc.blockNumber)
+			result, err := UpdateStatusAndConfirmationsForBurn(tc.doc, tc.blockNumber)
 
 			if tc.expectedErr {
 				assert.Error(t, err)
@@ -371,7 +371,7 @@ func TestSignBurn(t *testing.T) {
 			}
 			multisigPubKey := crypto.PublicKeyMultiSignature{PublicKeys: pubKeys}
 
-			result, err := signBurn(tc.doc, tc.privateKey, multisigPubKey, tc.numSigners)
+			result, err := SignBurn(tc.doc, tc.privateKey, multisigPubKey, tc.numSigners)
 
 			if tc.expectedErr {
 				assert.Error(t, err)
@@ -581,7 +581,7 @@ func TestSignInvalidMint(t *testing.T) {
 			}
 			multisigPubKey := crypto.PublicKeyMultiSignature{PublicKeys: pubKeys}
 
-			result, err := signInvalidMint(tc.doc, tc.privateKey, multisigPubKey, tc.numSigners)
+			result, err := SignInvalidMint(tc.doc, tc.privateKey, multisigPubKey, tc.numSigners)
 
 			if tc.expectedErr {
 				assert.Error(t, err)

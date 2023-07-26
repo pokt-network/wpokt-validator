@@ -1,4 +1,4 @@
-package ethereum
+package eth
 
 import (
 	"context"
@@ -10,11 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
-	ethereum "github.com/dan13ram/wpokt-backend/ethereum/client"
-	"github.com/dan13ram/wpokt-backend/models"
-	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	eth "github.com/dan13ram/wpokt-validator/eth/client"
+	"github.com/dan13ram/wpokt-validator/eth/util"
+	"github.com/dan13ram/wpokt-validator/models"
+	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -39,9 +40,9 @@ type MintSignerService struct {
 	wpoktContract          *autogen.WrappedPocket
 	mintControllerContract *autogen.MintController
 	numSigners             int
-	domain                 DomainData
-	poktClient             pocket.PocketClient
-	ethClient              ethereum.EthereumClient
+	domain                 util.DomainData
+	poktClient             pokt.PocketClient
+	ethClient              eth.EthereumClient
 	poktHeight             int64
 }
 
@@ -191,7 +192,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 		Nonce:     nonce,
 	}
 
-	mint, err = updateStatusAndConfirmationsForMint(mint, m.poktHeight)
+	mint, err = util.UpdateStatusAndConfirmationsForMint(mint, m.poktHeight)
 	if err != nil {
 		log.Error("[MINT SIGNER] Error updating status and confirmations for mint: ", err)
 		return false
@@ -201,7 +202,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 	if mint.Status == models.StatusConfirmed {
 		log.Debug("[MINT SIGNER] Mint confirmed, signing")
 
-		mint, err := signMint(mint, data, m.domain, m.privateKey, m.numSigners)
+		mint, err := util.SignMint(mint, data, m.domain, m.privateKey, m.numSigners)
 		if err != nil {
 			log.Error("[MINT SIGNER] Error signing mint: ", err)
 			return false
@@ -293,7 +294,7 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 	address := crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
 	log.Info("[MINT SIGNER] ETH signer address: ", address)
 
-	ethClient, err := ethereum.NewClient()
+	ethClient, err := eth.NewClient()
 	if err != nil {
 		log.Fatal("[MINT SIGNER] Error initializing ethereum client: ", err)
 	}
@@ -337,7 +338,7 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 		numSigners:             len(app.Config.Ethereum.ValidatorAddresses),
 		domain:                 domain,
 		ethClient:              ethClient,
-		poktClient:             pocket.NewClient(),
+		poktClient:             pokt.NewClient(),
 	}
 
 	log.Info("[MINT SIGNER] Initialized mint signer")

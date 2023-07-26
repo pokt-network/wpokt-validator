@@ -1,4 +1,4 @@
-module github.com/dan13ram/wpokt-backend
+module github.com/dan13ram/wpokt-validator
 
 go 1.18
 

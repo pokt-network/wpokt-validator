@@ -1,4 +1,4 @@
-package pocket
+package util
 
 import (
 	"encoding/json"
@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/models"
-	pocket "github.com/dan13ram/wpokt-backend/pocket/client"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/models"
+	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func createMint(tx *pocket.TxResponse, memo models.MintMemo, wpoktAddress string, vaultAddress string) models.Mint {
+func CreateMint(tx *pokt.TxResponse, memo models.MintMemo, wpoktAddress string, vaultAddress string) models.Mint {
 	return models.Mint{
 		Height:              strconv.FormatInt(tx.Height, 10),
 		Confirmations:       "0",
@@ -35,7 +35,7 @@ func createMint(tx *pocket.TxResponse, memo models.MintMemo, wpoktAddress string
 	}
 }
 
-func validateMemo(txMemo string) (models.MintMemo, bool) {
+func ValidateMemo(txMemo string) (models.MintMemo, bool) {
 	var memo models.MintMemo
 
 	err := json.Unmarshal([]byte(txMemo), &memo)
@@ -66,7 +66,7 @@ func validateMemo(txMemo string) (models.MintMemo, bool) {
 	return memo, true
 }
 
-func createInvalidMint(tx *pocket.TxResponse, vaultAddress string) models.InvalidMint {
+func CreateInvalidMint(tx *pokt.TxResponse, vaultAddress string) models.InvalidMint {
 	return models.InvalidMint{
 		Height:          strconv.FormatInt(tx.Height, 10),
 		Confirmations:   "0",

@@ -1,12 +1,12 @@
-package ethereum
+package util
 
 import (
 	"math/big"
 	"testing"
 
-	"github.com/dan13ram/wpokt-backend/app"
-	"github.com/dan13ram/wpokt-backend/ethereum/autogen"
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
@@ -100,7 +100,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Pocket.Confirmations = tc.requiredConfirmations
 
-			result, err := updateStatusAndConfirmationsForMint(tc.initialMint, tc.poktHeight)
+			result, err := UpdateStatusAndConfirmationsForMint(tc.initialMint, tc.poktHeight)
 			if err != nil {
 				t.Errorf("Error should be nil, got: %v", err)
 			}
@@ -118,6 +118,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 }
 
 func TestSignMint(t *testing.T) {
+	ZERO_ADDRESS := "0x0000000000000000000000000000000000000000"
 
 	testDomain := DomainData{
 		Name:              "Test",
@@ -207,7 +208,7 @@ func TestSignMint(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := signMint(tc.initialMint, testData, testDomain, testPrivateKey, tc.numSigners)
+			result, err := SignMint(tc.initialMint, testData, testDomain, testPrivateKey, tc.numSigners)
 
 			if tc.expectedErr {
 				assert.Error(t, err)

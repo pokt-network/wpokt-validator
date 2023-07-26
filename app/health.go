@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/models"
+	"github.com/dan13ram/wpokt-validator/models"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	poktCrypto "github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"

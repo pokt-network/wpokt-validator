@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dan13ram/wpokt-backend/app"
+	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/pokt-network/pocket-core/app/cmd/rpc"
 )
 
