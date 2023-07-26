@@ -113,11 +113,11 @@ func (m *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 		defer cancel()
 		opts := &bind.CallOpts{Context: ctx, Pending: false}
 		currentNonce, err := m.wpoktContract.GetUserNonce(opts, common.HexToAddress(mint.RecipientAddress))
-
 		if err != nil {
 			log.Error("[MINT SIGNER] Error fetching nonce from contract: ", err)
 			return nil, err
 		}
+		log.Debug("[MINT SIGNER] Current nonce: ", currentNonce, " for address: ", mint.RecipientAddress)
 
 		var pendingMints []models.Mint
 		filter := bson.M{
@@ -152,9 +152,10 @@ func (m *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 					return nonces[i] < nonces[j]
 				})
 
-				newNonce := big.NewInt(nonces[len(nonces)-1])
-				if currentNonce.Cmp(newNonce) < 0 {
-					currentNonce = newNonce
+				pendingNonce := big.NewInt(nonces[len(nonces)-1])
+				if currentNonce.Cmp(pendingNonce) < 0 {
+					log.Debug("[MINT SIGNER] Pending nonce: ", pendingNonce)
+					currentNonce = pendingNonce
 				}
 			}
 		}
@@ -185,6 +186,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 		log.Error("[MINT SIGNER] Error fetching nonce")
 		return false
 	}
+	log.Debug("[MINT SIGNER] Found Nonce: ", nonce)
 
 	data := autogen.MintControllerMintData{
 		Recipient: address,
