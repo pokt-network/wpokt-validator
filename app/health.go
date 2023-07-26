@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -24,6 +25,7 @@ type HealthService struct {
 	ethAddress       string
 	wpoktAddress     string
 	hostname         string
+	validatorId      string
 	lastSyncTime     time.Time
 	interval         time.Duration
 	services         []models.Service
@@ -94,7 +96,10 @@ func (b *HealthService) ServiceHealths() []models.ServiceHealth {
 func (b *HealthService) PostHealth() bool {
 	log.Debug("[HEALTH] Posting health")
 
-	filter := bson.M{"hostname": b.hostname}
+	filter := bson.M{
+		"validator_id": b.validatorId,
+		"hostname":     b.hostname,
+	}
 
 	health := models.Health{
 		PoktVaultAddress: b.poktVaultAddress,
@@ -105,6 +110,7 @@ func (b *HealthService) PostHealth() bool {
 		EthAddress:       b.ethAddress,
 		WPoktAddress:     b.wpoktAddress,
 		Hostname:         b.hostname,
+		ValidatorId:      b.validatorId,
 		Healthy:          true,
 		CreatedAt:        time.Now(),
 		ServiceHealths:   b.ServiceHealths(),
@@ -140,12 +146,11 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 	log.Debug("[HEALTH] Initialized private key")
 	log.Debug("[HEALTH] ETH Address: ", ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex())
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Fatal("[HEALTH] Error getting hostname: ", err)
-	}
+	ethAddress := ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex()
+	poktAddress := pk.PublicKey().Address().String()
 
 	var pks []poktCrypto.PublicKey
+	var signerIndex int
 	for _, pk := range Config.Pocket.MultisigPublicKeys {
 		p, err := poktCrypto.NewPublicKey(pk)
 		if err != nil {
@@ -153,6 +158,16 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 			continue
 		}
 		pks = append(pks, p)
+		if p.Address().String() == poktAddress {
+			signerIndex = len(pks)
+		}
+	}
+
+	validatorId := "wpokt-validator-" + fmt.Sprintf("%02d", signerIndex)
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal("[HEALTH] Error getting hostname: ", err)
 	}
 
 	multisigPkAddress := poktCrypto.PublicKeyMultiSignature{PublicKeys: pks}.Address().String()
@@ -168,11 +183,12 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 		poktVaultAddress: multisigPkAddress,
 		poktSigners:      Config.Pocket.MultisigPublicKeys,
 		poktPublicKey:    pk.PublicKey().RawString(),
-		poktAddress:      pk.PublicKey().Address().String(),
+		poktAddress:      poktAddress,
 		ethValidators:    Config.Ethereum.ValidatorAddresses,
-		ethAddress:       ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex(),
+		ethAddress:       ethAddress,
 		wpoktAddress:     Config.Ethereum.WPOKTAddress,
 		hostname:         hostname,
+		validatorId:      validatorId,
 		wg:               wg,
 	}
 

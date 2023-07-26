@@ -20,6 +20,7 @@ type Health struct {
 	EthAddress       string              `bson:"eth_address" json:"eth_address"`
 	WPoktAddress     string              `bson:"wpokt_address" json:"wpokt_address"`
 	Hostname         string              `bson:"hostname" json:"hostname"`
+	ValidatorId      string              `bson:"validator_id" json:"validator_id"`
 	Healthy          bool                `bson:"healthy" json:"healthy"`
 	CreatedAt        time.Time           `bson:"created_at" json:"created_at"`
 	ServiceHealths   []ServiceHealth     `bson:"service_healths" json:"service_healths"`
