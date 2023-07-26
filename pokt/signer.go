@@ -133,10 +133,7 @@ func (m *BurnSignerService) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 	}
 
-	filter := bson.M{
-		"_id":           doc.Id,
-		"vault_address": m.vaultAddress,
-	}
+	filter := bson.M{"_id": doc.Id}
 	err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error updating invalid mint: ", err)
@@ -183,10 +180,7 @@ func (m *BurnSignerService) HandleBurn(doc models.Burn) bool {
 		}
 	}
 
-	filter := bson.M{
-		"_id":           doc.Id,
-		"wpokt_address": m.wpoktAddress,
-	}
+	filter := bson.M{"_id": doc.Id}
 	err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error updating burn: ", err)

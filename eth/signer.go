@@ -235,11 +235,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 		}
 	}
 
-	filter := bson.M{
-		"_id":           mint.Id,
-		"wpokt_address": m.wpoktAddress,
-		"vault_address": m.vaultAddress,
-	}
+	filter := bson.M{"_id": mint.Id}
 
 	err = app.DB.UpdateOne(models.CollectionMints, filter, update)
 	if err != nil {

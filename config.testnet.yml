@@ -5,7 +5,7 @@ mongodb:
 
 pocket:
   start_height: 112665
-  confirmations: 3
+  confirmations: 1
   private_key: ""
   rpc_url: ""
   chain_id: "testnet"
@@ -19,7 +19,7 @@ pocket:
 
 ethereum:
   start_block_number: 9398000
-  confirmations: 12
+  confirmations: 8
   private_key: ""
   rpc_url: ""
   chain_id: "5"
