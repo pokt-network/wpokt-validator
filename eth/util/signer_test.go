@@ -1,6 +1,7 @@
 package util
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
@@ -21,6 +22,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 		requiredConfirmations int64
 		expectedStatus        string
 		expectedConfs         string
+		expectedErr           bool
 	}{
 		{
 			name: "Status is pending and confirmations are 0",
@@ -33,6 +35,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 			requiredConfirmations: 5,
 			expectedStatus:        models.StatusPending,
 			expectedConfs:         "0",
+			expectedErr:           false,
 		},
 		{
 			name: "Status is pending and confirmations are 0 but less than required confirmations",
@@ -45,6 +48,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 			requiredConfirmations: 10,
 			expectedStatus:        models.StatusPending,
 			expectedConfs:         "5",
+			expectedErr:           false,
 		},
 		{
 			name: "Status is pending and confirmations are greater than 0",
@@ -57,6 +61,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 			requiredConfirmations: 10,
 			expectedStatus:        models.StatusConfirmed,
 			expectedConfs:         "20",
+			expectedErr:           false,
 		},
 		{
 			name: "Status is confirmed",
@@ -69,6 +74,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 			requiredConfirmations: 2,
 			expectedStatus:        models.StatusConfirmed,
 			expectedConfs:         "24",
+			expectedErr:           false,
 		},
 		{
 			name: "Status is confirmed and required confirmations are 0",
@@ -81,18 +87,33 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 			requiredConfirmations: 0,
 			expectedStatus:        models.StatusConfirmed,
 			expectedConfs:         "3",
+			expectedErr:           false,
 		},
 		{
 			name: "Status is pending and required confirmations are 0",
 			initialMint: models.Mint{
 				Status:        models.StatusPending,
-				Confirmations: "3",
+				Confirmations: "-3",
 				Height:        "1000",
 			},
 			poktHeight:            1024,
 			requiredConfirmations: 0,
 			expectedStatus:        models.StatusConfirmed,
+			expectedConfs:         "0",
+			expectedErr:           false,
+		},
+		{
+			name: "Invalid Height",
+			initialMint: models.Mint{
+				Status:        models.StatusPending,
+				Confirmations: "3",
+				Height:        "random",
+			},
+			poktHeight:            1024,
+			requiredConfirmations: 5,
+			expectedStatus:        models.StatusConfirmed,
 			expectedConfs:         "3",
+			expectedErr:           true,
 		},
 	}
 
@@ -101,16 +122,17 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 			app.Config.Pocket.Confirmations = tc.requiredConfirmations
 
 			result, err := UpdateStatusAndConfirmationsForMint(tc.initialMint, tc.poktHeight)
-			if err != nil {
-				t.Errorf("Error should be nil, got: %v", err)
-			}
+			if tc.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				if result.Status != tc.expectedStatus {
+					t.Errorf("Expected status %s, got %s", tc.expectedStatus, result.Status)
+				}
 
-			if result.Status != tc.expectedStatus {
-				t.Errorf("Expected status %s, got %s", tc.expectedStatus, result.Status)
-			}
-
-			if result.Confirmations != tc.expectedConfs {
-				t.Errorf("Expected confirmations %s, got %s", tc.expectedConfs, result.Confirmations)
+				if result.Confirmations != tc.expectedConfs {
+					t.Errorf("Expected confirmations %s, got %s", tc.expectedConfs, result.Confirmations)
+				}
 			}
 		})
 	}
@@ -143,6 +165,9 @@ func TestSignMint(t *testing.T) {
 		numSigners   int
 		expectedMint models.Mint
 		expectedErr  bool
+		data         autogen.MintControllerMintData
+		domain       DomainData
+		privateKey   *ecdsa.PrivateKey
 	}{
 		{
 			name: "Single signer, mint not signed",
@@ -158,6 +183,9 @@ func TestSignMint(t *testing.T) {
 				Signers:    []string{testAddress},
 			},
 			expectedErr: false,
+			data:        testData,
+			domain:      testDomain,
+			privateKey:  testPrivateKey,
 		},
 		{
 			name: "Multiple signers, mint not signed",
@@ -173,6 +201,9 @@ func TestSignMint(t *testing.T) {
 				Signers:    []string{testAddress},
 			},
 			expectedErr: false,
+			data:        testData,
+			domain:      testDomain,
+			privateKey:  testPrivateKey,
 		},
 		{
 			name: "Multiple signers, mint signed",
@@ -188,6 +219,9 @@ func TestSignMint(t *testing.T) {
 				Signers:    []string{ZERO_ADDRESS, testAddress},
 			},
 			expectedErr: false,
+			data:        testData,
+			domain:      testDomain,
+			privateKey:  testPrivateKey,
 		},
 		{
 			name: "Multiple signers, mint signed",
@@ -203,12 +237,56 @@ func TestSignMint(t *testing.T) {
 				Signers:    []string{ZERO_ADDRESS, testAddress},
 			},
 			expectedErr: false,
+			data:        testData,
+			domain:      testDomain,
+			privateKey:  testPrivateKey,
+		},
+		{
+			name: "Invalid domain",
+			initialMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: []string{"0x..."},
+				Signers:    []string{ZERO_ADDRESS},
+			},
+			numSigners: 3,
+			expectedMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: []string{"0x...", testSignature},
+				Signers:    []string{ZERO_ADDRESS, testAddress},
+			},
+			expectedErr: true,
+			data:        testData,
+			domain: DomainData{
+				ChainId: big.NewInt(1),
+			},
+			privateKey: testPrivateKey,
+		},
+		{
+			name: "Invalid privateKey",
+			initialMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: []string{"0x..."},
+				Signers:    []string{ZERO_ADDRESS},
+			},
+			numSigners: 3,
+			expectedMint: models.Mint{
+				Status:     models.StatusConfirmed,
+				Signatures: []string{"0x...", testSignature},
+				Signers:    []string{ZERO_ADDRESS, testAddress},
+			},
+			expectedErr: true,
+			data: autogen.MintControllerMintData{
+				Recipient: common.HexToAddress(ZERO_ADDRESS),
+				Amount:    big.NewInt(100),
+			},
+			domain:     testDomain,
+			privateKey: testPrivateKey,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := SignMint(tc.initialMint, testData, testDomain, testPrivateKey, tc.numSigners)
+			result, err := SignMint(tc.initialMint, tc.data, tc.domain, tc.privateKey, tc.numSigners)
 
 			if tc.expectedErr {
 				assert.Error(t, err)

@@ -103,6 +103,22 @@ func TestUpdateStatusAndConfirmationsForInvalidMint(t *testing.T) {
 			},
 			expectedErr: false,
 		},
+		{
+			name: "Invalid Height",
+			doc: models.InvalidMint{
+				Status:        models.StatusPending,
+				Confirmations: "0",
+				Height:        "height",
+			},
+			currentHeight:         200,
+			requiredConfirmations: 100,
+			expectedDoc: models.InvalidMint{
+				Status:        models.StatusConfirmed,
+				Confirmations: "100",
+				Height:        "100",
+			},
+			expectedErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -211,6 +227,22 @@ func TestUpdateStatusAndConfirmationsForBurn(t *testing.T) {
 			},
 			expectedErr: false,
 		},
+		{
+			name: "Invalid Block Number",
+			doc: models.Burn{
+				Status:        models.StatusPending,
+				Confirmations: "0",
+				BlockNumber:   "number",
+			},
+			blockNumber:           200,
+			requiredConfirmations: 100,
+			expectedDoc: models.Burn{
+				Status:        models.StatusConfirmed,
+				Confirmations: "100",
+				BlockNumber:   "100",
+			},
+			expectedErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -247,6 +279,30 @@ func TestSignBurn(t *testing.T) {
 		expectedErr bool
 		privateKey  crypto.PrivateKey
 	}{
+		{
+			name:       "Invalid Amount",
+			numSigners: 2,
+			doc: models.Burn{
+				Status:           models.StatusPending,
+				Confirmations:    "0",
+				ReturnTx:         "",
+				Signers:          []string{},
+				RecipientAddress: address,
+				Amount:           "amount",
+				TransactionHash:  "transaction_hash",
+			},
+			expectedDoc: models.Burn{
+				Status:           models.StatusPending,
+				Confirmations:    "0",
+				ReturnTx:         "",
+				Signers:          []string{},
+				RecipientAddress: address,
+				Amount:           "100000",
+				TransactionHash:  "transaction_hash",
+			},
+			expectedErr: true,
+			privateKey:  privateKeys[0],
+		},
 		{
 			name:       "Sign without ReturnTx",
 			numSigners: 2,
@@ -457,6 +513,30 @@ func TestSignInvalidMint(t *testing.T) {
 		expectedErr bool
 		privateKey  crypto.PrivateKey
 	}{
+		{
+			name:       "Invalid Amount",
+			numSigners: 2,
+			doc: models.InvalidMint{
+				Status:          models.StatusPending,
+				Confirmations:   "0",
+				ReturnTx:        "",
+				Signers:         []string{},
+				SenderAddress:   address,
+				Amount:          "amount",
+				TransactionHash: "transaction_hash",
+			},
+			expectedDoc: models.InvalidMint{
+				Status:          models.StatusPending,
+				Confirmations:   "0",
+				ReturnTx:        "",
+				Signers:         []string{},
+				SenderAddress:   address,
+				Amount:          "100000",
+				TransactionHash: "transaction_hash",
+			},
+			expectedErr: true,
+			privateKey:  privateKeys[0],
+		},
 		{
 			name:       "Sign without ReturnTx",
 			numSigners: 2,

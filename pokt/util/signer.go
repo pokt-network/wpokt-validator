@@ -130,8 +130,11 @@ func signMultisigTx(
 		ms = ms.Unmarshal(tx.GetSignature().GetSignature())
 	}
 
-	ms, err = ms.AddSignature(sigBytes,
-		signerKey.PublicKey(), multisigKey.Keys())
+	ms, err = ms.AddSignature(
+		sigBytes,
+		signerKey.PublicKey(),
+		multisigKey.Keys(),
+	)
 
 	if err != nil {
 		return nil, err

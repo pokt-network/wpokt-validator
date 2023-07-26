@@ -77,7 +77,8 @@ type DomainData struct {
 
 func signTypedData(
 	domainData DomainData,
-	mint autogen.MintControllerMintData, key *ecdsa.PrivateKey,
+	mint autogen.MintControllerMintData,
+	key *ecdsa.PrivateKey,
 ) ([]byte, error) {
 
 	message := apitypes.TypedDataMessage{

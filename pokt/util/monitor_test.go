@@ -154,26 +154,35 @@ func TestCreateInvalidMint(t *testing.T) {
 }
 
 func TestValidateMemo(t *testing.T) {
-	app.Config.Ethereum.ChainId = "1"
 	address := common.HexToAddress("0x1234567890")
 
 	testCases := []struct {
 		name          string
+		chainId       string
 		txMemo        string
 		expectedMemo  models.MintMemo
 		expectedValid bool
 	}{
 		{
-			name:   "Valid Memo",
-			txMemo: fmt.Sprintf(`{"address": "%s","chain_id": "0001"}`, strings.ToLower(address.Hex())),
+			name:    "Valid Memo",
+			chainId: "1",
+			txMemo:  fmt.Sprintf(`{"address": "%s","chain_id": "0001"}`, strings.ToLower(address.Hex())),
 			expectedMemo: models.MintMemo{
 				Address: address.Hex(),
-				ChainId: app.Config.Ethereum.ChainId,
+				ChainId: "1",
 			},
 			expectedValid: true,
 		},
 		{
-			name: "Invalid JSON Memo",
+			name:          "Invalid JSON Memo",
+			chainId:       "1",
+			txMemo:        `random`,
+			expectedMemo:  models.MintMemo{},
+			expectedValid: false,
+		},
+		{
+			name:    "Invalid JSON Memo",
+			chainId: "1",
 			txMemo: `{
 				"address": "0x1234567890",
 				"chain_id": "0001",
@@ -183,19 +192,38 @@ func TestValidateMemo(t *testing.T) {
 			expectedValid: false,
 		},
 		{
-			name: "Invalid ChainID",
-			txMemo: `{
-				"address": "0x1234567890",
-				"chain_id": "0002"
-			}`,
+			name:    "Invalid ChainID",
+			chainId: "1",
+			txMemo:  fmt.Sprintf(`{"address": "%s","chain_id": "random"}`, strings.ToLower(address.Hex())),
 			expectedMemo: models.MintMemo{
-				Address: "0x1234567890",
-				ChainId: "0002",
+				Address: address.Hex(),
+				ChainId: "1",
 			},
 			expectedValid: false,
 		},
 		{
-			name: "Invalid Address",
+			name:    "Incorrect ChainID",
+			chainId: "1",
+			txMemo:  fmt.Sprintf(`{"address": "%s","chain_id": "002"}`, strings.ToLower(address.Hex())),
+			expectedMemo: models.MintMemo{
+				Address: address.Hex(),
+				ChainId: "1",
+			},
+			expectedValid: false,
+		},
+		{
+			name:    "Incorrect config ChainID",
+			chainId: "random",
+			txMemo:  fmt.Sprintf(`{"address": "%s","chain_id": "002"}`, strings.ToLower(address.Hex())),
+			expectedMemo: models.MintMemo{
+				Address: address.Hex(),
+				ChainId: "1",
+			},
+			expectedValid: false,
+		},
+		{
+			name:    "Invalid Address",
+			chainId: "1",
 			txMemo: `{
 				"address": "0xinvalid",
 				"chain_id": "0001"
@@ -210,6 +238,7 @@ func TestValidateMemo(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			app.Config.Ethereum.ChainId = tc.chainId
 
 			result, valid := ValidateMemo(tc.txMemo)
 			assert.Equal(t, tc.expectedValid, valid)
