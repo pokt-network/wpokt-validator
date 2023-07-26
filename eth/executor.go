@@ -108,7 +108,7 @@ func (b *MintExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinted
 	log.Debug("[MINT EXECUTOR] Handling mint event: ", event.Raw.TxHash, " ", event.Raw.Index)
 
 	filter := bson.M{
-		"mint_address":      b.wpoktAddress,
+		"wpokt_address":     b.wpoktAddress,
 		"vault_address":     b.vaultAddress,
 		"recipient_address": event.Recipient.Hex(),
 		"amount":            event.Amount.String(),
