@@ -58,7 +58,7 @@ Refer to the sample `config.yml` or `sample.env` files for reference on how to s
 
 3. In the "Advanced Options" under "Management", ensure that logging and monitoring are enabled for the VM template. This will help you monitor the performance and status of the deployed validators effectively.
 
-4. Under "Identity and API access", ensure that the Cloud Platform scope is enabled for the VM template. This will provide the necessary access to Secret Manager, which comes under the Cloud Platform.
+4. Ensure that the service account assigned to this VM template has the necessary access to the secrets stored in Secret Manager. This access ensures that the validator instances can securely retrieve the required private keys for the Ethereum and Pocket networks.
 
 ### Step 7: Create and Start N VM Instances
 
