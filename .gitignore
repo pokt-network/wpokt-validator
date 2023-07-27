@@ -13,7 +13,7 @@
 *.html
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 
 # Go workspace file
 go.work
@@ -23,8 +23,11 @@ go.work
 
 # config
 *.yml
-!config.testnet.yml
+!config.yml
 !docker-compose.yml
 
 # env
 .env*
+
+# google cloud
+credentials.json

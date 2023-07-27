@@ -249,7 +249,7 @@ func newExecutor(wg *sync.WaitGroup) models.Service {
 		interval:        time.Duration(app.Config.BurnExecutor.IntervalSecs) * time.Second,
 		stop:            make(chan bool),
 		multisigAddress: multisigAddress,
-		wpoktAddress:    app.Config.Ethereum.WPOKTAddress,
+		wpoktAddress:    app.Config.Ethereum.WrappedPocketAddress,
 		client:          pokt.NewClient(),
 	}
 

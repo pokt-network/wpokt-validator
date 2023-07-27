@@ -36,7 +36,7 @@ var (
 // Connect connects to the database
 func (d *mongoDatabase) Connect(ctx context.Context) error {
 	log.Debug("[DB] Connecting to database")
-	wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Duration(Config.MongoDB.TimeOutSecs)*time.Second))
+	wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Duration(Config.MongoDB.TimeoutSecs)*time.Second))
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(Config.MongoDB.URI).SetWriteConcern(wcMajority))
 	if err != nil {
@@ -54,7 +54,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 
 	// setup unique index for mints
 	log.Debug("[DB] Setting up indexes for mints")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	_, err := d.db.Collection(models.CollectionMints).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "transaction_hash", Value: 1}},
@@ -66,7 +66,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 
 	// setup unique index for invalid mints
 	log.Debug("[DB] Setting up indexes for invalid mints")
-	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	_, err = d.db.Collection(models.CollectionInvalidMints).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "transaction_hash", Value: 1}},
@@ -78,7 +78,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 
 	// setup unique index for burns
 	log.Debug("[DB] Setting up indexes for burns")
-	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	_, err = d.db.Collection(models.CollectionBurns).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "transaction_hash", Value: 1}, {Key: "log_index", Value: 1}},
@@ -96,7 +96,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 // Disconnect disconnects from the database
 func (d *mongoDatabase) Disconnect() error {
 	log.Debug("[DB] Disconnecting from database")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	err := d.db.Client().Disconnect(ctx)
 	log.Info("[DB] Disconnected from database")
@@ -118,7 +118,7 @@ func InitDB(ctx context.Context) {
 
 // method for insert single value in a collection
 func (d *mongoDatabase) InsertOne(collection string, data interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	_, err := d.db.Collection(collection).InsertOne(ctx, data)
 	return err
@@ -126,7 +126,7 @@ func (d *mongoDatabase) InsertOne(collection string, data interface{}) error {
 
 // method for find single value in a collection
 func (d *mongoDatabase) FindOne(collection string, filter interface{}, result interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	err := d.db.Collection(collection).FindOne(ctx, filter).Decode(result)
 	return err
@@ -134,7 +134,7 @@ func (d *mongoDatabase) FindOne(collection string, filter interface{}, result in
 
 // method for find multiple values in a collection
 func (d *mongoDatabase) FindMany(collection string, filter interface{}, result interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	cursor, err := d.db.Collection(collection).Find(ctx, filter)
 	if err != nil {
@@ -146,7 +146,7 @@ func (d *mongoDatabase) FindMany(collection string, filter interface{}, result i
 
 //method for update single value in a collection
 func (d *mongoDatabase) UpdateOne(collection string, filter interface{}, update interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	_, err := d.db.Collection(collection).UpdateOne(ctx, filter, update)
 	return err
@@ -154,7 +154,7 @@ func (d *mongoDatabase) UpdateOne(collection string, filter interface{}, update 
 
 //method for upsert single value in a collection
 func (d *mongoDatabase) UpsertOne(collection string, filter interface{}, update interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeOutSecs))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
 	defer cancel()
 
 	opts := options.Update().SetUpsert(true)

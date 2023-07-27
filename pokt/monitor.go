@@ -177,7 +177,7 @@ func newMonitor(wg *sync.WaitGroup) *MintMonitorService {
 		name:          MintMonitorName,
 		interval:      time.Duration(app.Config.MintMonitor.IntervalSecs) * time.Second,
 		vaultAddress:  multisigAddress,
-		wpoktAddress:  app.Config.Ethereum.WPOKTAddress,
+		wpoktAddress:  app.Config.Ethereum.WrappedPocketAddress,
 		startHeight:   0,
 		currentHeight: 0,
 		stop:          make(chan bool),

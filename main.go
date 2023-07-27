@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -10,58 +11,11 @@ import (
 	"time"
 
 	"github.com/dan13ram/wpokt-validator/app"
-	"github.com/dan13ram/wpokt-validator/eth"
-	ethClient "github.com/dan13ram/wpokt-validator/eth/client"
+	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
-	"github.com/dan13ram/wpokt-validator/pokt"
-	poktClient "github.com/dan13ram/wpokt-validator/pokt/client"
+	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	log "github.com/sirupsen/logrus"
 )
-
-func createService(
-	wg *sync.WaitGroup,
-	serviceName string,
-	serviceHealthMap map[string]models.ServiceHealth,
-	serviceWithoutHealth func(*sync.WaitGroup) models.Service,
-	serviceWithHealth func(*sync.WaitGroup, models.ServiceHealth) models.Service,
-) models.Service {
-	serviceHealth, ok := serviceHealthMap[serviceName]
-	if ok {
-		return serviceWithHealth(wg, serviceHealth)
-	} else {
-		return serviceWithoutHealth(wg)
-	}
-}
-
-var SERVICES = map[string]struct {
-	serviceWithoutHealth func(*sync.WaitGroup) models.Service
-	serviceWithHealth    func(*sync.WaitGroup, models.ServiceHealth) models.Service
-}{
-	pokt.MintMonitorName: {
-		serviceWithoutHealth: pokt.NewMonitor,
-		serviceWithHealth:    pokt.NewMonitorWithLastHealth,
-	},
-	pokt.BurnSignerName: {
-		serviceWithoutHealth: pokt.NewSigner,
-		serviceWithHealth:    pokt.NewSignerWithLastHealth,
-	},
-	pokt.BurnExecutorName: {
-		serviceWithoutHealth: pokt.NewExecutor,
-		serviceWithHealth:    pokt.NewExecutorWithLastHealth,
-	},
-	eth.BurnMonitorName: {
-		serviceWithoutHealth: eth.NewMonitor,
-		serviceWithHealth:    eth.NewMonitorWithLastHealth,
-	},
-	eth.MintSignerName: {
-		serviceWithoutHealth: eth.NewSigner,
-		serviceWithHealth:    eth.NewSignerWithLastHealth,
-	},
-	eth.MintExecutorName: {
-		serviceWithoutHealth: eth.NewExecutor,
-		serviceWithHealth:    eth.NewExecutorWithLastHealth,
-	},
-}
 
 func main() {
 
@@ -70,17 +24,29 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	if len(os.Args) < 2 {
-		log.Fatal("[MAIN] Missing config file path argument")
-	}
-	absConfigPath, _ := filepath.Abs(os.Args[1])
+	var configPath string
+	var envPath string
+	flag.StringVar(&configPath, "config", "", "path to config file")
+	flag.StringVar(&envPath, "env", "", "path to env file")
+	flag.Parse()
 
-	absEnvPath := ""
-	if len(os.Args) == 3 {
-		absEnvPath, _ = filepath.Abs(os.Args[2])
+	var absConfigPath string = ""
+	var err error
+	if configPath != "" {
+		absConfigPath, err = filepath.Abs(configPath)
+		if err != nil {
+			log.Fatal("[MAIN] Error getting absolute path for config file: ", err)
+		}
 	}
 
-	log.Debug("[MAIN] Starting server")
+	var absEnvPath string = ""
+	if envPath != "" {
+		absEnvPath, err = filepath.Abs(envPath)
+		if err != nil {
+			log.Fatal("[MAIN] Error getting absolute path for env file: ", err)
+		}
+	}
+
 	app.InitConfig(absConfigPath, absEnvPath)
 	if absEnvPath != "" {
 		log.Debug("[MAIN] Env loaded from: ", absEnvPath, " and merged with config from: ", absConfigPath)
@@ -91,12 +57,12 @@ func main() {
 	app.InitLogger()
 	log.Info("[MAIN] Logger initialized")
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.MongoDB.TimeOutSecs))
+	dbCtx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.MongoDB.TimeoutSecs))
 	defer cancel()
 	app.InitDB(dbCtx)
 
-	poktClient.Client.ValidateNetwork()
-	ethClient.Client.ValidateNetwork()
+	pokt.Client.ValidateNetwork()
+	eth.Client.ValidateNetwork()
 
 	var wg sync.WaitGroup
 
@@ -114,8 +80,8 @@ func main() {
 
 	services := []models.Service{healthcheck}
 
-	for serviceName, service := range SERVICES {
-		services = append(services, createService(&wg, serviceName, serviceHealthMap, service.serviceWithoutHealth, service.serviceWithHealth))
+	for serviceName, service := range GetServiceFactories() {
+		services = append(services, CreateService(&wg, serviceName, serviceHealthMap, service.CreateService, service.CreateServiceWithLastHealth))
 	}
 
 	healthcheck.SetServices(services)

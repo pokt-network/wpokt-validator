@@ -283,7 +283,7 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 		ethClient:      ethClient,
 		poktClient:     poktClient,
 		vaultAddress:   app.Config.Pocket.VaultAddress,
-		wpoktAddress:   app.Config.Ethereum.WPOKTAddress,
+		wpoktAddress:   app.Config.Ethereum.WrappedPocketAddress,
 	}
 
 	m.UpdateBlocks()

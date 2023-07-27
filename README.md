@@ -36,9 +36,9 @@ No specific installation steps are required. Users should have Golang installed 
 ## Usage
 
 1. **Configuration:**
-   Users need a configuration file (template available as `config.testnet.yml`) containing the required fields. They can choose from the following options:
+   Users need a configuration file (template available as `config.yml`) containing the required fields. They can choose from the following options:
 
-    a. Edit the `config.testnet.yml` file directly and add the necessary information.
+    a. Edit the `config.yml` file directly and add the necessary information.
 
     b. Set the configuration options as environment variables:
 
@@ -59,13 +59,13 @@ No specific installation steps are required. Users should have Golang installed 
     a. With config updated with the necessary information:
 
     ```bash
-    $ go run main.go config.local.yml
+    $ go run main.go config.yml
     ```
 
     b. Using environment variables:
 
     ```bash
-    $ ETH_PRIVATE_KEY="your_eth_private_key" ETH_RPC_URL="your_eth_rpc_url" ... go run main.go config.testnet.yml
+    $ ETH_PRIVATE_KEY="your_eth_private_key" ETH_RPC_URL="your_eth_rpc_url" ... go run main.go config.yml
     ```
 
     c. Using a `.env` file:
@@ -74,7 +74,7 @@ No specific installation steps are required. Users should have Golang installed 
     - Run the app:
 
     ```bash
-    $ go run main.go config.testnet.yml .env
+    $ go run main.go config.yml .env
     ```
 
     d. Running in a Docker container:
@@ -83,7 +83,7 @@ No specific installation steps are required. Users should have Golang installed 
     - Execute the following command in the project directory with the `docker-compose.yml` file:
 
     ```bash
-    $ docker-compose -f docker-compose.testnet.yml up
+    $ docker-compose -f docker-compose.yml up
     ```
 
 ## Valid Memo
@@ -104,7 +104,7 @@ Transactions with memos not conforming to this format will not be processed by t
 The wPOKT Validator is also available as a Docker image hosted on Docker Hub. You can run the validator in a Docker container using the following command:
 
 ```bash
-docker run -d --env-file .env docker.io/dan13ram/wpokt-validator-testnet:latest
+docker run -d --env-file .env docker.io/dan13ram/wpokt-validator:latest
 ```
 
 Ensure you have set the required environment variables in the `.env` file or directly in the command above.

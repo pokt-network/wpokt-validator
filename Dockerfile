@@ -32,4 +32,4 @@ ENV MONGODB_URI ${MONGODB_URI}
 ENV MONGODB_DATABASE ${MONGODB_DATABASE}
 
 # Run
-CMD ["/validator-service", "/app/config.testnet.yml"]
+CMD ["/validator-service", "/app/config.yml"]

@@ -199,11 +199,11 @@ func SignInvalidMint(
 	}
 
 	if returnTx == "" {
-		amountWithFees, err := strconv.ParseInt(doc.Amount, 10, 64)
+		amountWithTxFee, err := strconv.ParseInt(doc.Amount, 10, 64)
 		if err != nil {
 			return doc, err
 		}
-		amount := amountWithFees - app.Config.Pocket.Fees
+		amount := amountWithTxFee - app.Config.Pocket.TxFee
 		memo := doc.TransactionHash
 
 		returnTxBytes, err := buildMultiSigTxAndSign(
@@ -211,7 +211,7 @@ func SignInvalidMint(
 			memo,
 			app.Config.Pocket.ChainId,
 			amount,
-			app.Config.Pocket.Fees,
+			app.Config.Pocket.TxFee,
 			privateKey,
 			multisigPubKey,
 		)
@@ -289,11 +289,11 @@ func SignBurn(
 	}
 
 	if returnTx == "" {
-		amountWithFees, err := strconv.ParseInt(doc.Amount, 10, 64)
+		amountWithTxFee, err := strconv.ParseInt(doc.Amount, 10, 64)
 		if err != nil {
 			return doc, err
 		}
-		amount := amountWithFees - app.Config.Pocket.Fees
+		amount := amountWithTxFee - app.Config.Pocket.TxFee
 		memo := doc.TransactionHash
 
 		returnTxBytes, err := buildMultiSigTxAndSign(
@@ -301,7 +301,7 @@ func SignBurn(
 			memo,
 			app.Config.Pocket.ChainId,
 			amount,
-			app.Config.Pocket.Fees,
+			app.Config.Pocket.TxFee,
 			privateKey,
 			multisigPubKey,
 		)

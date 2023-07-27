@@ -420,7 +420,7 @@ func TestSignBurn(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Pocket.ChainId = "testnet"
-			app.Config.Pocket.Fees = 10000
+			app.Config.Pocket.TxFee = 10000
 			pubKeys := []crypto.PublicKey{}
 			for i := 0; i < tc.numSigners; i++ {
 				pubKeys = append(pubKeys, privateKeys[i].PublicKey())
@@ -440,7 +440,7 @@ func TestSignBurn(t *testing.T) {
 				assert.NotNil(t, tx)
 				assert.NotNil(t, bytesToSign)
 
-				fee := types.NewCoins(types.NewCoin(types.DefaultStakeDenom, types.NewInt(app.Config.Pocket.Fees)))
+				fee := types.NewCoins(types.NewCoin(types.DefaultStakeDenom, types.NewInt(app.Config.Pocket.TxFee)))
 				assert.Equal(t, fee, tx.GetFee())
 
 				assert.Equal(t, tc.doc.TransactionHash, tx.GetMemo())
@@ -451,7 +451,7 @@ func TestSignBurn(t *testing.T) {
 				assert.Equal(t, fa, tx.GetMsg().(*nodeTypes.MsgSend).FromAddress)
 
 				amountInt, _ := strconv.ParseInt(tc.doc.Amount, 10, 64)
-				finalAmount := amountInt - app.Config.Pocket.Fees
+				finalAmount := amountInt - app.Config.Pocket.TxFee
 				amount := strconv.FormatInt(finalAmount, 10)
 				assert.Equal(t, amount, tx.GetMsg().(*nodeTypes.MsgSend).Amount.String())
 
@@ -654,7 +654,7 @@ func TestSignInvalidMint(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Pocket.ChainId = "testnet"
-			app.Config.Pocket.Fees = 10000
+			app.Config.Pocket.TxFee = 10000
 			pubKeys := []crypto.PublicKey{}
 			for i := 0; i < tc.numSigners; i++ {
 				pubKeys = append(pubKeys, privateKeys[i].PublicKey())
@@ -674,7 +674,7 @@ func TestSignInvalidMint(t *testing.T) {
 				assert.NotNil(t, tx)
 				assert.NotNil(t, bytesToSign)
 
-				fee := types.NewCoins(types.NewCoin(types.DefaultStakeDenom, types.NewInt(app.Config.Pocket.Fees)))
+				fee := types.NewCoins(types.NewCoin(types.DefaultStakeDenom, types.NewInt(app.Config.Pocket.TxFee)))
 				assert.Equal(t, fee, tx.GetFee())
 
 				assert.Equal(t, tc.doc.TransactionHash, tx.GetMemo())
@@ -685,7 +685,7 @@ func TestSignInvalidMint(t *testing.T) {
 				assert.Equal(t, fa, tx.GetMsg().(*nodeTypes.MsgSend).FromAddress)
 
 				amountInt, _ := strconv.ParseInt(tc.doc.Amount, 10, 64)
-				finalAmount := amountInt - app.Config.Pocket.Fees
+				finalAmount := amountInt - app.Config.Pocket.TxFee
 				amount := strconv.FormatInt(finalAmount, 10)
 				assert.Equal(t, amount, tx.GetMsg().(*nodeTypes.MsgSend).Amount.String())
 

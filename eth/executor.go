@@ -187,9 +187,9 @@ func newExecutor(wg *sync.WaitGroup) *MintExecutorService {
 		log.Fatal("[MINT EXECUTOR] Error initializing ethereum client", err)
 	}
 
-	log.Debug("[MINT EXECUTOR] Connecting to mint contract at: ", app.Config.Ethereum.WPOKTAddress)
+	log.Debug("[MINT EXECUTOR] Connecting to mint contract at: ", app.Config.Ethereum.WrappedPocketAddress)
 
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTAddress), client.GetClient())
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WrappedPocketAddress), client.GetClient())
 	if err != nil {
 		log.Fatal("[MINT EXECUTOR] Error initializing Wrapped Pocket contract", err)
 	}
@@ -213,7 +213,7 @@ func newExecutor(wg *sync.WaitGroup) *MintExecutorService {
 		wpoktContract:      contract,
 		mintControllerAbi:  mintControllerAbi,
 		client:             client,
-		wpoktAddress:       app.Config.Ethereum.WPOKTAddress,
+		wpoktAddress:       app.Config.Ethereum.WrappedPocketAddress,
 		vaultAddress:       app.Config.Pocket.VaultAddress,
 	}
 

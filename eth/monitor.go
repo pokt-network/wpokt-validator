@@ -164,8 +164,8 @@ func newMonitor(wg *sync.WaitGroup) *BurnMonitorService {
 	if err != nil {
 		log.Fatal("[BURN MONITOR] Error initializing ethereum client: ", err)
 	}
-	log.Debug("[BURN MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTAddress)
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTAddress), client.GetClient())
+	log.Debug("[BURN MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WrappedPocketAddress)
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WrappedPocketAddress), client.GetClient())
 	if err != nil {
 		log.Fatal("[BURN MONITOR] Error initializing Wrapped Pocket contract", err)
 	}

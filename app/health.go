@@ -124,6 +124,8 @@ func (b *HealthService) PostHealth() bool {
 		log.Error("[HEALTH] Error posting health: ", err)
 		return false
 	}
+
+	log.Info("[HEALTH] Posted health")
 	return true
 }
 
@@ -179,14 +181,14 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 	b := &HealthService{
 		name:             "health",
 		stop:             make(chan bool),
-		interval:         time.Duration(Config.Health.IntervalSecs) * time.Second,
+		interval:         time.Duration(Config.HealthCheck.IntervalSecs) * time.Second,
 		poktVaultAddress: multisigPkAddress,
 		poktSigners:      Config.Pocket.MultisigPublicKeys,
 		poktPublicKey:    pk.PublicKey().RawString(),
 		poktAddress:      poktAddress,
 		ethValidators:    Config.Ethereum.ValidatorAddresses,
 		ethAddress:       ethAddress,
-		wpoktAddress:     Config.Ethereum.WPOKTAddress,
+		wpoktAddress:     Config.Ethereum.WrappedPocketAddress,
 		hostname:         hostname,
 		validatorId:      validatorId,
 		wg:               wg,

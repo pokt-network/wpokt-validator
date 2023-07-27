@@ -109,7 +109,7 @@ func (m *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
 		log.Info("[MINT SIGNER] Mint nonce not set, fetching from contract")
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
 		defer cancel()
 		opts := &bind.CallOpts{Context: ctx, Pending: false}
 		currentNonce, err := m.wpoktContract.GetUserNonce(opts, common.HexToAddress(mint.RecipientAddress))
@@ -299,8 +299,8 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 		log.Fatal("[MINT SIGNER] Error initializing ethereum client: ", err)
 	}
 
-	log.Debug("[MINT SIGNER] Connecting to wpokt contract at: ", app.Config.Ethereum.WPOKTAddress)
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WPOKTAddress), ethClient.GetClient())
+	log.Debug("[MINT SIGNER] Connecting to wpokt contract at: ", app.Config.Ethereum.WrappedPocketAddress)
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WrappedPocketAddress), ethClient.GetClient())
 	if err != nil {
 		log.Fatal("[MINT SIGNER] Error initializing Wrapped Pocket contract", err)
 	}
@@ -314,7 +314,7 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 	log.Debug("[MINT SIGNER] Connected to mint controller contract")
 
 	log.Debug("[MINT SIGNER] Fetching mint controller domain data")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
 	defer cancel()
 	opts := &bind.CallOpts{Context: ctx, Pending: false}
 	domain, err := mintControllerContract.Eip712Domain(opts)
@@ -331,7 +331,7 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 		interval:               time.Duration(app.Config.MintSigner.IntervalSecs) * time.Second,
 		privateKey:             privateKey,
 		address:                address,
-		wpoktAddress:           app.Config.Ethereum.WPOKTAddress,
+		wpoktAddress:           app.Config.Ethereum.WrappedPocketAddress,
 		vaultAddress:           app.Config.Pocket.VaultAddress,
 		wpoktContract:          contract,
 		mintControllerContract: mintControllerContract,

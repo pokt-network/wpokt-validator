@@ -36,7 +36,7 @@ func (c *ethereumClient) GetClient() *ethclient.Client {
 	return c.client
 }
 func (c *ethereumClient) GetBlockNumber() (uint64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
 	defer cancel()
 
 	blockNumber, err := c.client.BlockNumber(ctx)
@@ -48,7 +48,7 @@ func (c *ethereumClient) GetBlockNumber() (uint64, error) {
 }
 
 func (c *ethereumClient) GetChainId() (*big.Int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
 	defer cancel()
 
 	chainId, err := c.client.ChainID(ctx)
@@ -87,7 +87,7 @@ func (c *ethereumClient) ValidateNetwork() {
 }
 
 func (c *ethereumClient) GetTransactionByHash(txHash string) (*types.Transaction, bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeOutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
 	defer cancel()
 
 	tx, isPending, err := c.client.TransactionByHash(ctx, common.HexToHash(txHash))
