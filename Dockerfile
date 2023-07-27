@@ -5,7 +5,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy the source code
+# copy the source code
 COPY app ./app
 COPY eth ./eth
 COPY pokt ./pokt
@@ -13,10 +13,10 @@ COPY models ./models
 COPY services.go ./
 COPY main.go ./
 
-# Build
+# build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /validator
 
-# Set environment variables
+# set environment variables
 # mongodb
 ENV MONGODB_URI ${MONGODB_URI}
 ENV MONGODB_DATABASE ${MONGODB_DATABASE}
@@ -80,5 +80,5 @@ ENV HEALTH_CHECK_INTERVAL_SECS ${HEALTH_CHECK_INTERVAL_SECS}
 # logging
 ENV LOG_LEVEL ${LOG_LEVEL}
 
-# Run
+# run
 CMD ["/validator"]
