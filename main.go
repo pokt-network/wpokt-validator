@@ -78,11 +78,13 @@ func main() {
 		}
 	}
 
-	services := []models.Service{healthcheck}
+	services := []models.Service{}
 
 	for serviceName, service := range GetServiceFactories() {
 		services = append(services, CreateService(&wg, serviceName, serviceHealthMap, service.CreateService, service.CreateServiceWithLastHealth))
 	}
+
+	services = append(services, healthcheck)
 
 	healthcheck.SetServices(services)
 
