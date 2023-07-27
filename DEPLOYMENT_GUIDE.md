@@ -56,6 +56,10 @@ This guide will walk you through the process of deploying wPOKT Validators on Go
 
 Refer to the sample `config.yml` or `sample.env` files for reference on how to structure the environment variables.
 
+3. In the "Advanced Options" under "Management", ensure that logging and monitoring are enabled for the VM template. This will help you monitor the performance and status of the deployed validators effectively.
+
+4. Under "Identity and API access", ensure that the Cloud Platform scope is enabled for the VM template. This will provide the necessary access to Secret Manager, which comes under the Cloud Platform.
+
 ### Step 7: Create and Start N VM Instances
 
 1. With the VM template prepared, you can now create and start N instances of the validators, where N is the number of validators you determined in Step 3.
