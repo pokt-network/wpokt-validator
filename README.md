@@ -35,56 +35,49 @@ No specific installation steps are required. Users should have Golang installed 
 
 ## Usage
 
-1. **Configuration:**
-   Users need a configuration file (template available as `config.yml`) containing the required fields. They can choose from the following options:
+To run the wPOKT Validator, execute the following command:
 
-    a. Edit the `config.yml` file directly and add the necessary information.
+```bash
+go run .
+```
 
-    b. Set the configuration options as environment variables:
+### Configuration
 
-    - `ETH_PRIVATE_KEY`
-    - `ETH_RPC_URL`
-    - `ETH_CHAIN_ID`
-    - `ETH_START_BLOCK_NUMBER`
-    - `POKT_PRIVATE_KEY`
-    - `POKT_RPC_URL`
-    - `POKT_CHAIN_ID`
-    - `POKT_START_HEIGHT`
-    - `MONGODB_URI`
-    - `MONGODB_DATABASE`
+The wPOKT Validator can be configured in the following ways:
 
-2. **Run the application:**
-   Users can execute the program in the following ways:
+1. Using a Config File:
 
-    a. With config updated with the necessary information:
+    - A template configuration file `config.yml` is provided.
+    - You can specify the config file using the `--config` flag:
 
     ```bash
-    $ go run main.go config.yml
+    go run . --config config.yml
     ```
 
-    b. Using environment variables:
+2. Using an Env File:
+
+    - A template environment file `sample.env` is provided.
+    - You can specify the env file using the `--env` flag:
 
     ```bash
-    $ ETH_PRIVATE_KEY="your_eth_private_key" ETH_RPC_URL="your_eth_rpc_url" ... go run main.go config.yml
+    go run . --env .env
     ```
 
-    c. Using a `.env` file:
-
-    - Create a `.env` file and add the environment variables in the format `VARIABLE_NAME=VALUE`.
-    - Run the app:
-
+3. Using Environment Variables:
+    - Instead of using a config or env file, you can directly set the required environment variables in your terminal:
     ```bash
-    $ go run main.go config.yml .env
+    ETH_PRIVATE_KEY="your_eth_private_key" ETH_RPC_URL="your_eth_rpc_url" ... go run .
     ```
 
-    d. Running in a Docker container:
+If both a config file and an env file are provided, the `config.yml` file will be loaded first, and then the env file will be read. Any falsy values in the config will be updated with corresponding values from the env file.
 
-    - Set the environment variables in the environment or use a file.
-    - Execute the following command in the project directory with the `docker-compose.yml` file:
+### Using Docker Compose
 
-    ```bash
-    $ docker-compose -f docker-compose.yml up
-    ```
+You can also run the wPOKT Validator using `docker-compose` with the provided `.env` file. Execute the following command in the project directory:
+
+```bash
+docker-compose --env-file .env up
+```
 
 ## Valid Memo
 
