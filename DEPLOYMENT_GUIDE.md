@@ -26,7 +26,7 @@ This guide will walk you through the process of deploying wPOKT Validators on Go
 
 4. Update the MintController Smart Contract on the Ethereum network with the Ethereum addresses of the N validators. The MintController Smart Contract will utilize these addresses to validate signatures from the deployed validators during the bridging process.
 
-### Step 4: Store Private Keys in Secret Manager and Other Secure Places
+### Step 4: Store Private Keys in Secret Manager
 
 1. Add all the Ethereum and Pocket private keys to the Secret Manager on GCP. Ensure you securely store these keys as they are crucial for your validator's operation.
 
@@ -60,7 +60,7 @@ Refer to the sample `config.sample.yml` or `sample.env` files for reference on h
 
 4. Ensure that the service account assigned to this VM template has the necessary access to the secrets stored in Secret Manager. This access ensures that the validator instances can securely retrieve the required private keys for the Ethereum and Pocket networks.
 
-### Step 7: Create and Start N VM Instances
+### Step 7: Create and Start VM Instances
 
 1. With the VM template prepared, you can now create and start N instances of the validators, where N is the number of validators you determined in Step 3.
 
