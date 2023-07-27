@@ -54,7 +54,7 @@ This guide will walk you through the process of deploying wPOKT Validators on Go
 
     - Google Cloud Project ID: Add the project ID for your GCP project to ensure proper authentication and billing.
 
-Refer to the sample `config.yml` or `sample.env` files for reference on how to structure the environment variables.
+Refer to the sample `config.sample.yml` or `sample.env` files for reference on how to structure the environment variables.
 
 3. In the "Advanced Options" under "Management", ensure that logging and monitoring are enabled for the VM template. This will help you monitor the performance and status of the deployed validators effectively.
 

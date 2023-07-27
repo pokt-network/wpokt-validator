@@ -23,7 +23,7 @@ go.work
 
 # config
 *.yml
-!config.yml
+!config.sample.yml
 !docker-compose.yml
 
 # env

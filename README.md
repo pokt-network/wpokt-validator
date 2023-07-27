@@ -47,7 +47,7 @@ The wPOKT Validator can be configured in the following ways:
 
 1. Using a Config File:
 
-    - A template configuration file `config.yml` is provided.
+    - A sample configuration file `config.sample.yml` is provided.
     - You can specify the config file using the `--config` flag:
 
     ```bash
@@ -56,7 +56,7 @@ The wPOKT Validator can be configured in the following ways:
 
 2. Using an Env File:
 
-    - A template environment file `sample.env` is provided.
+    - A sample environment file `sample.env` is provided.
     - You can specify the env file using the `--env` flag:
 
     ```bash
