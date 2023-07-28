@@ -101,22 +101,26 @@ func (b *HealthService) PostHealth() bool {
 		"hostname":     b.hostname,
 	}
 
-	health := models.Health{
-		PoktVaultAddress: b.poktVaultAddress,
-		PoktSigners:      b.poktSigners,
-		PoktPublicKey:    b.poktPublicKey,
-		PoktAddress:      b.poktAddress,
-		EthValidators:    b.ethValidators,
-		EthAddress:       b.ethAddress,
-		WPoktAddress:     b.wpoktAddress,
-		Hostname:         b.hostname,
-		ValidatorId:      b.validatorId,
-		Healthy:          true,
-		CreatedAt:        time.Now(),
-		ServiceHealths:   b.ServiceHealths(),
+	onInsert := bson.M{
+		"pokt_vault_address": b.poktVaultAddress,
+		"pokt_signers":       b.poktSigners,
+		"pokt_public_key":    b.poktPublicKey,
+		"pokt_address":       b.poktAddress,
+		"eth_validators":     b.ethValidators,
+		"eth_address":        b.ethAddress,
+		"wpokt_address":      b.wpoktAddress,
+		"hostname":           b.hostname,
+		"validator_id":       b.validatorId,
+		"created_at":         time.Now(),
 	}
 
-	update := bson.M{"$set": health}
+	onUpdate := bson.M{
+		"healthy":         true,
+		"service_healths": b.ServiceHealths(),
+		"updated_at":      time.Now(),
+	}
+
+	update := bson.M{"$set": onUpdate, "$setOnInsert": onInsert}
 
 	err := DB.UpsertOne(models.CollectionHealthChecks, filter, update)
 
