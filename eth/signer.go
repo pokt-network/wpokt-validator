@@ -279,7 +279,7 @@ func (m *MintSignerService) SyncTxs() bool {
 	return success
 }
 
-func newSigner(wg *sync.WaitGroup) models.Service {
+func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
 	if app.Config.MintSigner.Enabled == false {
 		log.Debug("[MINT SIGNER] BURN signer disabled")
 		return models.NewEmptyService(wg)
@@ -344,11 +344,4 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 	log.Info("[MINT SIGNER] Initialized mint signer")
 
 	return b
-}
-func NewSigner(wg *sync.WaitGroup) models.Service {
-	return newSigner(wg)
-}
-
-func NewSignerWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
-	return newSigner(wg)
 }

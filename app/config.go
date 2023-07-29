@@ -16,7 +16,9 @@ var (
 func InitConfig(configFile string, envFile string) {
 	readConfigFromConfigFile(configFile)
 	readConfigFromENV(envFile)
-	readKeysFromGSM()
+	if Config.GoogleSecretManager.Enabled == true {
+		readKeysFromGSM()
+	}
 	validateConfig()
 }
 
@@ -81,5 +83,29 @@ func validateConfig() {
 	}
 	if Config.Pocket.MultisigPublicKeys == nil || len(Config.Pocket.MultisigPublicKeys) == 0 {
 		log.Fatal("[CONFIG] Pocket.MultisigPublicKeys is required")
+	}
+
+	// services
+	if Config.MintMonitor.Enabled == true && Config.MintMonitor.IntervalSecs == 0 {
+		log.Fatal("[CONFIG] MintMonitor.Interval is required")
+	}
+	if Config.MintSigner.Enabled == true && Config.MintSigner.IntervalSecs == 0 {
+		log.Fatal("[CONFIG] MintSigner.Interval is required")
+	}
+	if Config.MintExecutor.Enabled == true && Config.MintExecutor.IntervalSecs == 0 {
+		log.Fatal("[CONFIG] MintExecutor.Interval is required")
+	}
+	if Config.BurnMonitor.Enabled == true && Config.BurnMonitor.IntervalSecs == 0 {
+		log.Fatal("[CONFIG] BurnMonitor.Interval is required")
+	}
+	if Config.BurnSigner.Enabled == true && Config.BurnSigner.IntervalSecs == 0 {
+		log.Fatal("[CONFIG] BurnSigner.Interval is required")
+	}
+	if Config.BurnExecutor.Enabled == true && Config.BurnExecutor.IntervalSecs == 0 {
+		log.Fatal("[CONFIG] BurnExecutor.Interval is required")
+	}
+
+	if Config.HealthCheck.IntervalSecs == 0 {
+		log.Fatal("[CONFIG] HealthCheck.Interval is required")
 	}
 }

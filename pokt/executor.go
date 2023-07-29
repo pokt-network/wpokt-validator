@@ -218,7 +218,7 @@ func (m *BurnExecutorService) SyncTxs() bool {
 	return success
 }
 
-func newExecutor(wg *sync.WaitGroup) models.Service {
+func NewExecutor(wg *sync.WaitGroup, health models.ServiceHealth) models.Service {
 	if !app.Config.BurnExecutor.Enabled {
 		log.Debug("[BURN EXECUTOR] Pokt executor disabled")
 		return models.NewEmptyService(wg)
@@ -256,12 +256,4 @@ func newExecutor(wg *sync.WaitGroup) models.Service {
 	log.Info("[BURN EXECUTOR] Initialized burn executor")
 
 	return m
-}
-
-func NewExecutor(wg *sync.WaitGroup) models.Service {
-	return newExecutor(wg)
-}
-
-func NewExecutorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
-	return newExecutor(wg)
 }

@@ -23,11 +23,6 @@ func accessSecretVersion(client *secretmanager.Client, name string) (string, err
 }
 
 func readKeysFromGSM() {
-	if Config.GoogleSecretManager.Enabled == false {
-		log.Debug("[GSM] Google Secret Manager is disabled")
-		return
-	}
-
 	if Config.GoogleSecretManager.ProjectId == "" {
 		log.Fatalf("[GSM] ProjectId is empty")
 	}
@@ -39,29 +34,25 @@ func readKeysFromGSM() {
 	}
 	defer client.Close()
 
-	if Config.Ethereum.PrivateKey == "" {
-		if Config.GoogleSecretManager.EthSecretName == "" {
-			log.Fatalf("[GSM] Ethereum secret name is empty")
-		}
-
-		log.Debug("[GSM] Reading ethereum private key")
-		Config.Ethereum.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.EthSecretName)
-		if err != nil {
-			log.Fatalf("[GSM] Failed to access ethereum private key: %v", err)
-		}
-		log.Info("[GSM] Successfully read ethereum private key")
+	if Config.GoogleSecretManager.EthSecretName == "" {
+		log.Fatalf("[GSM] Ethereum secret name is empty")
 	}
 
-	if Config.Pocket.PrivateKey == "" {
-		if Config.GoogleSecretManager.PoktSecretName == "" {
-			log.Fatalf("[GSM] Pocket secret name is empty")
-		}
-
-		log.Debug("[GSM] Reading pocket private key")
-		Config.Pocket.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.PoktSecretName)
-		if err != nil {
-			log.Fatalf("[GSM] Failed to access pocket private key: %v", err)
-		}
-		log.Info("[GSM] Successfully read pocket private key")
+	log.Debug("[GSM] Reading ethereum private key")
+	Config.Ethereum.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.EthSecretName)
+	if err != nil {
+		log.Fatalf("[GSM] Failed to access ethereum private key: %v", err)
 	}
+	log.Info("[GSM] Successfully read ethereum private key")
+
+	if Config.GoogleSecretManager.PoktSecretName == "" {
+		log.Fatalf("[GSM] Pocket secret name is empty")
+	}
+
+	log.Debug("[GSM] Reading pocket private key")
+	Config.Pocket.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.PoktSecretName)
+	if err != nil {
+		log.Fatalf("[GSM] Failed to access pocket private key: %v", err)
+	}
+	log.Info("[GSM] Successfully read pocket private key")
 }

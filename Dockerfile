@@ -10,8 +10,8 @@ COPY app ./app
 COPY eth ./eth
 COPY pokt ./pokt
 COPY models ./models
-COPY services.go ./
 COPY main.go ./
+COPY defaults.yml ./
 
 # build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /validator
@@ -81,4 +81,4 @@ ENV HEALTH_CHECK_INTERVAL_SECS ${HEALTH_CHECK_INTERVAL_SECS}
 ENV LOG_LEVEL ${LOG_LEVEL}
 
 # run
-CMD ["/validator"]
+CMD ["/validator", "--config", "/app/defaults.yml"]

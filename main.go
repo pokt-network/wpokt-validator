@@ -11,11 +11,22 @@ import (
 	"time"
 
 	"github.com/dan13ram/wpokt-validator/app"
-	eth "github.com/dan13ram/wpokt-validator/eth/client"
+	"github.com/dan13ram/wpokt-validator/eth"
 	"github.com/dan13ram/wpokt-validator/models"
-	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
+	"github.com/dan13ram/wpokt-validator/pokt"
 	log "github.com/sirupsen/logrus"
 )
+
+type ServiceFactory = func(*sync.WaitGroup, models.ServiceHealth) models.Service
+
+var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
+	pokt.MintMonitorName:  pokt.NewMonitor,
+	pokt.BurnSignerName:   pokt.NewSigner,
+	pokt.BurnExecutorName: pokt.NewExecutor,
+	eth.BurnMonitorName:   eth.NewMonitor,
+	eth.MintSignerName:    eth.NewSigner,
+	eth.MintExecutorName:  eth.NewExecutor,
+}
 
 func main() {
 
@@ -61,8 +72,8 @@ func main() {
 	defer cancel()
 	app.InitDB(dbCtx)
 
-	pokt.Client.ValidateNetwork()
-	eth.Client.ValidateNetwork()
+	pokt.ValidateNetwork()
+	eth.ValidateNetwork()
 
 	var wg sync.WaitGroup
 
@@ -80,8 +91,13 @@ func main() {
 
 	services := []models.Service{}
 
-	for serviceName, service := range GetServiceFactories() {
-		services = append(services, CreateService(&wg, serviceName, serviceHealthMap, service.CreateService, service.CreateServiceWithLastHealth))
+	for serviceName, NewService := range ServiceFactoryMap {
+		health := models.ServiceHealth{}
+		lastHealth, ok := serviceHealthMap[serviceName]
+		if ok {
+			health = lastHealth
+		}
+		services = append(services, NewService(&wg, health))
 	}
 
 	services = append(services, healthcheck)

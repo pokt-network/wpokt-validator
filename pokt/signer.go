@@ -237,7 +237,7 @@ func (m *BurnSignerService) SyncTxs() bool {
 	return success
 }
 
-func newSigner(wg *sync.WaitGroup) models.Service {
+func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) models.Service {
 	if app.Config.BurnSigner.Enabled == false {
 		log.Debug("[BURN SIGNER] BURN signer disabled")
 		return models.NewEmptyService(wg)
@@ -291,12 +291,4 @@ func newSigner(wg *sync.WaitGroup) models.Service {
 	log.Info("[BURN SIGNER] Initialized burn signer")
 
 	return m
-}
-
-func NewSigner(wg *sync.WaitGroup) models.Service {
-	return newSigner(wg)
-}
-
-func NewSignerWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
-	return newSigner(wg)
 }

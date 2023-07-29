@@ -157,7 +157,13 @@ func (m *MintMonitorService) SyncTxs() bool {
 	return success
 }
 
-func newMonitor(wg *sync.WaitGroup) *MintMonitorService {
+func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+	if !app.Config.MintMonitor.Enabled {
+		log.Debug("[MINT MONITOR] Pokt monitor disabled")
+		return models.NewEmptyService(wg)
+	}
+
+	log.Debug("[MINT MONITOR] Initializing mint monitor")
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
@@ -184,47 +190,20 @@ func newMonitor(wg *sync.WaitGroup) *MintMonitorService {
 		client:        pokt.NewClient(),
 	}
 
-	return m
-}
+	initHeight := (app.Config.Pocket.StartHeight)
 
-func NewMonitor(wg *sync.WaitGroup) models.Service {
-	if !app.Config.MintMonitor.Enabled {
-		log.Debug("[MINT MONITOR] Pokt monitor disabled")
-		return models.NewEmptyService(wg)
+	if (lastHealth.PoktHeight) != "" {
+		lastHeight, err := strconv.ParseInt(lastHealth.PoktHeight, 10, 64)
+		if err != nil {
+			log.Error("[MINT MONITOR] Error parsing last height: ", err)
+			initHeight = app.Config.Pocket.StartHeight
+		} else {
+			initHeight = lastHeight
+		}
 	}
-
-	log.Debug("[MINT MONITOR] Initializing mint monitor")
-
-	m := newMonitor(wg)
-
 	m.UpdateCurrentHeight()
 
-	m.InitStartHeight(app.Config.Pocket.StartHeight)
-
-	log.Info("[MINT MONITOR] Initialized mint monitor")
-
-	return m
-}
-
-func NewMonitorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
-	if !app.Config.MintMonitor.Enabled {
-		log.Debug("[MINT MONITOR] Pokt monitor disabled")
-		return models.NewEmptyService(wg)
-	}
-
-	log.Debug("[MINT MONITOR] Initializing mint monitor with last health")
-
-	m := newMonitor(wg)
-
-	lastHeight, err := strconv.ParseInt(lastHealth.PoktHeight, 10, 64)
-	if err != nil {
-		log.Error("[MINT MONITOR] Error parsing last height: ", err)
-		lastHeight = app.Config.Pocket.StartHeight
-	}
-
-	m.UpdateCurrentHeight()
-
-	m.InitStartHeight(lastHeight)
+	m.InitStartHeight(initHeight)
 
 	log.Info("[MINT MONITOR] Initialized mint monitor")
 

@@ -159,7 +159,13 @@ func (b *BurnMonitorService) SyncTxs() bool {
 	return success
 }
 
-func newMonitor(wg *sync.WaitGroup) *BurnMonitorService {
+func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+	if app.Config.BurnMonitor.Enabled == false {
+		log.Debug("[BURN MONITOR] BURN monitor disabled")
+		return models.NewEmptyService(wg)
+	}
+
+	log.Debug("[BURN MONITOR] Initializing burn monitor")
 	client, err := eth.NewClient()
 	if err != nil {
 		log.Fatal("[BURN MONITOR] Error initializing ethereum client: ", err)
@@ -182,49 +188,31 @@ func newMonitor(wg *sync.WaitGroup) *BurnMonitorService {
 		client:             client,
 	}
 
+	if app.Config.BurnMonitor.Enabled == false {
+		log.Debug("[BURN MONITOR] BURN monitor disabled")
+		return models.NewEmptyService(wg)
+	}
+
+	log.Debug("[BURN MONITOR] Initializing burn monitor")
+
+	initBlockNumber := int64(app.Config.Ethereum.StartBlockNumber)
+
+	if lastHealth.EthBlockNumber != "" {
+
+		lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64)
+		if err != nil {
+			log.Error("[BURN EXECUTOR] Error parsing last block number from last health", err)
+			initBlockNumber = app.Config.Ethereum.StartBlockNumber
+		} else {
+			initBlockNumber = lastBlockNumber
+		}
+	}
+
+	b.UpdateCurrentBlockNumber()
+
+	b.InitStartBlockNumber(initBlockNumber)
+
+	log.Info("[BURN MONITOR] Initialized burn monitor")
+
 	return b
-}
-
-func NewMonitor(wg *sync.WaitGroup) models.Service {
-	if app.Config.BurnMonitor.Enabled == false {
-		log.Debug("[BURN MONITOR] BURN monitor disabled")
-		return models.NewEmptyService(wg)
-	}
-
-	log.Debug("[BURN MONITOR] Initializing burn monitor")
-
-	m := newMonitor(wg)
-
-	m.UpdateCurrentBlockNumber()
-
-	m.InitStartBlockNumber(int64(app.Config.Ethereum.StartBlockNumber))
-
-	log.Info("[BURN MONITOR] Initialized burn monitor")
-
-	return m
-}
-
-func NewMonitorWithLastHealth(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
-	if app.Config.BurnMonitor.Enabled == false {
-		log.Debug("[BURN MONITOR] BURN monitor disabled")
-		return models.NewEmptyService(wg)
-	}
-
-	log.Debug("[BURN MONITOR] Initializing burn monitor")
-
-	m := newMonitor(wg)
-
-	lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64)
-	if err != nil {
-		log.Error("[BURN EXECUTOR] Error parsing last block number from last health", err)
-		lastBlockNumber = app.Config.Ethereum.StartBlockNumber
-	}
-
-	m.UpdateCurrentBlockNumber()
-
-	m.InitStartBlockNumber(lastBlockNumber)
-
-	log.Info("[BURN MONITOR] Initialized burn monitor")
-
-	return m
 }
