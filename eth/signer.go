@@ -253,7 +253,10 @@ func (x *MintSignerService) HandleMint(mint models.Mint) bool {
 		}
 	}
 
-	filter := bson.M{"_id": mint.Id}
+	filter := bson.M{
+		"_id":    mint.Id,
+		"status": bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
+	}
 
 	err = app.DB.UpdateOne(models.CollectionMints, filter, update)
 	if err != nil {

@@ -82,7 +82,7 @@ func (x *BurnExecutorService) Stop() {
 func (x *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 	log.Debug("[BURN EXECUTOR] Handling invalid mint: ", doc.TransactionHash)
 
-	filter := bson.M{"_id": doc.Id}
+	var filter bson.M
 	var update bson.M
 
 	if doc.Status == models.StatusSigned {
@@ -96,6 +96,11 @@ func (x *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
 			return false
+		}
+
+		filter = bson.M{
+			"_id":    doc.Id,
+			"status": models.StatusSigned,
 		}
 
 		update = bson.M{
@@ -112,6 +117,12 @@ func (x *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
 		}
+
+		filter = bson.M{
+			"_id":    doc.Id,
+			"status": models.StatusSubmitted,
+		}
+
 		update = bson.M{
 			"$set": bson.M{
 				"status":     models.StatusSuccess,
@@ -133,7 +144,7 @@ func (x *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 func (x *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 	log.Debug("[BURN EXECUTOR] Handling burn: ", doc.TransactionHash)
 
-	filter := bson.M{"_id": doc.Id}
+	var filter bson.M
 	var update bson.M
 
 	if doc.Status == models.StatusSigned {
@@ -149,6 +160,11 @@ func (x *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 			return false
 		}
 
+		filter = bson.M{
+			"_id":    doc.Id,
+			"status": models.StatusSigned,
+		}
+
 		update = bson.M{
 			"$set": bson.M{
 				"status":         models.StatusSubmitted,
@@ -162,6 +178,11 @@ func (x *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
+		}
+
+		filter = bson.M{
+			"_id":    doc.Id,
+			"status": models.StatusSubmitted,
 		}
 
 		update = bson.M{
