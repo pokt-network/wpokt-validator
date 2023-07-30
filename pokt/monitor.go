@@ -20,86 +20,82 @@ const (
 
 type MintMonitorService struct {
 	wg            *sync.WaitGroup
-	name          string
 	client        pokt.PocketClient
 	stop          chan bool
 	wpoktAddress  string
 	vaultAddress  string
-	lastSyncTime  time.Time
 	interval      time.Duration
 	startHeight   int64
 	currentHeight int64
+
+	healthMu sync.RWMutex
+	health   models.ServiceHealth
 }
 
-func (m *MintMonitorService) Start() {
+func (x *MintMonitorService) Start() {
 	log.Info("[MINT MONITOR] Starting service")
 	stop := false
 	for !stop {
 		log.Info("[MINT MONITOR] Starting sync")
-		m.lastSyncTime = time.Now()
 
-		m.UpdateCurrentHeight()
+		x.UpdateCurrentHeight()
 
-		if (m.currentHeight - m.startHeight) > 0 {
-			log.Info("[MINT MONITOR] Syncing mint txs from height: ", m.startHeight, " to height: ", m.currentHeight)
-			success := m.SyncTxs()
-			if success {
-				m.startHeight = m.currentHeight
-			}
-		} else {
-			log.Info("[MINT MONITOR] No new blocks to sync")
-		}
+		x.SyncTxs()
 
-		log.Info("[MINT MONITOR] Finished sync, Sleeping for ", m.interval)
+		x.UpdateHealth()
+
+		log.Info("[MINT MONITOR] Finished sync, Sleeping for ", x.interval)
 
 		select {
-		case <-m.stop:
+		case <-x.stop:
 			stop = true
 			log.Info("[MINT MONITOR] Stopped service")
-		case <-time.After(m.interval):
+		case <-time.After(x.interval):
 		}
 	}
-	m.wg.Done()
+	x.wg.Done()
 }
 
-func (m *MintMonitorService) Health() models.ServiceHealth {
-	return models.ServiceHealth{
-		Name:           m.name,
-		LastSyncTime:   m.lastSyncTime,
-		NextSyncTime:   m.lastSyncTime.Add(m.interval),
-		PoktHeight:     strconv.FormatInt(m.startHeight, 10),
+func (x *MintMonitorService) Health() models.ServiceHealth {
+	x.healthMu.RLock()
+	defer x.healthMu.RUnlock()
+
+	return x.health
+}
+
+func (x *MintMonitorService) UpdateHealth() {
+	x.healthMu.Lock()
+	defer x.healthMu.Unlock()
+
+	lastSyncTime := time.Now()
+
+	x.health = models.ServiceHealth{
+		Name:           MintMonitorName,
+		LastSyncTime:   lastSyncTime,
+		NextSyncTime:   lastSyncTime.Add(x.interval),
+		PoktHeight:     strconv.FormatInt(x.startHeight, 10),
 		EthBlockNumber: "",
 		Healthy:        true,
 	}
 }
 
-func (m *MintMonitorService) Stop() {
+func (x *MintMonitorService) Stop() {
 	log.Debug("[MINT MONITOR] Stopping service")
-	m.stop <- true
+	x.stop <- true
 }
 
-func (m *MintMonitorService) InitStartHeight(height int64) {
-	if height > 0 {
-		m.startHeight = height
-	} else {
-		log.Info("[MINT MONITOR] Found invalid start height, using current height")
-		m.startHeight = m.currentHeight
-	}
-	log.Info("[MINT MONITOR] Start height: ", m.startHeight)
-}
-
-func (m *MintMonitorService) UpdateCurrentHeight() {
-	res, err := m.client.GetHeight()
+func (x *MintMonitorService) UpdateCurrentHeight() {
+	res, err := x.client.GetHeight()
 	if err != nil {
 		log.Error("[MINT MONITOR] Error getting current height: ", err)
 		return
 	}
-	m.currentHeight = res.Height
-	log.Info("[MINT MONITOR] Current height: ", m.currentHeight)
+	x.currentHeight = res.Height
+	log.Info("[MINT MONITOR] Current height: ", x.currentHeight)
 }
 
-func (m *MintMonitorService) HandleInvalidMint(tx *pokt.TxResponse) bool {
-	doc := util.CreateInvalidMint(tx, m.vaultAddress)
+func (x *MintMonitorService) HandleInvalidMint(tx *pokt.TxResponse) bool {
+	doc := util.CreateInvalidMint(tx, x.vaultAddress)
 
 	log.Debug("[MINT MONITOR] Storing invalid mint tx")
 	err := app.DB.InsertOne(models.CollectionInvalidMints, doc)
@@ -116,8 +112,8 @@ func (m *MintMonitorService) HandleInvalidMint(tx *pokt.TxResponse) bool {
 	return true
 }
 
-func (m *MintMonitorService) HandleValidMint(tx *pokt.TxResponse, memo models.MintMemo) bool {
-	doc := util.CreateMint(tx, memo, m.wpoktAddress, m.vaultAddress)
+func (x *MintMonitorService) HandleValidMint(tx *pokt.TxResponse, memo models.MintMemo) bool {
+	doc := util.CreateMint(tx, memo, x.wpoktAddress, x.vaultAddress)
 
 	log.Debug("[MINT MONITOR] Storing mint tx")
 	err := app.DB.InsertOne(models.CollectionMints, doc)
@@ -134,8 +130,14 @@ func (m *MintMonitorService) HandleValidMint(tx *pokt.TxResponse, memo models.Mi
 	return true
 }
 
-func (m *MintMonitorService) SyncTxs() bool {
-	txs, err := m.client.GetAccountTxsByHeight(m.vaultAddress, int64(m.startHeight))
+func (x *MintMonitorService) SyncTxs() bool {
+
+	if x.currentHeight <= x.startHeight {
+		log.Info("[MINT MONITOR] No new blocks to sync")
+		return true
+	}
+
+	txs, err := x.client.GetAccountTxsByHeight(x.vaultAddress, x.startHeight)
 	if err != nil {
 		log.Error(err)
 		return false
@@ -147,13 +149,18 @@ func (m *MintMonitorService) SyncTxs() bool {
 
 		if !ok {
 			log.Info("[MINT MONITOR] Found invalid mint tx: ", tx.Hash, " with memo: ", "\""+tx.StdTx.Memo+"\"")
-			success = m.HandleInvalidMint(tx) && success
+			success = x.HandleInvalidMint(tx) && success
 			continue
 		}
 
 		log.Info("[MINT MONITOR] Found valid mint tx: ", tx.Hash, " with memo: ", tx.StdTx.Memo)
-		success = m.HandleValidMint(tx, memo) && success
+		success = x.HandleValidMint(tx, memo) && success
 	}
+
+	if success {
+		x.startHeight = x.currentHeight
+	}
+
 	return success
 }
 
@@ -178,9 +185,8 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Serv
 	multisigAddress := multisigPk.Address().String()
 	log.Debug("[MINT EXECUTOR] Multisig address: ", multisigAddress)
 
-	m := &MintMonitorService{
+	x := &MintMonitorService{
 		wg:            wg,
-		name:          MintMonitorName,
 		interval:      time.Duration(app.Config.MintMonitor.IntervalSecs) * time.Second,
 		vaultAddress:  multisigAddress,
 		wpoktAddress:  app.Config.Ethereum.WrappedPocketAddress,
@@ -190,22 +196,27 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Serv
 		client:        pokt.NewClient(),
 	}
 
-	initHeight := (app.Config.Pocket.StartHeight)
+	startHeight := (app.Config.Pocket.StartHeight)
 
 	if (lastHealth.PoktHeight) != "" {
-		lastHeight, err := strconv.ParseInt(lastHealth.PoktHeight, 10, 64)
-		if err != nil {
-			log.Error("[MINT MONITOR] Error parsing last height: ", err)
-			initHeight = app.Config.Pocket.StartHeight
-		} else {
-			initHeight = lastHeight
+		if lastHeight, err := strconv.ParseInt(lastHealth.PoktHeight, 10, 64); err == nil {
+			startHeight = lastHeight
 		}
 	}
-	m.UpdateCurrentHeight()
 
-	m.InitStartHeight(initHeight)
+	x.UpdateCurrentHeight()
+
+	if startHeight > 0 {
+		x.startHeight = startHeight
+	} else {
+		log.Info("[MINT MONITOR] Found invalid start height, using current height")
+		x.startHeight = x.currentHeight
+	}
+	log.Info("[MINT MONITOR] Start height: ", x.startHeight)
+
+	x.UpdateHealth()
 
 	log.Info("[MINT MONITOR] Initialized mint monitor")
 
-	return m
+	return x
 }

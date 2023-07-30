@@ -33,7 +33,6 @@ type MintSignerService struct {
 	stop                   chan bool
 	address                string
 	privateKey             *ecdsa.PrivateKey
-	lastSyncTime           time.Time
 	interval               time.Duration
 	vaultAddress           string
 	wpoktAddress           string
@@ -44,57 +43,74 @@ type MintSignerService struct {
 	poktClient             pokt.PocketClient
 	ethClient              eth.EthereumClient
 	poktHeight             int64
+
+	healthMu sync.RWMutex
+	health   models.ServiceHealth
 }
 
-func (m *MintSignerService) Start() {
+func (x *MintSignerService) Start() {
 	log.Info("[MINT SIGNER] Starting service")
 	stop := false
 	for !stop {
 		log.Info("[MINT SIGNER] Starting sync")
-		m.lastSyncTime = time.Now()
 
-		m.UpdateBlocks()
-		m.SyncTxs()
+		x.UpdateBlocks()
 
-		log.Info("[MINT SIGNER] Finished sync, Sleeping for ", m.interval)
+		x.SyncTxs()
+
+		x.UpdateHealth()
+
+		log.Info("[MINT SIGNER] Finished sync, Sleeping for ", x.interval)
 
 		select {
-		case <-m.stop:
+		case <-x.stop:
 			stop = true
 			log.Info("[MINT SIGNER] Stopped service")
-		case <-time.After(m.interval):
+		case <-time.After(x.interval):
 		}
 	}
-	m.wg.Done()
+	x.wg.Done()
 }
 
-func (m *MintSignerService) Health() models.ServiceHealth {
-	return models.ServiceHealth{
-		Name:           m.name,
-		LastSyncTime:   m.lastSyncTime,
-		NextSyncTime:   m.lastSyncTime.Add(m.interval),
-		PoktHeight:     strconv.FormatInt(m.poktHeight, 10),
+func (x *MintSignerService) Health() models.ServiceHealth {
+	x.healthMu.RLock()
+	defer x.healthMu.RUnlock()
+
+	return x.health
+}
+
+func (x *MintSignerService) UpdateHealth() {
+	x.healthMu.Lock()
+	defer x.healthMu.Unlock()
+
+	lastSyncTime := time.Now()
+
+	x.health = models.ServiceHealth{
+		Name:           MintSignerName,
+		LastSyncTime:   lastSyncTime,
+		NextSyncTime:   lastSyncTime.Add(x.interval),
+		PoktHeight:     strconv.FormatInt(x.poktHeight, 10),
 		EthBlockNumber: "",
 		Healthy:        true,
 	}
 }
 
-func (m *MintSignerService) Stop() {
+func (x *MintSignerService) Stop() {
 	log.Debug("[MINT SIGNER] Stopping service")
-	m.stop <- true
+	x.stop <- true
 }
 
-func (m *MintSignerService) UpdateBlocks() {
+func (x *MintSignerService) UpdateBlocks() {
 	log.Debug("[MINT SIGNER] Updating blocks")
-	poktHeight, err := m.poktClient.GetHeight()
+	poktHeight, err := x.poktClient.GetHeight()
 	if err != nil {
 		log.Error("[MINT SIGNER] Error fetching pokt block height: ", err)
 		return
 	}
-	m.poktHeight = poktHeight.Height
+	x.poktHeight = poktHeight.Height
 }
 
-func (m *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
+func (x *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 	log.Debug("[MINT SIGNER] Finding nonce for mint: ", mint.TransactionHash)
 	var nonce *big.Int
 
@@ -112,7 +128,7 @@ func (m *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
 		defer cancel()
 		opts := &bind.CallOpts{Context: ctx, Pending: false}
-		currentNonce, err := m.wpoktContract.GetUserNonce(opts, common.HexToAddress(mint.RecipientAddress))
+		currentNonce, err := x.wpoktContract.GetUserNonce(opts, common.HexToAddress(mint.RecipientAddress))
 		if err != nil {
 			log.Error("[MINT SIGNER] Error fetching nonce from contract: ", err)
 			return nil, err
@@ -122,8 +138,8 @@ func (m *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 		var pendingMints []models.Mint
 		filter := bson.M{
 			"_id":               bson.M{"$ne": mint.Id},
-			"vault_address":     m.vaultAddress,
-			"wpokt_address":     m.wpoktAddress,
+			"vault_address":     x.vaultAddress,
+			"wpokt_address":     x.wpoktAddress,
 			"recipient_address": mint.RecipientAddress,
 			"status":            bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed, models.StatusSigned}},
 		}
@@ -165,7 +181,7 @@ func (m *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 	return nonce, nil
 }
 
-func (m *MintSignerService) HandleMint(mint models.Mint) bool {
+func (x *MintSignerService) HandleMint(mint models.Mint) bool {
 	log.Debug("[MINT SIGNER] Handling mint: ", mint.TransactionHash)
 
 	address := common.HexToAddress(mint.RecipientAddress)
@@ -175,7 +191,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 		return false
 	}
 
-	nonce, err := m.FindNonce(mint)
+	nonce, err := x.FindNonce(mint)
 
 	if err != nil {
 		log.Error("[MINT SIGNER] Error fetching nonce: ", err)
@@ -194,7 +210,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 		Nonce:     nonce,
 	}
 
-	mint, err = util.UpdateStatusAndConfirmationsForMint(mint, m.poktHeight)
+	mint, err = util.UpdateStatusAndConfirmationsForMint(mint, x.poktHeight)
 	if err != nil {
 		log.Error("[MINT SIGNER] Error updating status and confirmations for mint: ", err)
 		return false
@@ -204,7 +220,7 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 	if mint.Status == models.StatusConfirmed {
 		log.Debug("[MINT SIGNER] Mint confirmed, signing")
 
-		mint, err := util.SignMint(mint, data, m.domain, m.privateKey, m.numSigners)
+		mint, err := util.SignMint(mint, data, x.domain, x.privateKey, x.numSigners)
 		if err != nil {
 			log.Error("[MINT SIGNER] Error signing mint: ", err)
 			return false
@@ -249,15 +265,15 @@ func (m *MintSignerService) HandleMint(mint models.Mint) bool {
 	return true
 }
 
-func (m *MintSignerService) SyncTxs() bool {
+func (x *MintSignerService) SyncTxs() bool {
 	log.Debug("[MINT SIGNER] Syncing pending txs")
 
 	filter := bson.M{
-		"wpokt_address": m.wpoktAddress,
-		"vault_address": m.vaultAddress,
+		"wpokt_address": x.wpoktAddress,
+		"vault_address": x.vaultAddress,
 		"status":        bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
 		"signers": bson.M{
-			"$nin": []string{m.address},
+			"$nin": []string{x.address},
 		},
 	}
 
@@ -271,8 +287,7 @@ func (m *MintSignerService) SyncTxs() bool {
 
 	var success bool = true
 	for _, mint := range results {
-		success = m.HandleMint(mint) && success
-
+		success = x.HandleMint(mint) && success
 	}
 
 	log.Debug("[MINT SIGNER] Finished syncing pending txs")
@@ -324,7 +339,7 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Servi
 	}
 	log.Debug("[MINT SIGNER] Fetched mint controller domain data")
 
-	b := &MintSignerService{
+	x := &MintSignerService{
 		wg:                     wg,
 		name:                   MintSignerName,
 		stop:                   make(chan bool),
@@ -341,7 +356,11 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Servi
 		poktClient:             pokt.NewClient(),
 	}
 
+	x.UpdateBlocks()
+
+	x.UpdateHealth()
+
 	log.Info("[MINT SIGNER] Initialized mint signer")
 
-	return b
+	return x
 }

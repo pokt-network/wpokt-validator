@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/eth"
@@ -68,9 +66,7 @@ func main() {
 	app.InitLogger()
 	log.Info("[MAIN] Logger initialized")
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(app.Config.MongoDB.TimeoutSecs))
-	defer cancel()
-	app.InitDB(dbCtx)
+	app.InitDB()
 
 	pokt.ValidateNetwork()
 	eth.ValidateNetwork()
@@ -79,11 +75,8 @@ func main() {
 
 	healthcheck := app.NewHealthCheck(&wg)
 
-	lastHealth, err := healthcheck.FindLastHealth()
 	serviceHealthMap := make(map[string]models.ServiceHealth)
-	if err != nil {
-		log.Warn("[MAIN] Error getting last health: ", err)
-	} else {
+	if lastHealth, err := healthcheck.FindLastHealth(); err == nil {
 		for _, serviceHealth := range lastHealth.ServiceHealths {
 			serviceHealthMap[serviceHealth.Name] = serviceHealth
 		}
@@ -93,8 +86,7 @@ func main() {
 
 	for serviceName, NewService := range ServiceFactoryMap {
 		health := models.ServiceHealth{}
-		lastHealth, ok := serviceHealthMap[serviceName]
-		if ok {
+		if lastHealth, ok := serviceHealthMap[serviceName]; ok {
 			health = lastHealth
 		}
 		services = append(services, NewService(&wg, health))

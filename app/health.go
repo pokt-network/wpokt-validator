@@ -13,9 +13,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+const (
+	HealthServiceName = "health"
+)
+
 type HealthService struct {
 	wg               *sync.WaitGroup
-	name             string
 	stop             chan bool
 	poktSigners      []string
 	poktPublicKey    string
@@ -26,7 +29,6 @@ type HealthService struct {
 	wpoktAddress     string
 	hostname         string
 	validatorId      string
-	lastSyncTime     time.Time
 	interval         time.Duration
 	services         []models.Service
 }
@@ -38,10 +40,11 @@ type HealthServiceInterface interface {
 }
 
 func (b *HealthService) Health() models.ServiceHealth {
+	lastSyncTime := time.Now()
 	return models.ServiceHealth{
-		Name:           b.name,
-		LastSyncTime:   b.lastSyncTime,
-		NextSyncTime:   b.lastSyncTime.Add(b.interval),
+		Name:           HealthServiceName,
+		LastSyncTime:   lastSyncTime,
+		NextSyncTime:   lastSyncTime.Add(b.interval),
 		PoktHeight:     "",
 		EthBlockNumber: "",
 		Healthy:        true,
@@ -52,7 +55,6 @@ func (b *HealthService) Start() {
 	stop := false
 	for !stop {
 		log.Info("[HEALTH] Starting sync")
-		b.lastSyncTime = time.Now()
 
 		b.PostHealth()
 
@@ -84,11 +86,11 @@ func (b *HealthService) FindLastHealth() (models.Health, error) {
 func (b *HealthService) ServiceHealths() []models.ServiceHealth {
 	var serviceHealths []models.ServiceHealth
 	for _, service := range b.services {
-		health := service.Health()
-		if health.Name == models.EmptyServiceName {
+		serviceHealth := service.Health()
+		if serviceHealth.Name == models.EmptyServiceName || serviceHealth.Name == "" {
 			continue
 		}
-		serviceHealths = append(serviceHealths, health)
+		serviceHealths = append(serviceHealths, serviceHealth)
 	}
 	return serviceHealths
 }
@@ -183,7 +185,6 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 	}
 
 	b := &HealthService{
-		name:             "health",
 		stop:             make(chan bool),
 		interval:         time.Duration(Config.HealthCheck.IntervalSecs) * time.Second,
 		poktVaultAddress: multisigPkAddress,

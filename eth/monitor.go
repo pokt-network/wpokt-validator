@@ -24,84 +24,80 @@ const (
 
 type BurnMonitorService struct {
 	wg                 *sync.WaitGroup
-	name               string
 	stop               chan bool
 	startBlockNumber   int64
 	currentBlockNumber int64
-	lastSyncTime       time.Time
 	interval           time.Duration
 	wpoktContract      *autogen.WrappedPocket
 	client             eth.EthereumClient
+
+	healthMu sync.RWMutex
+	health   models.ServiceHealth
 }
 
-func (b *BurnMonitorService) Start() {
+func (x *BurnMonitorService) Start() {
 	log.Info("[BURN MONITOR] Starting service")
 	stop := false
 	for !stop {
 		log.Info("[BURN MONITOR] Starting sync")
-		b.lastSyncTime = time.Now()
 
-		b.UpdateCurrentBlockNumber()
+		x.UpdateCurrentBlockNumber()
 
-		if (b.currentBlockNumber - b.startBlockNumber) > 0 {
-			success := b.SyncTxs()
-			if success {
-				b.startBlockNumber = b.currentBlockNumber
-			}
-		} else {
-			log.Info("[BURN MONITOR] No new blocks to sync")
-		}
+		x.SyncTxs()
 
-		log.Info("[BURN MONITOR] Finished sync, Sleeping for ", b.interval)
+		x.UpdateHealth()
+
+		log.Info("[BURN MONITOR] Finished sync, Sleeping for ", x.interval)
 
 		select {
-		case <-b.stop:
+		case <-x.stop:
 			stop = true
 			log.Info("[BURN MONITOR] Stopped service")
-		case <-time.After(b.interval):
+		case <-time.After(x.interval):
 		}
 	}
-	b.wg.Done()
+	x.wg.Done()
 }
 
-func (b *BurnMonitorService) Health() models.ServiceHealth {
-	return models.ServiceHealth{
-		Name:           b.name,
-		LastSyncTime:   b.lastSyncTime,
-		NextSyncTime:   b.lastSyncTime.Add(b.interval),
+func (x *BurnMonitorService) Health() models.ServiceHealth {
+	x.healthMu.RLock()
+	defer x.healthMu.RUnlock()
+
+	return x.health
+}
+
+func (x *BurnMonitorService) UpdateHealth() {
+	x.healthMu.Lock()
+	defer x.healthMu.Unlock()
+
+	lastSyncTime := time.Now()
+
+	x.health = models.ServiceHealth{
+		Name:           BurnMonitorName,
+		LastSyncTime:   lastSyncTime,
+		NextSyncTime:   lastSyncTime.Add(x.interval),
 		PoktHeight:     "",
-		EthBlockNumber: strconv.FormatInt(b.startBlockNumber, 10),
+		EthBlockNumber: strconv.FormatInt(x.startBlockNumber, 10),
 		Healthy:        true,
 	}
 }
 
-func (b *BurnMonitorService) Stop() {
+func (x *BurnMonitorService) Stop() {
 	log.Debug("[BURN MONITOR] Stopping service")
-	b.stop <- true
+	x.stop <- true
 }
 
-func (b *BurnMonitorService) InitStartBlockNumber(startBlockNumber int64) {
-	if app.Config.Ethereum.StartBlockNumber > 0 {
-		b.startBlockNumber = int64(app.Config.Ethereum.StartBlockNumber)
-	} else {
-		log.Warn("[BURN MONITOR] Found invalid start block number, updating to current block number")
-		b.startBlockNumber = b.currentBlockNumber
-	}
-
-	log.Info("[BURN EXECUTOR] Start block number: ", b.startBlockNumber)
-}
-
-func (b *BurnMonitorService) UpdateCurrentBlockNumber() {
-	res, err := b.client.GetBlockNumber()
+func (x *BurnMonitorService) UpdateCurrentBlockNumber() {
+	res, err := x.client.GetBlockNumber()
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	b.currentBlockNumber = int64(res)
-	log.Info("[BURN MONITOR] Current block number: ", b.currentBlockNumber)
+	x.currentBlockNumber = int64(res)
+	log.Info("[BURN MONITOR] Current block number: ", x.currentBlockNumber)
 }
 
-func (b *BurnMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAndBridge) bool {
+func (x *BurnMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAndBridge) bool {
 	doc := util.CreateBurn(event)
 
 	// each event is a combination of transaction hash and log index
@@ -121,41 +117,51 @@ func (b *BurnMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAnd
 	return true
 }
 
-func (b *BurnMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
-	filter, err := b.wpoktContract.FilterBurnAndBridge(&bind.FilterOpts{
+func (x *BurnMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
+	filter, err := x.wpoktContract.FilterBurnAndBridge(&bind.FilterOpts{
 		Start:   startBlockNumber,
 		End:     &endBlockNumber,
 		Context: context.Background(),
 	}, []*big.Int{}, []common.Address{}, []common.Address{})
 
 	if err != nil {
-		log.Errorln("[BURN MONITOR] Error while syncing burn events: ", err)
+		log.Error("[BURN MONITOR] Error while syncing burn events: ", err)
 		return false
 	}
 
 	var success bool = true
 	for filter.Next() {
-		success = success && b.HandleBurnEvent(filter.Event)
+		success = success && x.HandleBurnEvent(filter.Event)
 	}
 	return success
 }
 
-func (b *BurnMonitorService) SyncTxs() bool {
+func (x *BurnMonitorService) SyncTxs() bool {
+	if x.currentBlockNumber <= x.startBlockNumber {
+		log.Info("[BURN MONITOR] [MINT EXECUTOR] No new blocks to sync")
+		return true
+	}
+
 	var success bool = true
-	if (b.currentBlockNumber - b.startBlockNumber) > eth.MAX_QUERY_BLOCKS {
+	if (x.currentBlockNumber - x.startBlockNumber) > eth.MAX_QUERY_BLOCKS {
 		log.Debug("[BURN MONITOR] Syncing burn txs in chunks")
-		for i := b.startBlockNumber; i < b.currentBlockNumber; i += eth.MAX_QUERY_BLOCKS {
+		for i := x.startBlockNumber; i < x.currentBlockNumber; i += eth.MAX_QUERY_BLOCKS {
 			endBlockNumber := i + eth.MAX_QUERY_BLOCKS
-			if endBlockNumber > b.currentBlockNumber {
-				endBlockNumber = b.currentBlockNumber
+			if endBlockNumber > x.currentBlockNumber {
+				endBlockNumber = x.currentBlockNumber
 			}
 			log.Info("[BURN MONITOR] Syncing burn txs from blockNumber: ", i, " to blockNumber: ", endBlockNumber)
-			success = success && b.SyncBlocks(uint64(i), uint64(endBlockNumber))
+			success = success && x.SyncBlocks(uint64(i), uint64(endBlockNumber))
 		}
 	} else {
-		log.Info("[BURN MONITOR] Syncing burn txs from blockNumber: ", b.startBlockNumber, " to blockNumber: ", b.currentBlockNumber)
-		success = success && b.SyncBlocks(uint64(b.startBlockNumber), uint64(b.currentBlockNumber))
+		log.Info("[BURN MONITOR] Syncing burn txs from blockNumber: ", x.startBlockNumber, " to blockNumber: ", x.currentBlockNumber)
+		success = success && x.SyncBlocks(uint64(x.startBlockNumber), uint64(x.currentBlockNumber))
 	}
+
+	if success {
+		x.startBlockNumber = x.currentBlockNumber
+	}
+
 	return success
 }
 
@@ -177,9 +183,8 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Serv
 	}
 	log.Debug("[BURN MONITOR] Connected to wpokt contract")
 
-	b := &BurnMonitorService{
+	x := &BurnMonitorService{
 		wg:                 wg,
-		name:               BurnMonitorName,
 		stop:               make(chan bool),
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
@@ -189,30 +194,32 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Serv
 	}
 
 	if app.Config.BurnMonitor.Enabled == false {
-		log.Debug("[BURN MONITOR] BURN monitor disabled")
+		log.Debug("[BURN MONITOR] burn monitor disabled")
 		return models.NewEmptyService(wg)
 	}
 
 	log.Debug("[BURN MONITOR] Initializing burn monitor")
 
-	initBlockNumber := int64(app.Config.Ethereum.StartBlockNumber)
+	x.UpdateCurrentBlockNumber()
 
-	if lastHealth.EthBlockNumber != "" {
+	startBlockNumber := int64(app.Config.Ethereum.StartBlockNumber)
 
-		lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error parsing last block number from last health", err)
-			initBlockNumber = app.Config.Ethereum.StartBlockNumber
-		} else {
-			initBlockNumber = lastBlockNumber
-		}
+	if lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64); err == nil {
+		startBlockNumber = lastBlockNumber
 	}
 
-	b.UpdateCurrentBlockNumber()
+	if startBlockNumber > 0 {
+		x.startBlockNumber = startBlockNumber
+	} else {
+		log.Warn("Found invalid start block number, updating to current block number")
+		x.startBlockNumber = x.currentBlockNumber
+	}
 
-	b.InitStartBlockNumber(initBlockNumber)
+	log.Info("[BURN MONITOR] Start block number: ", x.startBlockNumber)
+
+	x.UpdateHealth()
 
 	log.Info("[BURN MONITOR] Initialized burn monitor")
 
-	return b
+	return x
 }

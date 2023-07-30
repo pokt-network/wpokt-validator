@@ -14,7 +14,7 @@ import (
 )
 
 type Database interface {
-	Connect(ctx context.Context) error
+	Connect() error
 	SetupIndexes() error
 	Disconnect() error
 	InsertOne(collection string, data interface{}) error
@@ -34,9 +34,12 @@ var (
 )
 
 // Connect connects to the database
-func (d *mongoDatabase) Connect(ctx context.Context) error {
+func (d *mongoDatabase) Connect() error {
 	log.Debug("[DB] Connecting to database")
 	wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Duration(Config.MongoDB.TimeoutSecs)*time.Second))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
+	defer cancel()
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(Config.MongoDB.URI).SetWriteConcern(wcMajority))
 	if err != nil {
@@ -104,9 +107,10 @@ func (d *mongoDatabase) Disconnect() error {
 }
 
 // InitDB creates a new database wrapper
-func InitDB(ctx context.Context) {
+func InitDB() {
 	DB = &mongoDatabase{}
-	err := DB.Connect(ctx)
+
+	err := DB.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
