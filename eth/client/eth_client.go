@@ -61,28 +61,30 @@ func (c *ethereumClient) GetChainId() (*big.Int, error) {
 
 func (c *ethereumClient) ValidateNetwork() {
 	log.Debugln("[ETH]", "Validating network")
-	log.Debugln("[ETH]", "URL", app.Config.Ethereum.RPCURL)
+	log.Debugln("[ETH]", "uri", app.Config.Ethereum.RPCURL)
 	client, err := ethclient.Dial(app.Config.Ethereum.RPCURL)
 	if err != nil {
 		log.Fatalln("[ETH]", "Failed to connect to Ethereum node:", err)
 	}
 	c.client = client
 
-	blockNumber, err := c.GetBlockNumber()
-	if err != nil {
-		log.Fatalln("[ETH]", "Failed to get block number:", err)
-	}
-	log.Debugln("[ETH]", "Validating network", "blockNumber", blockNumber)
-
 	chainId, err := c.GetChainId()
 	if err != nil {
 		log.Fatalln("[ETH]", "Failed to get chain ID:", err)
 	}
-	log.Debugln("[ETH]", "Validating network", "chainId", chainId.Uint64())
+	blockNumber, err := c.GetBlockNumber()
+	if err != nil {
+		log.Fatalln("[ETH]", "Failed to get block number:", err)
+	}
+
+	log.Debugln("[ETH]", "chainId", chainId.Uint64())
 
 	if chainId.String() != app.Config.Ethereum.ChainId {
 		log.Fatalln("[ETH]", "Chain ID Mismatch", "expected", app.Config.Ethereum.ChainId, "got", chainId.Uint64())
 	}
+
+	log.Debugln("[ETH]", "blockNumber", blockNumber)
+
 	log.Infoln("[ETH]", "Validated network")
 }
 
