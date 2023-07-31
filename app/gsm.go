@@ -34,25 +34,43 @@ func readKeysFromGSM() {
 	}
 	defer client.Close()
 
-	if Config.GoogleSecretManager.EthSecretName == "" {
+	if Config.MongoDB.URI == "" && Config.GoogleSecretManager.MongoSecretName == "" {
+		log.Fatalf("[GSM] Mongo secret name is empty")
+	}
+
+	if Config.GoogleSecretManager.MongoSecretName != "" {
+		log.Debug("[GSM] Reading mongo uri")
+		Config.MongoDB.URI, err = accessSecretVersion(client, Config.GoogleSecretManager.MongoSecretName)
+		if err != nil {
+			log.Fatalf("[GSM] Failed to access mongo uri: %v", err)
+		}
+		log.Info("[GSM] Successfully read mongo uri")
+	}
+
+	if Config.Ethereum.PrivateKey == "" && Config.GoogleSecretManager.EthSecretName == "" {
 		log.Fatalf("[GSM] Ethereum secret name is empty")
 	}
 
-	log.Debug("[GSM] Reading ethereum private key")
-	Config.Ethereum.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.EthSecretName)
-	if err != nil {
-		log.Fatalf("[GSM] Failed to access ethereum private key: %v", err)
-	}
-	log.Info("[GSM] Successfully read ethereum private key")
+	if Config.GoogleSecretManager.EthSecretName != "" {
+		log.Debug("[GSM] Reading ethereum private key")
+		Config.Ethereum.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.EthSecretName)
+		if err != nil {
+			log.Fatalf("[GSM] Failed to access ethereum private key: %v", err)
+		}
+		log.Info("[GSM] Successfully read ethereum private key")
 
-	if Config.GoogleSecretManager.PoktSecretName == "" {
+	}
+
+	if Config.Pocket.PrivateKey == "" && Config.GoogleSecretManager.PoktSecretName == "" {
 		log.Fatalf("[GSM] Pocket secret name is empty")
 	}
 
-	log.Debug("[GSM] Reading pocket private key")
-	Config.Pocket.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.PoktSecretName)
-	if err != nil {
-		log.Fatalf("[GSM] Failed to access pocket private key: %v", err)
+	if Config.GoogleSecretManager.PoktSecretName != "" {
+		log.Debug("[GSM] Reading pocket private key")
+		Config.Pocket.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.PoktSecretName)
+		if err != nil {
+			log.Fatalf("[GSM] Failed to access pocket private key: %v", err)
+		}
+		log.Info("[GSM] Successfully read pocket private key")
 	}
-	log.Info("[GSM] Successfully read pocket private key")
 }

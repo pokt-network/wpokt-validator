@@ -267,6 +267,9 @@ func readConfigFromENV(envFile string) {
 	if Config.GoogleSecretManager.ProjectId == "" {
 		Config.GoogleSecretManager.ProjectId = os.Getenv("GOOGLE_PROJECT_ID")
 	}
+	if Config.GoogleSecretManager.MongoSecretName == "" {
+		Config.GoogleSecretManager.MongoSecretName = os.Getenv("GOOGLE_MONGO_SECRET_NAME")
+	}
 	if Config.GoogleSecretManager.PoktSecretName == "" {
 		Config.GoogleSecretManager.PoktSecretName = os.Getenv("GOOGLE_POKT_SECRET_NAME")
 	}

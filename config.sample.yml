@@ -64,5 +64,6 @@ logger:
 google_secret_manager:
   enabled: false
   project_id: ""
+  mongo_secret_name: ""
   pokt_secret_name: ""
   eth_secret_name: ""
