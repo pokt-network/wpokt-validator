@@ -83,7 +83,8 @@ func NewRunnerService(
 
 ) Service {
 	if (name == "") || (runner == nil) || (wg == nil) || (interval == 0) {
-		log.Fatal("[RUNNER] Invalid parameters")
+		log.Debug("[RUNNER] Invalid parameters")
+		return nil
 	}
 
 	return &RunnerService{
