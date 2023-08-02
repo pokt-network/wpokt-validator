@@ -63,7 +63,6 @@ logger:
 
 google_secret_manager:
   enabled: false
-  project_id: ""
-  mongo_secret_name: ""
+  mongo_secret_name: "" # projects/<project-id>/secrets/<secret-name>/versions/latest
   pokt_secret_name: ""
   eth_secret_name: ""

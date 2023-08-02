@@ -69,14 +69,14 @@ The wPOKT Validator can be configured in the following ways:
     ETH_PRIVATE_KEY="your_eth_private_key" ETH_RPC_URL="your_eth_rpc_url" ... go run .
     ```
 
-If both a config file and an env file are provided, the `config.yml` file will be loaded first, and then the env file will be read. Any falsy values in the config will be updated with corresponding values from the env file.
+If both a config file and an env file are provided, the config file will be loaded first, followed by the env file. Non-empty values from the env file or provided through environment variables will take precedence over the corresponding values from the config file.
 
 ### Using Docker Compose
 
-You can also run the wPOKT Validator using `docker-compose` with the provided `.env` file. Execute the following command in the project directory:
+You can also run the wPOKT Validator using `docker-compose`. Execute the following command in the project directory:
 
 ```bash
-docker-compose --env-file .env up
+docker-compose --env-file .env up --build
 ```
 
 ## Valid Memo
@@ -94,7 +94,7 @@ Transactions with memos not conforming to this format will not be processed by t
 
 ## Docker Image
 
-The wPOKT Validator is also available as a Docker image hosted on Docker Hub. You can run the validator in a Docker container using the following command:
+The wPOKT Validator is also available as a Docker image hosted on [Docker Hub](https://hub.docker.com/r/dan13ram/wpokt-validator). You can run the validator in a Docker container using the following command:
 
 ```bash
 docker run -d --env-file .env docker.io/dan13ram/wpokt-validator:latest

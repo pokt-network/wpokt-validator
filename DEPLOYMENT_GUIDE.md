@@ -26,13 +26,15 @@ This guide will walk you through the process of deploying wPOKT Validators on Go
 
 4. Update the MintController Smart Contract on the Ethereum network with the Ethereum addresses of the N validators. The MintController Smart Contract will utilize these addresses to validate signatures from the deployed validators during the bridging process.
 
-### Step 4: Store Private Keys in Secret Manager
+### Step 4: Store Secrets in Secret Manager
 
 1. Add all the Ethereum and Pocket private keys to the Secret Manager on GCP. Ensure you securely store these keys as they are crucial for your validator's operation.
 
-2. Note down the names of all the secrets created in Secret Manager. You will use these secret names during the deployment process.
+2. Also add the MongoDB URI with read-and-write permissions to the Secret Manager. This URI will be used to connect to the MongoDB cluster.
 
-3. Additionally, consider storing copies of the private keys in other secure places for additional redundancy and security. You might want to use hardware wallets, cold storage devices, or other secure offline storage methods to safeguard your validator's private keys.
+3. Note down the names of all the secrets created in Secret Manager. You will use these secret names during the deployment process.
+
+4. Additionally, consider storing copies of the private keys in other secure places for additional redundancy and security. You might want to use hardware wallets, cold storage devices, or other secure offline storage methods to safeguard your validator's private keys.
 
 ### Step 5: Optional - Create Service Accounts and Separate Key Pairs
 
@@ -44,15 +46,13 @@ This guide will walk you through the process of deploying wPOKT Validators on Go
 
 1. Create a VM template on GCP's "Compute Engine" that includes the docker image for the wPOKT Validator and valid environment variables.
 
-2. Set the following environment variables:
+2. Set the default environment variables for:
 
-    - MongoDB URI with read-and-write permissions: Provide the URI to access the MongoDB cluster with read-and-write permissions.
+    - Ethereum network configuration
 
-    - Ethereum network configuration: Use the valid Ethereum private key secret name from Secret Manager, Ethereum RPC URL, and chain ID.
+    - Pocket network configuration
 
-    - Pocket network configuration: Utilize the valid Pocket private key secret name from Secret Manager, Pocket RPC URL, chain ID, and the generated Pocket multisig address.
-
-    - Google Cloud Project ID: Add the project ID for your GCP project to ensure proper authentication and billing.
+    - Google secret manager configuration
 
 Refer to the sample `config.sample.yml` or `sample.env` files for reference on how to structure the environment variables.
 

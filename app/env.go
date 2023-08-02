@@ -127,7 +127,7 @@ func readConfigFromENV(envFile string) {
 	if os.Getenv("POKT_VAULT_ADDRESS") != "" {
 		Config.Pocket.VaultAddress = os.Getenv("POKT_VAULT_ADDRESS")
 	}
-	if Config.Pocket.MultisigPublicKeys == nil || len(Config.Pocket.MultisigPublicKeys) == 0 {
+	if os.Getenv("POKT_MULTISIG_PUBLIC_KEYS") != "" {
 		multisigPublicKeys := os.Getenv("POKT_MULTISIG_PUBLIC_KEYS")
 		Config.Pocket.MultisigPublicKeys = strings.Split(multisigPublicKeys, ",")
 	}
@@ -241,7 +241,7 @@ func readConfigFromENV(envFile string) {
 	}
 
 	// health check
-	if Config.HealthCheck.IntervalSecs == 0 {
+	if os.Getenv("HEALTH_CHECK_INTERVAL_SECS") != "" {
 		intervalSecs, err := strconv.ParseInt(os.Getenv("HEALTH_CHECK_INTERVAL_SECS"), 10, 64)
 		if err != nil {
 			log.Warn("[ENV] Error parsing HEALTH_CHECK_INTERVAL_SECS: ", err.Error())
@@ -251,7 +251,7 @@ func readConfigFromENV(envFile string) {
 	}
 
 	// logging
-	if Config.Logger.Level == "" {
+	if os.Getenv("LOG_LEVEL") != "" {
 		logLevel := os.Getenv("LOG_LEVEL")
 		if logLevel == "" {
 			log.Warn("[ENV] Setting LogLevel to debug")
@@ -262,7 +262,7 @@ func readConfigFromENV(envFile string) {
 	}
 
 	// google secret manager
-	if Config.GoogleSecretManager.Enabled == false && os.Getenv("GOOGLE_SECRET_MANAGER_ENABLED") != "" {
+	if os.Getenv("GOOGLE_SECRET_MANAGER_ENABLED") != "" {
 		enabled, err := strconv.ParseBool(os.Getenv("GOOGLE_SECRET_MANAGER_ENABLED"))
 		if err != nil {
 			log.Warn("[ENV] Error parsing GOOGLE_SECRET_MANAGER_ENABLED: ", err.Error())
@@ -270,16 +270,13 @@ func readConfigFromENV(envFile string) {
 			Config.GoogleSecretManager.Enabled = enabled
 		}
 	}
-	if Config.GoogleSecretManager.ProjectId == "" {
-		Config.GoogleSecretManager.ProjectId = os.Getenv("GOOGLE_PROJECT_ID")
-	}
-	if Config.GoogleSecretManager.MongoSecretName == "" {
+	if os.Getenv("GOOGLE_MONGO_SECRET_NAME") != "" {
 		Config.GoogleSecretManager.MongoSecretName = os.Getenv("GOOGLE_MONGO_SECRET_NAME")
 	}
-	if Config.GoogleSecretManager.PoktSecretName == "" {
+	if os.Getenv("GOOGLE_POKT_SECRET_NAME") != "" {
 		Config.GoogleSecretManager.PoktSecretName = os.Getenv("GOOGLE_POKT_SECRET_NAME")
 	}
-	if Config.GoogleSecretManager.EthSecretName == "" {
+	if os.Getenv("GOOGLE_ETH_SECRET_NAME") != "" {
 		Config.GoogleSecretManager.EthSecretName = os.Getenv("GOOGLE_ETH_SECRET_NAME")
 	}
 

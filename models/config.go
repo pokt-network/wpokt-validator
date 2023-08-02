@@ -17,7 +17,6 @@ type Config struct {
 
 type GoogleSecretManagerConfig struct {
 	Enabled         bool   `yaml:"enabled" json:"enabled"`
-	ProjectId       string `yaml:"project_id" json:"project_id"`
 	MongoSecretName string `yaml:"mongo_secret_name" json:"mongo_secret_name"`
 	PoktSecretName  string `yaml:"pokt_secret_name" json:"pokt_secret_name"`
 	EthSecretName   string `yaml:"eth_secret_name" json:"eth_secret_name"`
