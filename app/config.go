@@ -1,7 +1,7 @@
 package app
 
 import (
-	"io/ioutil"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,19 +14,21 @@ var (
 )
 
 func InitConfig(configFile string, envFile string) {
+	log.Debug("[CONFIG] Initializing config")
 	readConfigFromConfigFile(configFile)
 	readConfigFromENV(envFile)
-	if Config.GoogleSecretManager.Enabled == true {
-		readKeysFromGSM()
-	}
+	readKeysFromGSM()
 	validateConfig()
+	log.Info("[CONFIG] Config initialized")
 }
 
 func readConfigFromConfigFile(configFile string) {
 	if configFile == "" {
+		log.Debug("[CONFIG] No config file provided")
 		return
 	}
-	var yamlFile, err = ioutil.ReadFile(configFile)
+	log.Debugf("[CONFIG] Reading config file %s", configFile)
+	var yamlFile, err = os.ReadFile(configFile)
 	if err != nil {
 		log.Fatalf("[CONFIG] Error reading config file %q: %s\n", configFile, err.Error())
 	}
@@ -34,9 +36,11 @@ func readConfigFromConfigFile(configFile string) {
 	if err != nil {
 		log.Fatalf("[CONFIG] Error unmarshalling config file %q: %s\n", configFile, err.Error())
 	}
+	log.Debugf("[CONFIG] Config loaded from %s", configFile)
 }
 
 func validateConfig() {
+	log.Debug("[CONFIG] Validating config")
 	// mongodb
 	if Config.MongoDB.URI == "" {
 		log.Fatal("[CONFIG] MongoDB.URI is required")
@@ -108,4 +112,6 @@ func validateConfig() {
 	if Config.HealthCheck.IntervalSecs == 0 {
 		log.Fatal("[CONFIG] HealthCheck.Interval is required")
 	}
+
+	log.Debug("[CONFIG] Config validated")
 }

@@ -23,6 +23,13 @@ func accessSecretVersion(client *secretmanager.Client, name string) (string, err
 }
 
 func readKeysFromGSM() {
+	if Config.GoogleSecretManager.Enabled == true {
+		log.Debug("[GSM] Reading keys from Google Secret Manager")
+	} else {
+		log.Debug("[GSM] Google Secret Manager is disabled")
+		return
+	}
+
 	if Config.GoogleSecretManager.ProjectId == "" {
 		log.Fatalf("[GSM] ProjectId is empty")
 	}

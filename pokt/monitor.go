@@ -15,73 +15,26 @@ import (
 )
 
 const (
-	MintMonitorName = "mint monitor"
+	MintMonitorName = "MINT MONITOR"
 )
 
 type MintMonitorService struct {
-	wg            *sync.WaitGroup
 	client        pokt.PocketClient
-	stop          chan bool
 	wpoktAddress  string
 	vaultAddress  string
-	interval      time.Duration
 	startHeight   int64
 	currentHeight int64
-
-	healthMu sync.RWMutex
-	health   models.ServiceHealth
 }
 
-func (x *MintMonitorService) Start() {
-	log.Info("[MINT MONITOR] Starting service")
-	stop := false
-	for !stop {
-		log.Info("[MINT MONITOR] Starting sync")
+func (x *MintMonitorService) Run() {
+	x.UpdateCurrentHeight()
+	x.SyncTxs()
+}
 
-		x.UpdateCurrentHeight()
-
-		x.SyncTxs()
-
-		x.UpdateHealth()
-
-		log.Info("[MINT MONITOR] Finished sync, Sleeping for ", x.interval)
-
-		select {
-		case <-x.stop:
-			stop = true
-			log.Info("[MINT MONITOR] Stopped service")
-		case <-time.After(x.interval):
-		}
+func (x *MintMonitorService) Status() models.RunnerStatus {
+	return models.RunnerStatus{
+		PoktHeight: strconv.FormatInt(x.startHeight, 10),
 	}
-	x.wg.Done()
-}
-
-func (x *MintMonitorService) Health() models.ServiceHealth {
-	x.healthMu.RLock()
-	defer x.healthMu.RUnlock()
-
-	return x.health
-}
-
-func (x *MintMonitorService) UpdateHealth() {
-	x.healthMu.Lock()
-	defer x.healthMu.Unlock()
-
-	lastSyncTime := time.Now()
-
-	x.health = models.ServiceHealth{
-		Name:           MintMonitorName,
-		LastSyncTime:   lastSyncTime,
-		NextSyncTime:   lastSyncTime.Add(x.interval),
-		PoktHeight:     strconv.FormatInt(x.startHeight, 10),
-		EthBlockNumber: "",
-		Healthy:        true,
-	}
-}
-
-func (x *MintMonitorService) Stop() {
-	log.Debug("[MINT MONITOR] Stopping service")
-	x.stop <- true
 }
 
 func (x *MintMonitorService) UpdateCurrentHeight() {
@@ -164,13 +117,13 @@ func (x *MintMonitorService) SyncTxs() bool {
 	return success
 }
 
-func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if !app.Config.MintMonitor.Enabled {
-		log.Debug("[MINT MONITOR] Pokt monitor disabled")
-		return models.NewEmptyService(wg)
+		log.Debug("[MINT MONITOR] Disabled")
+		return app.NewEmptyService(wg)
 	}
 
-	log.Debug("[MINT MONITOR] Initializing mint monitor")
+	log.Debug("[MINT MONITOR] Initializing")
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
@@ -186,13 +139,10 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Serv
 	log.Debug("[MINT EXECUTOR] Multisig address: ", multisigAddress)
 
 	x := &MintMonitorService{
-		wg:            wg,
-		interval:      time.Duration(app.Config.MintMonitor.IntervalSecs) * time.Second,
 		vaultAddress:  multisigAddress,
 		wpoktAddress:  app.Config.Ethereum.WrappedPocketAddress,
 		startHeight:   0,
 		currentHeight: 0,
-		stop:          make(chan bool),
 		client:        pokt.NewClient(),
 	}
 
@@ -214,9 +164,7 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Serv
 	}
 	log.Info("[MINT MONITOR] Start height: ", x.startHeight)
 
-	x.UpdateHealth()
+	log.Info("[MINT MONITOR] Initialized")
 
-	log.Info("[MINT MONITOR] Initialized mint monitor")
-
-	return x
+	return app.NewRunnerService(MintMonitorName, x, wg, time.Duration(app.Config.MintMonitor.IntervalSecs)*time.Second)
 }

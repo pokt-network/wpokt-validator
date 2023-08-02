@@ -19,78 +19,31 @@ import (
 )
 
 const (
-	MintExecutorName string = "mint executor"
+	MintExecutorName string = "MINT EXECUTOR"
 )
 
-type MintExecutorService struct {
-	wg                 *sync.WaitGroup
-	stop               chan bool
+type MintExecutorRunner struct {
 	startBlockNumber   int64
 	currentBlockNumber int64
-	interval           time.Duration
 	wpoktContract      *autogen.WrappedPocket
 	mintControllerAbi  *abi.ABI
 	client             eth.EthereumClient
 	vaultAddress       string
 	wpoktAddress       string
-
-	healthMu sync.RWMutex
-	health   models.ServiceHealth
 }
 
-func (x *MintExecutorService) Start() {
-	log.Info("[MINT EXECUTOR] Starting service")
-	stop := false
-	for !stop {
-		log.Info("[MINT EXECUTOR] Starting sync")
-
-		x.UpdateCurrentBlockNumber()
-
-		x.SyncTxs()
-
-		x.UpdateHealth()
-
-		log.Info("[MINT EXECUTOR] Finished sync, Sleeping for ", x.interval)
-
-		select {
-		case <-x.stop:
-			stop = true
-			log.Info("[MINT EXECUTOR] Stopped service")
-		case <-time.After(x.interval):
-		}
-	}
-	x.wg.Done()
+func (x *MintExecutorRunner) Run() {
+	x.UpdateCurrentBlockNumber()
+	x.SyncTxs()
 }
 
-func (x *MintExecutorService) Health() models.ServiceHealth {
-	x.healthMu.RLock()
-	defer x.healthMu.RUnlock()
-
-	return x.health
-}
-
-func (x *MintExecutorService) UpdateHealth() {
-	x.healthMu.Lock()
-	defer x.healthMu.Unlock()
-
-	lastSyncTime := time.Now()
-
-	x.health = models.ServiceHealth{
-		Name:           MintExecutorName,
-		LastSyncTime:   lastSyncTime,
-		NextSyncTime:   lastSyncTime.Add(x.interval),
-		PoktHeight:     "",
+func (x *MintExecutorRunner) Status() models.RunnerStatus {
+	return models.RunnerStatus{
 		EthBlockNumber: strconv.FormatInt(x.startBlockNumber, 10),
-		Healthy:        true,
 	}
 }
 
-func (x *MintExecutorService) Stop() {
-	log.Debug("[MINT EXECUTOR] Stopping service")
-	x.stop <- true
-}
-
-func (x *MintExecutorService) UpdateCurrentBlockNumber() {
+func (x *MintExecutorRunner) UpdateCurrentBlockNumber() {
 	res, err := x.client.GetBlockNumber()
 	if err != nil {
 		log.Error(err)
@@ -101,7 +54,7 @@ func (x *MintExecutorService) UpdateCurrentBlockNumber() {
 	log.Info("[MINT EXECUTOR] Current block number: ", x.currentBlockNumber)
 }
 
-func (x *MintExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinted) bool {
+func (x *MintExecutorRunner) HandleMintEvent(event *autogen.WrappedPocketMinted) bool {
 	log.Debug("[MINT EXECUTOR] Handling mint event: ", event.Raw.TxHash, " ", event.Raw.Index)
 
 	filter := bson.M{
@@ -135,7 +88,7 @@ func (x *MintExecutorService) HandleMintEvent(event *autogen.WrappedPocketMinted
 	return true
 }
 
-func (x *MintExecutorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
+func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
 	filter, err := x.wpoktContract.FilterMinted(&bind.FilterOpts{
 		Start:   startBlockNumber,
 		End:     &endBlockNumber,
@@ -155,7 +108,7 @@ func (x *MintExecutorService) SyncBlocks(startBlockNumber uint64, endBlockNumber
 	return success
 }
 
-func (x *MintExecutorService) SyncTxs() bool {
+func (x *MintExecutorRunner) SyncTxs() bool {
 
 	if x.currentBlockNumber <= x.startBlockNumber {
 		log.Info("[MINT EXECUTOR] No new blocks to sync")
@@ -189,12 +142,12 @@ func (x *MintExecutorService) SyncTxs() bool {
 	return success
 }
 
-func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if app.Config.MintExecutor.Enabled == false {
-		log.Debug("[MINT EXECUTOR] MINT executor disabled")
-		return models.NewEmptyService(wg)
+		log.Debug("[MINT EXECUTOR] Disabled")
+		return app.NewEmptyService(wg)
 	}
-	log.Debug("[MINT EXECUTOR] Initializing mint executor with last health")
+	log.Debug("[MINT EXECUTOR] Initializing mint executor")
 
 	client, err := eth.NewClient()
 	if err != nil {
@@ -217,12 +170,9 @@ func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Ser
 
 	log.Debug("[MINT EXECUTOR] Mint controller abi parsed")
 
-	x := &MintExecutorService{
-		wg:                 wg,
-		stop:               make(chan bool),
+	x := &MintExecutorRunner{
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
-		interval:           time.Duration(app.Config.MintExecutor.IntervalSecs) * time.Second,
 		wpoktContract:      contract,
 		mintControllerAbi:  mintControllerAbi,
 		client:             client,
@@ -247,9 +197,7 @@ func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Ser
 
 	log.Info("[MINT EXECUTOR] Start block number: ", x.startBlockNumber)
 
-	x.UpdateHealth()
-
 	log.Info("[MINT EXECUTOR] Initialized mint executor")
 
-	return x
+	return app.NewRunnerService(MintExecutorName, x, wg, time.Duration(app.Config.MintExecutor.IntervalSecs)*time.Second)
 }

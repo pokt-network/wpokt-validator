@@ -35,3 +35,8 @@ type ServiceHealth struct {
 	LastSyncTime   time.Time `bson:"last_sync_time" json:"last_sync_time"`
 	NextSyncTime   time.Time `bson:"next_sync_time" json:"next_sync_time"`
 }
+
+type RunnerStatus struct {
+	EthBlockNumber string `bson:"eth_block_number" json:"eth_block_number"`
+	PoktHeight     string `bson:"pokt_height" json:"pokt_height"`
+}

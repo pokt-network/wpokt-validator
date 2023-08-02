@@ -24,16 +24,12 @@ import (
 )
 
 const (
-	MintSignerName = "mint signer"
+	MintSignerName = "MINT SIGNER"
 )
 
-type MintSignerService struct {
-	wg                     *sync.WaitGroup
-	name                   string
-	stop                   chan bool
+type MintSignerRunner struct {
 	address                string
 	privateKey             *ecdsa.PrivateKey
-	interval               time.Duration
 	vaultAddress           string
 	wpoktAddress           string
 	wpoktContract          *autogen.WrappedPocket
@@ -43,64 +39,20 @@ type MintSignerService struct {
 	poktClient             pokt.PocketClient
 	ethClient              eth.EthereumClient
 	poktHeight             int64
-
-	healthMu sync.RWMutex
-	health   models.ServiceHealth
 }
 
-func (x *MintSignerService) Start() {
-	log.Info("[MINT SIGNER] Starting service")
-	stop := false
-	for !stop {
-		log.Info("[MINT SIGNER] Starting sync")
-
-		x.UpdateBlocks()
-
-		x.SyncTxs()
-
-		x.UpdateHealth()
-
-		log.Info("[MINT SIGNER] Finished sync, Sleeping for ", x.interval)
-
-		select {
-		case <-x.stop:
-			stop = true
-			log.Info("[MINT SIGNER] Stopped service")
-		case <-time.After(x.interval):
-		}
-	}
-	x.wg.Done()
+func (x *MintSignerRunner) Run() {
+	x.UpdateBlocks()
+	x.SyncTxs()
 }
 
-func (x *MintSignerService) Health() models.ServiceHealth {
-	x.healthMu.RLock()
-	defer x.healthMu.RUnlock()
-
-	return x.health
-}
-
-func (x *MintSignerService) UpdateHealth() {
-	x.healthMu.Lock()
-	defer x.healthMu.Unlock()
-
-	lastSyncTime := time.Now()
-
-	x.health = models.ServiceHealth{
-		Name:           MintSignerName,
-		LastSyncTime:   lastSyncTime,
-		NextSyncTime:   lastSyncTime.Add(x.interval),
-		PoktHeight:     strconv.FormatInt(x.poktHeight, 10),
-		EthBlockNumber: "",
-		Healthy:        true,
+func (x *MintSignerRunner) Status() models.RunnerStatus {
+	return models.RunnerStatus{
+		PoktHeight: strconv.FormatInt(x.poktHeight, 10),
 	}
 }
 
-func (x *MintSignerService) Stop() {
-	log.Debug("[MINT SIGNER] Stopping service")
-	x.stop <- true
-}
-
-func (x *MintSignerService) UpdateBlocks() {
+func (x *MintSignerRunner) UpdateBlocks() {
 	log.Debug("[MINT SIGNER] Updating blocks")
 	poktHeight, err := x.poktClient.GetHeight()
 	if err != nil {
@@ -110,7 +62,7 @@ func (x *MintSignerService) UpdateBlocks() {
 	x.poktHeight = poktHeight.Height
 }
 
-func (x *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
+func (x *MintSignerRunner) FindNonce(mint models.Mint) (*big.Int, error) {
 	log.Debug("[MINT SIGNER] Finding nonce for mint: ", mint.TransactionHash)
 	var nonce *big.Int
 
@@ -181,7 +133,7 @@ func (x *MintSignerService) FindNonce(mint models.Mint) (*big.Int, error) {
 	return nonce, nil
 }
 
-func (x *MintSignerService) HandleMint(mint models.Mint) bool {
+func (x *MintSignerRunner) HandleMint(mint models.Mint) bool {
 	log.Debug("[MINT SIGNER] Handling mint: ", mint.TransactionHash)
 
 	address := common.HexToAddress(mint.RecipientAddress)
@@ -268,7 +220,7 @@ func (x *MintSignerService) HandleMint(mint models.Mint) bool {
 	return true
 }
 
-func (x *MintSignerService) SyncTxs() bool {
+func (x *MintSignerRunner) SyncTxs() bool {
 	log.Debug("[MINT SIGNER] Syncing pending txs")
 
 	filter := bson.M{
@@ -297,10 +249,10 @@ func (x *MintSignerService) SyncTxs() bool {
 	return success
 }
 
-func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if app.Config.MintSigner.Enabled == false {
-		log.Debug("[MINT SIGNER] BURN signer disabled")
-		return models.NewEmptyService(wg)
+		log.Debug("[MINT SIGNER] Disabled")
+		return app.NewEmptyService(wg)
 	}
 
 	log.Debug("[MINT SIGNER] Initializing mint signer")
@@ -342,11 +294,7 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Servi
 	}
 	log.Debug("[MINT SIGNER] Fetched mint controller domain data")
 
-	x := &MintSignerService{
-		wg:                     wg,
-		name:                   MintSignerName,
-		stop:                   make(chan bool),
-		interval:               time.Duration(app.Config.MintSigner.IntervalSecs) * time.Second,
+	x := &MintSignerRunner{
 		privateKey:             privateKey,
 		address:                address,
 		wpoktAddress:           app.Config.Ethereum.WrappedPocketAddress,
@@ -361,9 +309,7 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Servi
 
 	x.UpdateBlocks()
 
-	x.UpdateHealth()
-
 	log.Info("[MINT SIGNER] Initialized mint signer")
 
-	return x
+	return app.NewRunnerService(MintSignerName, x, wg, time.Duration(app.Config.MintSigner.IntervalSecs)*time.Second)
 }

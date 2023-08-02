@@ -1,13 +1,15 @@
-package models
+package app
 
 import (
 	"sync"
 	"time"
+
+	"github.com/dan13ram/wpokt-validator/models"
 )
 
 type Service interface {
 	Start()
-	Health() ServiceHealth
+	Health() models.ServiceHealth
 	Stop()
 }
 
@@ -23,8 +25,8 @@ func (e *EmptyService) Stop() {
 
 const EmptyServiceName = "empty"
 
-func (e *EmptyService) Health() ServiceHealth {
-	return ServiceHealth{
+func (e *EmptyService) Health() models.ServiceHealth {
+	return models.ServiceHealth{
 		Name:           EmptyServiceName,
 		LastSyncTime:   time.Now(),
 		NextSyncTime:   time.Now(),
@@ -34,7 +36,7 @@ func (e *EmptyService) Health() ServiceHealth {
 	}
 }
 
-func NewEmptyService(wg *sync.WaitGroup) *EmptyService {
+func NewEmptyService(wg *sync.WaitGroup) Service {
 	return &EmptyService{
 		wg: wg,
 	}

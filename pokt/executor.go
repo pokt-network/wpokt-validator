@@ -14,72 +14,24 @@ import (
 )
 
 const (
-	BurnExecutorName = "burn executor"
+	BurnExecutorName = "BURN EXECUTOR"
 )
 
-type BurnExecutorService struct {
-	wg              *sync.WaitGroup
+type BurnExecutorRunner struct {
 	client          pokt.PocketClient
 	wpoktAddress    string
-	stop            chan bool
-	interval        time.Duration
 	multisigAddress string
-
-	healthMu sync.RWMutex
-	health   models.ServiceHealth
 }
 
-func (x *BurnExecutorService) Start() {
-	log.Info("[BURN EXECUTOR] Starting service")
-	stop := false
-	for !stop {
-		log.Info("[BURN EXECUTOR] Starting sync")
-
-		x.SyncTxs()
-
-		x.UpdateHealth()
-
-		log.Info("[BURN EXECUTOR] Finished sync, Sleeping for ", x.interval)
-
-		select {
-		case <-x.stop:
-			stop = true
-			log.Info("[BURN EXECUTOR] Stopped service")
-		case <-time.After(x.interval):
-		}
-	}
-	x.wg.Done()
+func (x *BurnExecutorRunner) Run() {
+	x.SyncTxs()
 }
 
-func (x *BurnExecutorService) Health() models.ServiceHealth {
-	x.healthMu.RLock()
-	defer x.healthMu.RUnlock()
-
-	return x.health
+func (x *BurnExecutorRunner) Status() models.RunnerStatus {
+	return models.RunnerStatus{}
 }
 
-func (x *BurnExecutorService) UpdateHealth() {
-	x.healthMu.Lock()
-	defer x.healthMu.Unlock()
-
-	lastSyncTime := time.Now()
-
-	x.health = models.ServiceHealth{
-		Name:           BurnExecutorName,
-		LastSyncTime:   lastSyncTime,
-		NextSyncTime:   lastSyncTime.Add(x.interval),
-		PoktHeight:     "",
-		EthBlockNumber: "",
-		Healthy:        true,
-	}
-}
-
-func (x *BurnExecutorService) Stop() {
-	log.Debug("[BURN EXECUTOR] Stopping service")
-	x.stop <- true
-}
-
-func (x *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
+func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 	log.Debug("[BURN EXECUTOR] Handling invalid mint: ", doc.TransactionHash)
 
 	var filter bson.M
@@ -141,7 +93,7 @@ func (x *BurnExecutorService) HandleInvalidMint(doc models.InvalidMint) bool {
 	return true
 }
 
-func (x *BurnExecutorService) HandleBurn(doc models.Burn) bool {
+func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 	log.Debug("[BURN EXECUTOR] Handling burn: ", doc.TransactionHash)
 
 	var filter bson.M
@@ -202,7 +154,7 @@ func (x *BurnExecutorService) HandleBurn(doc models.Burn) bool {
 	return true
 }
 
-func (x *BurnExecutorService) SyncTxs() bool {
+func (x *BurnExecutorRunner) SyncTxs() bool {
 	filter := bson.M{
 		"status": bson.M{
 			"$in": []string{
@@ -253,13 +205,13 @@ func (x *BurnExecutorService) SyncTxs() bool {
 	return success
 }
 
-func NewExecutor(wg *sync.WaitGroup, health models.ServiceHealth) models.Service {
+func NewExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 	if !app.Config.BurnExecutor.Enabled {
-		log.Debug("[BURN EXECUTOR] Pokt executor disabled")
-		return models.NewEmptyService(wg)
+		log.Debug("[BURN EXECUTOR] Disabled")
+		return app.NewEmptyService(wg)
 	}
 
-	log.Debug("[BURN EXECUTOR] Initializing burn executor")
+	log.Debug("[BURN EXECUTOR] Initializing")
 
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
@@ -278,18 +230,13 @@ func NewExecutor(wg *sync.WaitGroup, health models.ServiceHealth) models.Service
 		log.Fatal("[BURN EXECUTOR] Multisig address does not match vault address")
 	}
 
-	x := &BurnExecutorService{
-		wg:              wg,
-		interval:        time.Duration(app.Config.BurnExecutor.IntervalSecs) * time.Second,
-		stop:            make(chan bool),
+	x := &BurnExecutorRunner{
 		multisigAddress: multisigAddress,
 		wpoktAddress:    app.Config.Ethereum.WrappedPocketAddress,
 		client:          pokt.NewClient(),
 	}
 
-	x.UpdateHealth()
+	log.Info("[BURN EXECUTOR] Initialized")
 
-	log.Info("[BURN EXECUTOR] Initialized burn executor")
-
-	return x
+	return app.NewRunnerService(BurnExecutorName, x, wg, time.Duration(app.Config.BurnExecutor.IntervalSecs)*time.Second)
 }

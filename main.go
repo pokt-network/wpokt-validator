@@ -15,13 +15,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type ServiceFactory = func(*sync.WaitGroup, models.ServiceHealth) models.Service
+type ServiceFactory = func(*sync.WaitGroup, models.ServiceHealth) app.Service
 
 var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
 	pokt.MintMonitorName:  pokt.NewMonitor,
 	pokt.BurnSignerName:   pokt.NewSigner,
 	pokt.BurnExecutorName: pokt.NewExecutor,
-	eth.BurnMonitorName:   eth.NewMonitor,
+	eth.BurnMonitorName:   eth.NewBurnMonitor,
 	eth.MintSignerName:    eth.NewSigner,
 	eth.MintExecutorName:  eth.NewExecutor,
 }
@@ -57,23 +57,13 @@ func main() {
 	}
 
 	app.InitConfig(absConfigPath, absEnvPath)
-	if absEnvPath != "" {
-		log.Debug("[MAIN] Env loaded from: ", absEnvPath, " and merged with config from: ", absConfigPath)
-	} else {
-		log.Debug("[MAIN] Config loaded from: ", absConfigPath)
-	}
-	log.Info("[MAIN] Config initialized")
 	app.InitLogger()
-	log.Info("[MAIN] Logger initialized")
-
 	app.InitDB()
 
 	pokt.ValidateNetwork()
 	eth.ValidateNetwork()
 
-	var wg sync.WaitGroup
-
-	healthcheck := app.NewHealthCheck(&wg)
+	healthcheck := app.NewHealthCheck()
 
 	serviceHealthMap := make(map[string]models.ServiceHealth)
 	if lastHealth, err := healthcheck.FindLastHealth(); err == nil {
@@ -82,7 +72,8 @@ func main() {
 		}
 	}
 
-	services := []models.Service{}
+	services := []app.Service{}
+	var wg sync.WaitGroup
 
 	for serviceName, NewService := range ServiceFactoryMap {
 		health := models.ServiceHealth{}
@@ -92,7 +83,7 @@ func main() {
 		services = append(services, NewService(&wg, health))
 	}
 
-	services = append(services, healthcheck)
+	services = append(services, app.NewHealthService(healthcheck, &wg))
 
 	healthcheck.SetServices(services)
 
@@ -101,6 +92,8 @@ func main() {
 	for _, service := range services {
 		go service.Start()
 	}
+
+	log.Info("[MAIN] Server started")
 
 	gracefulStop := make(chan os.Signal, 1)
 	done := make(chan bool, 1)

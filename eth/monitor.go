@@ -19,75 +19,28 @@ import (
 )
 
 const (
-	BurnMonitorName = "burn monitor"
+	BurnMonitorName = "BURN MONITOR"
 )
 
-type BurnMonitorService struct {
-	wg                 *sync.WaitGroup
-	stop               chan bool
+type BurnMonitorRunner struct {
 	startBlockNumber   int64
 	currentBlockNumber int64
-	interval           time.Duration
 	wpoktContract      *autogen.WrappedPocket
 	client             eth.EthereumClient
-
-	healthMu sync.RWMutex
-	health   models.ServiceHealth
 }
 
-func (x *BurnMonitorService) Start() {
-	log.Info("[BURN MONITOR] Starting service")
-	stop := false
-	for !stop {
-		log.Info("[BURN MONITOR] Starting sync")
-
-		x.UpdateCurrentBlockNumber()
-
-		x.SyncTxs()
-
-		x.UpdateHealth()
-
-		log.Info("[BURN MONITOR] Finished sync, Sleeping for ", x.interval)
-
-		select {
-		case <-x.stop:
-			stop = true
-			log.Info("[BURN MONITOR] Stopped service")
-		case <-time.After(x.interval):
-		}
-	}
-	x.wg.Done()
+func (x *BurnMonitorRunner) Run() {
+	x.UpdateCurrentBlockNumber()
+	x.SyncTxs()
 }
 
-func (x *BurnMonitorService) Health() models.ServiceHealth {
-	x.healthMu.RLock()
-	defer x.healthMu.RUnlock()
-
-	return x.health
-}
-
-func (x *BurnMonitorService) UpdateHealth() {
-	x.healthMu.Lock()
-	defer x.healthMu.Unlock()
-
-	lastSyncTime := time.Now()
-
-	x.health = models.ServiceHealth{
-		Name:           BurnMonitorName,
-		LastSyncTime:   lastSyncTime,
-		NextSyncTime:   lastSyncTime.Add(x.interval),
-		PoktHeight:     "",
+func (x *BurnMonitorRunner) Status() models.RunnerStatus {
+	return models.RunnerStatus{
 		EthBlockNumber: strconv.FormatInt(x.startBlockNumber, 10),
-		Healthy:        true,
 	}
 }
 
-func (x *BurnMonitorService) Stop() {
-	log.Debug("[BURN MONITOR] Stopping service")
-	x.stop <- true
-}
-
-func (x *BurnMonitorService) UpdateCurrentBlockNumber() {
+func (x *BurnMonitorRunner) UpdateCurrentBlockNumber() {
 	res, err := x.client.GetBlockNumber()
 	if err != nil {
 		log.Error(err)
@@ -97,7 +50,7 @@ func (x *BurnMonitorService) UpdateCurrentBlockNumber() {
 	log.Info("[BURN MONITOR] Current block number: ", x.currentBlockNumber)
 }
 
-func (x *BurnMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAndBridge) bool {
+func (x *BurnMonitorRunner) HandleBurnEvent(event *autogen.WrappedPocketBurnAndBridge) bool {
 	doc := util.CreateBurn(event)
 
 	// each event is a combination of transaction hash and log index
@@ -117,7 +70,7 @@ func (x *BurnMonitorService) HandleBurnEvent(event *autogen.WrappedPocketBurnAnd
 	return true
 }
 
-func (x *BurnMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
+func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber uint64) bool {
 	filter, err := x.wpoktContract.FilterBurnAndBridge(&bind.FilterOpts{
 		Start:   startBlockNumber,
 		End:     &endBlockNumber,
@@ -136,7 +89,7 @@ func (x *BurnMonitorService) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 	return success
 }
 
-func (x *BurnMonitorService) SyncTxs() bool {
+func (x *BurnMonitorRunner) SyncTxs() bool {
 	if x.currentBlockNumber <= x.startBlockNumber {
 		log.Info("[BURN MONITOR] [MINT EXECUTOR] No new blocks to sync")
 		return true
@@ -165,10 +118,10 @@ func (x *BurnMonitorService) SyncTxs() bool {
 	return success
 }
 
-func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Service {
+func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if app.Config.BurnMonitor.Enabled == false {
-		log.Debug("[BURN MONITOR] BURN monitor disabled")
-		return models.NewEmptyService(wg)
+		log.Debug("[BURM MONITOR] Disabled")
+		return app.NewEmptyService(wg)
 	}
 
 	log.Debug("[BURN MONITOR] Initializing burn monitor")
@@ -183,22 +136,12 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Serv
 	}
 	log.Debug("[BURN MONITOR] Connected to wpokt contract")
 
-	x := &BurnMonitorService{
-		wg:                 wg,
-		stop:               make(chan bool),
+	x := &BurnMonitorRunner{
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
-		interval:           time.Duration(app.Config.BurnMonitor.IntervalSecs) * time.Second,
 		wpoktContract:      contract,
 		client:             client,
 	}
-
-	if app.Config.BurnMonitor.Enabled == false {
-		log.Debug("[BURN MONITOR] burn monitor disabled")
-		return models.NewEmptyService(wg)
-	}
-
-	log.Debug("[BURN MONITOR] Initializing burn monitor")
 
 	x.UpdateCurrentBlockNumber()
 
@@ -217,9 +160,12 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) models.Serv
 
 	log.Info("[BURN MONITOR] Start block number: ", x.startBlockNumber)
 
-	x.UpdateHealth()
-
 	log.Info("[BURN MONITOR] Initialized burn monitor")
 
-	return x
+	return app.NewRunnerService(
+		BurnMonitorName,
+		x,
+		wg,
+		time.Duration(app.Config.BurnMonitor.IntervalSecs)*time.Second,
+	)
 }

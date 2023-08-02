@@ -14,8 +14,14 @@ func readConfigFromENV(envFile string) {
 		err := godotenv.Load(envFile)
 		if err != nil {
 			log.Warn("[ENV] Error loading .env file: ", err.Error())
+		} else {
+			log.Debug("[ENV] .env file loaded from: ", envFile)
 		}
+	} else {
+		log.Debug("[ENV] No .env file provided")
 	}
+
+	log.Debug("[ENV] Reading config from ENV variables")
 
 	if os.Getenv("MONGODB_URI") != "" {
 		Config.MongoDB.URI = os.Getenv("MONGODB_URI")
@@ -277,4 +283,5 @@ func readConfigFromENV(envFile string) {
 		Config.GoogleSecretManager.EthSecretName = os.Getenv("GOOGLE_ETH_SECRET_NAME")
 	}
 
+	log.Debug("[ENV] Config read from env variables")
 }

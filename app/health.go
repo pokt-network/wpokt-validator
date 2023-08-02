@@ -14,12 +14,10 @@ import (
 )
 
 const (
-	HealthServiceName = "health"
+	HealthCheckName = "HEALTH"
 )
 
-type HealthService struct {
-	wg               *sync.WaitGroup
-	stop             chan bool
+type HealthCheckRunner struct {
 	poktSigners      []string
 	poktPublicKey    string
 	poktAddress      string
@@ -29,65 +27,32 @@ type HealthService struct {
 	wpoktAddress     string
 	hostname         string
 	validatorId      string
-	interval         time.Duration
-	services         []models.Service
+	services         []Service
 }
 
-type HealthServiceInterface interface {
-	models.Service
-	FindLastHealth() (models.Health, error)
-	SetServices(services []models.Service)
+func (x *HealthCheckRunner) Status() models.RunnerStatus {
+	return models.RunnerStatus{}
 }
 
-func (b *HealthService) Health() models.ServiceHealth {
-	lastSyncTime := time.Now()
-	return models.ServiceHealth{
-		Name:           HealthServiceName,
-		LastSyncTime:   lastSyncTime,
-		NextSyncTime:   lastSyncTime.Add(b.interval),
-		PoktHeight:     "",
-		EthBlockNumber: "",
-		Healthy:        true,
-	}
-}
-func (b *HealthService) Start() {
-	log.Info("[HEALTH] Starting service")
-	stop := false
-	for !stop {
-		log.Info("[HEALTH] Starting sync")
-
-		b.PostHealth()
-
-		log.Info("[HEALTH] Finished sync, Sleeping for ", b.interval)
-
-		select {
-		case <-b.stop:
-			stop = true
-			b.PostHealth()
-			log.Info("[HEALTH] Stopped service")
-			b.wg.Done()
-		case <-time.After(b.interval):
-		}
-	}
+func (x *HealthCheckRunner) Run() {
+	x.PostHealth()
 }
 
-func (b *HealthService) Stop() {
-	log.Debug("[HEALTH] Stopping health")
-	b.stop <- true
-}
-
-func (b *HealthService) FindLastHealth() (models.Health, error) {
+func (x *HealthCheckRunner) FindLastHealth() (models.Health, error) {
 	var health models.Health
-	filter := bson.M{"hostname": b.hostname}
+	filter := bson.M{
+		"validator_id": x.validatorId,
+		"hostname":     x.hostname,
+	}
 	err := DB.FindOne(models.CollectionHealthChecks, filter, &health)
 	return health, err
 }
 
-func (b *HealthService) ServiceHealths() []models.ServiceHealth {
+func (x *HealthCheckRunner) ServiceHealths() []models.ServiceHealth {
 	var serviceHealths []models.ServiceHealth
-	for _, service := range b.services {
+	for _, service := range x.services {
 		serviceHealth := service.Health()
-		if serviceHealth.Name == models.EmptyServiceName || serviceHealth.Name == "" {
+		if serviceHealth.Name == EmptyServiceName || serviceHealth.Name == "" {
 			continue
 		}
 		serviceHealths = append(serviceHealths, serviceHealth)
@@ -95,30 +60,30 @@ func (b *HealthService) ServiceHealths() []models.ServiceHealth {
 	return serviceHealths
 }
 
-func (b *HealthService) PostHealth() bool {
+func (x *HealthCheckRunner) PostHealth() bool {
 	log.Debug("[HEALTH] Posting health")
 
 	filter := bson.M{
-		"validator_id": b.validatorId,
-		"hostname":     b.hostname,
+		"validator_id": x.validatorId,
+		"hostname":     x.hostname,
 	}
 
 	onInsert := bson.M{
-		"pokt_vault_address": b.poktVaultAddress,
-		"pokt_signers":       b.poktSigners,
-		"pokt_public_key":    b.poktPublicKey,
-		"pokt_address":       b.poktAddress,
-		"eth_validators":     b.ethValidators,
-		"eth_address":        b.ethAddress,
-		"wpokt_address":      b.wpoktAddress,
-		"hostname":           b.hostname,
-		"validator_id":       b.validatorId,
+		"pokt_vault_address": x.poktVaultAddress,
+		"pokt_signers":       x.poktSigners,
+		"pokt_public_key":    x.poktPublicKey,
+		"pokt_address":       x.poktAddress,
+		"eth_validators":     x.ethValidators,
+		"eth_address":        x.ethAddress,
+		"wpokt_address":      x.wpoktAddress,
+		"hostname":           x.hostname,
+		"validator_id":       x.validatorId,
 		"created_at":         time.Now(),
 	}
 
 	onUpdate := bson.M{
 		"healthy":         true,
-		"service_healths": b.ServiceHealths(),
+		"service_healths": x.ServiceHealths(),
 		"updated_at":      time.Now(),
 	}
 
@@ -135,11 +100,11 @@ func (b *HealthService) PostHealth() bool {
 	return true
 }
 
-func (b *HealthService) SetServices(services []models.Service) {
-	b.services = services
+func (x *HealthCheckRunner) SetServices(services []Service) {
+	x.services = services
 }
 
-func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
+func NewHealthCheck() *HealthCheckRunner {
 	log.Debug("[HEALTH] Initializing health")
 
 	pk, err := poktCrypto.NewPrivateKey(Config.Pocket.PrivateKey)
@@ -184,9 +149,7 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 		log.Fatal("[HEALTH] Multisig address does not match vault address")
 	}
 
-	b := &HealthService{
-		stop:             make(chan bool),
-		interval:         time.Duration(Config.HealthCheck.IntervalSecs) * time.Second,
+	x := &HealthCheckRunner{
 		poktVaultAddress: multisigPkAddress,
 		poktSigners:      Config.Pocket.MultisigPublicKeys,
 		poktPublicKey:    pk.PublicKey().RawString(),
@@ -196,10 +159,14 @@ func NewHealthCheck(wg *sync.WaitGroup) HealthServiceInterface {
 		wpoktAddress:     Config.Ethereum.WrappedPocketAddress,
 		hostname:         hostname,
 		validatorId:      validatorId,
-		wg:               wg,
 	}
 
 	log.Info("[HEALTH] Initialized health")
 
-	return b
+	return x
+}
+
+func NewHealthService(x *HealthCheckRunner, wg *sync.WaitGroup) Service {
+	service := NewRunnerService(HealthCheckName, x, wg, time.Duration(Config.HealthCheck.IntervalSecs)*time.Second)
+	return service
 }

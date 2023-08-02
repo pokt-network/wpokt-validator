@@ -61,7 +61,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 	defer cancel()
 	_, err := d.db.Collection(models.CollectionMints).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "transaction_hash", Value: 1}},
-		Options: options.Index().SetUnique(true).SetBackground(true),
+		Options: options.Index().SetUnique(true),
 	})
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 	defer cancel()
 	_, err = d.db.Collection(models.CollectionInvalidMints).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "transaction_hash", Value: 1}},
-		Options: options.Index().SetUnique(true).SetBackground(true),
+		Options: options.Index().SetUnique(true),
 	})
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 	defer cancel()
 	_, err = d.db.Collection(models.CollectionBurns).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "transaction_hash", Value: 1}, {Key: "log_index", Value: 1}},
-		Options: options.Index().SetUnique(true).SetBackground(true),
+		Options: options.Index().SetUnique(true),
 	})
 	if err != nil {
 		return err
@@ -118,6 +118,7 @@ func InitDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Info("[DB] Database initialized")
 }
 
 // method for insert single value in a collection
