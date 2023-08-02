@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
@@ -11,7 +10,7 @@ import (
 
 func accessSecretVersion(client *secretmanager.Client, name string) (string, error) {
 	req := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", Config.GoogleSecretManager.ProjectId, name),
+		Name: name,
 	}
 
 	result, err := client.AccessSecretVersion(context.Background(), req)
@@ -28,10 +27,6 @@ func readKeysFromGSM() {
 	} else {
 		log.Debug("[GSM] Google Secret Manager is disabled")
 		return
-	}
-
-	if Config.GoogleSecretManager.ProjectId == "" {
-		log.Fatalf("[GSM] ProjectId is empty")
 	}
 
 	ctx := context.Background()
