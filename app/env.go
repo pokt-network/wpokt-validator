@@ -262,7 +262,7 @@ func readConfigFromENV(envFile string) {
 	}
 
 	// google secret manager
-	if Config.GoogleSecretManager.Enabled == false {
+	if Config.GoogleSecretManager.Enabled == false && os.Getenv("GOOGLE_SECRET_MANAGER_ENABLED") != "" {
 		enabled, err := strconv.ParseBool(os.Getenv("GOOGLE_SECRET_MANAGER_ENABLED"))
 		if err != nil {
 			log.Warn("[ENV] Error parsing GOOGLE_SECRET_MANAGER_ENABLED: ", err.Error())
