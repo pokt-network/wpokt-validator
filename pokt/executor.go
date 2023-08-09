@@ -64,7 +64,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 	} else if doc.Status == models.StatusSubmitted {
 		log.Debug("[BURN EXECUTOR] Checking invalid mint")
-		_, err := x.client.GetTx(doc.ReturnTxHash)
+		tx, err := x.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
@@ -75,11 +75,25 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 			"status": models.StatusSubmitted,
 		}
 
-		update = bson.M{
-			"$set": bson.M{
-				"status":     models.StatusSuccess,
-				"updated_at": time.Now(),
-			},
+		if tx.TxResult.Code != 0 {
+			log.Error("[BURN EXECUTOR] Invalid mint return tx failed: ", tx.Hash)
+			update = bson.M{
+				"$set": bson.M{
+					"status":         models.StatusConfirmed,
+					"updated_at":     time.Now(),
+					"return_tx_hash": "",
+					"return_tx":      "",
+					"signers":        []string{},
+				},
+			}
+		} else {
+			log.Debug("[BURN EXECUTOR] Invalid mint return tx succeeded: ", tx.Hash)
+			update = bson.M{
+				"$set": bson.M{
+					"status":     models.StatusSuccess,
+					"updated_at": time.Now(),
+				},
+			}
 		}
 	}
 
@@ -126,7 +140,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 		}
 	} else if doc.Status == models.StatusSubmitted {
 		log.Debug("[BURN EXECUTOR] Checking burn")
-		_, err := x.client.GetTx(doc.ReturnTxHash)
+		tx, err := x.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
@@ -137,11 +151,25 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 			"status": models.StatusSubmitted,
 		}
 
-		update = bson.M{
-			"$set": bson.M{
-				"status":     models.StatusSuccess,
-				"updated_at": time.Now(),
-			},
+		if tx.TxResult.Code != 0 {
+			log.Error("[BURN EXECUTOR] Burn return tx failed: ", tx.Hash)
+			update = bson.M{
+				"$set": bson.M{
+					"status":         models.StatusConfirmed,
+					"updated_at":     time.Now(),
+					"return_tx_hash": "",
+					"return_tx":      "",
+					"signers":        []string{},
+				},
+			}
+		} else {
+			log.Debug("[BURN EXECUTOR] Burn return tx succeeded: ", tx.Hash)
+			update = bson.M{
+				"$set": bson.M{
+					"status":     models.StatusSuccess,
+					"updated_at": time.Now(),
+				},
+			}
 		}
 	}
 
