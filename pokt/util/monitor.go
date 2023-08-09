@@ -84,3 +84,22 @@ func CreateInvalidMint(tx *pokt.TxResponse, vaultAddress string) models.InvalidM
 		ReturnTxHash:    "",
 	}
 }
+
+func CreateFailedMint(tx *pokt.TxResponse, vaultAddress string) models.InvalidMint {
+	return models.InvalidMint{
+		Height:          strconv.FormatInt(tx.Height, 10),
+		Confirmations:   "0",
+		TransactionHash: tx.Hash,
+		SenderAddress:   tx.StdTx.Msg.Value.FromAddress,
+		SenderChainId:   app.Config.Pocket.ChainId,
+		Memo:            tx.StdTx.Memo,
+		Amount:          tx.StdTx.Msg.Value.Amount,
+		VaultAddress:    vaultAddress,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		Status:          models.StatusFailed,
+		Signers:         []string{},
+		ReturnTx:        "",
+		ReturnTxHash:    "",
+	}
+}

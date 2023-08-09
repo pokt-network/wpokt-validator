@@ -51,6 +51,7 @@ burn_executor:
 
 health_check:
   interval_secs: 300
+  read_last_health: true
 
 logger:
   level: "info"

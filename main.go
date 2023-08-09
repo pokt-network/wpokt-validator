@@ -66,9 +66,12 @@ func main() {
 	healthcheck := app.NewHealthCheck()
 
 	serviceHealthMap := make(map[string]models.ServiceHealth)
-	if lastHealth, err := healthcheck.FindLastHealth(); err == nil {
-		for _, serviceHealth := range lastHealth.ServiceHealths {
-			serviceHealthMap[serviceHealth.Name] = serviceHealth
+
+	if app.Config.HealthCheck.ReadLastHealth {
+		if lastHealth, err := healthcheck.FindLastHealth(); err == nil {
+			for _, serviceHealth := range lastHealth.ServiceHealths {
+				serviceHealthMap[serviceHealth.Name] = serviceHealth
+			}
 		}
 	}
 

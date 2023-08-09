@@ -47,6 +47,24 @@ func (x *MintMonitorService) UpdateCurrentHeight() {
 	log.Info("[MINT MONITOR] Current height: ", x.currentHeight)
 }
 
+func (x *MintMonitorService) HandleFailedMint(tx *pokt.TxResponse) bool {
+	doc := util.CreateFailedMint(tx, x.vaultAddress)
+
+	log.Debug("[MINT MONITOR] Storing failed mint tx")
+	err := app.DB.InsertOne(models.CollectionInvalidMints, doc)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			log.Info("[MINT MONITOR] Found duplicate failed mint tx")
+			return true
+		}
+		log.Error("[MINT MONITOR] Error storing failed mint tx: ", err)
+		return false
+	}
+
+	log.Info("[MINT MONITOR] Stored failed mint tx")
+	return true
+}
+
 func (x *MintMonitorService) HandleInvalidMint(tx *pokt.TxResponse) bool {
 	doc := util.CreateInvalidMint(tx, x.vaultAddress)
 
@@ -98,8 +116,13 @@ func (x *MintMonitorService) SyncTxs() bool {
 	log.Info("[MINT MONITOR] Found ", len(txs), " txs to sync")
 	var success bool = true
 	for _, tx := range txs {
+		txResult := tx.TxResult
+		if txResult.Code != 0 || txResult.Recipient != x.vaultAddress || txResult.MessageType != "send" {
+			log.Info("[MINT MONITOR] Found failed mint tx: ", tx.Hash, " with code: ", txResult.Code)
+			success = x.HandleFailedMint(tx) && success
+			continue
+		}
 		memo, ok := util.ValidateMemo(tx.StdTx.Memo)
-
 		if !ok {
 			log.Info("[MINT MONITOR] Found invalid mint tx: ", tx.Hash, " with memo: ", "\""+tx.StdTx.Memo+"\"")
 			success = x.HandleInvalidMint(tx) && success

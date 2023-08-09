@@ -23,7 +23,8 @@ type GoogleSecretManagerConfig struct {
 }
 
 type HealthCheckConfig struct {
-	IntervalSecs int64 `yaml:"interval_secs" json:"interval_secs"`
+	IntervalSecs   int64 `yaml:"interval_secs" json:"interval_secs"`
+	ReadLastHealth bool  `yaml:"read_last_health" json:"read_last_health"`
 }
 
 type LoggerConfig struct {
