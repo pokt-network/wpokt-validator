@@ -249,6 +249,14 @@ func readConfigFromENV(envFile string) {
 			Config.HealthCheck.IntervalSecs = intervalSecs
 		}
 	}
+	if os.Getenv("HEALTH_CHECK_READ_LAST_HEALTH") != "" {
+		readLastHealth, err := strconv.ParseBool(os.Getenv("HEALTH_CHECK_READ_LAST_HEALTH"))
+		if err != nil {
+			log.Warn("[ENV] Error parsing HEALTH_CHECK_READ_LAST_HEALTH: ", err.Error())
+		} else {
+			Config.HealthCheck.ReadLastHealth = readLastHealth
+		}
+	}
 
 	// logging
 	if os.Getenv("LOG_LEVEL") != "" {

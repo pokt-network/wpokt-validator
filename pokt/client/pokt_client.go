@@ -1,12 +1,13 @@
 package client
 
 import (
+	"io"
+
 	log "github.com/sirupsen/logrus"
 
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -146,7 +147,7 @@ func queryRPC(path string, jsonArgs []byte) (string, error) {
 	}
 
 	defer resp.Body.Close()
-	bz, err := ioutil.ReadAll(resp.Body)
+	bz, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

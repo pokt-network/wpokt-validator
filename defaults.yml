@@ -1,0 +1,63 @@
+mongodb:
+  uri: ""
+  database: ""
+  timeout_secs: 30
+
+ethereum:
+  start_block_number: 0
+  confirmations: 32
+  private_key: ""
+  rpc_url: ""
+  chain_id: "5"
+  rpc_timeout_secs: 30
+  wrapped_pocket_address: ""
+  mint_controller_address: ""
+  validator_addresses:
+
+pocket:
+  start_height: 0
+  confirmations: 3
+  private_key: ""
+  rpc_url: ""
+  chain_id: "testnet"
+  rpc_timeout_secs: 30
+  tx_fee: 10000
+  vault_address: ""
+  multisig_public_keys:
+
+mint_monitor:
+  enabled: true
+  interval_secs: 300
+
+mint_signer:
+  enabled: true
+  interval_secs: 300
+
+mint_executor:
+  enabled: true
+  interval_secs: 300
+
+burn_monitor:
+  enabled: true
+  interval_secs: 300
+
+burn_signer:
+  enabled: true
+  interval_secs: 300
+
+burn_executor:
+  enabled: true
+  interval_secs: 300
+
+health_check:
+  interval_secs: 300
+  read_last_health: true
+
+logger:
+  level: "info"
+
+google_secret_manager:
+  enabled: false
+  mongo_secret_name: ""
+  pokt_secret_name: ""
+  eth_secret_name: ""

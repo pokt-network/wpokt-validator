@@ -25,10 +25,11 @@ type StdTx struct {
 }
 
 type TxResponse struct {
-	Hash   string `json:"hash"`
-	Height int64  `json:"height"`
-	Index  int64  `json:"index"`
-	StdTx  StdTx  `json:"stdTx"`
+	Hash     string   `json:"hash"`
+	Height   int64    `json:"height"`
+	Index    int64    `json:"index"`
+	StdTx    StdTx    `json:"stdTx"`
+	TxResult TxResult `json:"tx_result"`
 }
 
 type AccountTxsResponse struct {
@@ -48,4 +49,16 @@ type Block struct {
 
 type BlockResponse struct {
 	Block Block `json:"block"`
+}
+
+type TxResult struct {
+	Code        int64  `json:"code"`
+	Codespace   string `json:"codespace"`
+	Data        string `json:"data"`
+	Events      string `json:"events"`
+	Info        string `json:"info"`
+	Log         string `json:"log"`
+	MessageType string `json:"message_type"`
+	Recipient   string `json:"recipient"`
+	Signer      string `json:"signer"`
 }
