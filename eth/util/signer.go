@@ -77,7 +77,7 @@ type DomainData struct {
 
 func signTypedData(
 	domainData DomainData,
-	mint autogen.MintControllerMintData,
+	mint *autogen.MintControllerMintData,
 	key *ecdsa.PrivateKey,
 ) ([]byte, error) {
 
@@ -125,7 +125,7 @@ func signTypedData(
 	return signature, nil
 }
 
-func UpdateStatusAndConfirmationsForMint(mint models.Mint, poktHeight int64) (models.Mint, error) {
+func UpdateStatusAndConfirmationsForMint(mint *models.Mint, poktHeight int64) (*models.Mint, error) {
 	status := mint.Status
 	confirmations, err := strconv.ParseInt(mint.Confirmations, 10, 64)
 	if err != nil || confirmations < 0 {
@@ -154,12 +154,12 @@ func UpdateStatusAndConfirmationsForMint(mint models.Mint, poktHeight int64) (mo
 }
 
 func SignMint(
-	mint models.Mint,
-	data autogen.MintControllerMintData,
+	mint *models.Mint,
+	data *autogen.MintControllerMintData,
 	domain DomainData,
 	privateKey *ecdsa.PrivateKey,
 	numSigners int,
-) (models.Mint, error) {
+) (*models.Mint, error) {
 	signature, err := signTypedData(domain, data, privateKey)
 	if err != nil {
 		return mint, err

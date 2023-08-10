@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/dan13ram/wpokt-validator/eth/util"
 	"github.com/dan13ram/wpokt-validator/models"
 	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
+	poktUtil "github.com/dan13ram/wpokt-validator/pokt/util"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -62,7 +64,7 @@ func (x *MintSignerRunner) UpdateBlocks() {
 	x.poktHeight = poktHeight.Height
 }
 
-func (x *MintSignerRunner) FindNonce(mint models.Mint) (*big.Int, error) {
+func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 	log.Debug("[MINT SIGNER] Finding nonce for mint: ", mint.TransactionHash)
 	var nonce *big.Int
 
@@ -76,7 +78,7 @@ func (x *MintSignerRunner) FindNonce(mint models.Mint) (*big.Int, error) {
 	}
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
-		log.Info("[MINT SIGNER] Mint nonce not set, fetching from contract")
+		log.Debug("[MINT SIGNER] Mint nonce not set, fetching from contract")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
 		defer cancel()
 		opts := &bind.CallOpts{Context: ctx, Pending: false}
@@ -133,7 +135,60 @@ func (x *MintSignerRunner) FindNonce(mint models.Mint) (*big.Int, error) {
 	return nonce, nil
 }
 
-func (x *MintSignerRunner) HandleMint(mint models.Mint) bool {
+func (x *MintSignerRunner) ValidateMint(mint *models.Mint, data *autogen.MintControllerMintData) (bool, error) {
+	log.Debug("[MINT SIGNER] Validating mint: ", mint.TransactionHash)
+
+	tx, err := x.poktClient.GetTx(mint.TransactionHash)
+	if err != nil {
+		return false, errors.New("Error fetching transaction: " + err.Error())
+	}
+
+	if tx.Tx == "" || tx.TxResult.Code != 0 {
+		log.Debug("[MINT SIGNER] Transaction not found or failed")
+		return false, nil
+	}
+
+	if tx.TxResult.MessageType != "send" || tx.StdTx.Msg.Type != "pos/Send" {
+		log.Debug("[MINT SIGNER] Transaction message type is not send")
+		return false, nil
+	}
+
+	if strings.ToLower(tx.StdTx.Msg.Value.ToAddress) != strings.ToLower(x.vaultAddress) {
+		log.Debug("[MINT SIGNER] Transaction recipient is not vault address")
+		return false, nil
+	}
+
+	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(mint.SenderAddress) {
+		log.Debug("[MINT SIGNER] Transaction signer is not sender address")
+		return false, nil
+	}
+
+	if tx.StdTx.Msg.Value.Amount != mint.Amount {
+		log.Debug("[MINT SIGNER] Transaction amount does not match mint amount")
+		return false, nil
+	}
+
+	memo, valid := poktUtil.ValidateMemo(tx.StdTx.Memo)
+	if !valid {
+		log.Debug("[MINT SIGNER] Memo failed validation")
+		return false, nil
+	}
+
+	if memo.Address != mint.RecipientAddress {
+		log.Debug("[MINT SIGNER] Memo address does not match recipient address")
+		return false, nil
+	}
+
+	if memo.ChainId != mint.RecipientChainId {
+		log.Debug("[MINT SIGNER] Memo chain id does not match recipient chain id")
+		return false, nil
+	}
+
+	log.Debug("[MINT SIGNER] Mint validated")
+	return true, nil
+}
+
+func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
 	log.Debug("[MINT SIGNER] Handling mint: ", mint.TransactionHash)
 
 	address := common.HexToAddress(mint.RecipientAddress)
@@ -156,7 +211,7 @@ func (x *MintSignerRunner) HandleMint(mint models.Mint) bool {
 	}
 	log.Debug("[MINT SIGNER] Found Nonce: ", nonce)
 
-	data := autogen.MintControllerMintData{
+	data := &autogen.MintControllerMintData{
 		Recipient: address,
 		Amount:    amount,
 		Nonce:     nonce,
@@ -169,40 +224,59 @@ func (x *MintSignerRunner) HandleMint(mint models.Mint) bool {
 	}
 
 	var update bson.M
-	if mint.Status == models.StatusConfirmed {
-		log.Debug("[MINT SIGNER] Mint confirmed, signing")
 
-		mint, err := util.SignMint(mint, data, x.domain, x.privateKey, x.numSigners)
-		if err != nil {
-			log.Error("[MINT SIGNER] Error signing mint: ", err)
-			return false
-		}
+	valid, err := x.ValidateMint(mint, data)
+	if err != nil {
+		log.Error("[MINT SIGNER] Error validating mint: ", err)
+		return false
+	}
 
+	if !valid {
+		log.Error("[MINT SIGNER] Mint failed validation")
 		update = bson.M{
 			"$set": bson.M{
-				"data": models.MintData{
-					Recipient: data.Recipient.Hex(),
-					Amount:    data.Amount.String(),
-					Nonce:     data.Nonce.String(),
-				},
-				"nonce":         data.Nonce.String(),
-				"signatures":    mint.Signatures,
-				"signers":       mint.Signers,
-				"status":        mint.Status,
-				"confirmations": mint.Confirmations,
-				"updated_at":    time.Now(),
+				"status":     models.StatusFailed,
+				"updated_at": time.Now(),
 			},
 		}
-
 	} else {
-		log.Debug("[MINT SIGNER] Mint pending confirmation, not signing")
-		update = bson.M{
-			"$set": bson.M{
-				"status":        mint.Status,
-				"confirmations": mint.Confirmations,
-				"updated_at":    time.Now(),
-			},
+
+		if mint.Status == models.StatusConfirmed {
+			log.Debug("[MINT SIGNER] Mint confirmed, signing")
+
+			mint, err := util.SignMint(mint, data, x.domain, x.privateKey, x.numSigners)
+			if err != nil {
+				log.Error("[MINT SIGNER] Error signing mint: ", err)
+				return false
+			}
+
+			update = bson.M{
+				"$set": bson.M{
+					"data": models.MintData{
+						Recipient: data.Recipient.Hex(),
+						Amount:    data.Amount.String(),
+						Nonce:     data.Nonce.String(),
+					},
+					"nonce":         data.Nonce.String(),
+					"signatures":    mint.Signatures,
+					"signers":       mint.Signers,
+					"status":        mint.Status,
+					"confirmations": mint.Confirmations,
+					"updated_at":    time.Now(),
+				},
+			}
+
+		} else {
+			log.Debug("[MINT SIGNER] Mint pending confirmation, not signing")
+			update = bson.M{
+				"$set": bson.M{
+					"status":        mint.Status,
+					"confirmations": mint.Confirmations,
+					"updated_at":    time.Now(),
+				},
+			}
 		}
+
 	}
 
 	filter := bson.M{
@@ -215,7 +289,7 @@ func (x *MintSignerRunner) HandleMint(mint models.Mint) bool {
 		log.Error("[MINT SIGNER] Error updating mint: ", err)
 		return false
 	}
-	log.Info("[MINT SIGNER] Mint updated with signature")
+	log.Info("[MINT SIGNER] Handled mint: ", mint.TransactionHash)
 
 	return true
 }
@@ -242,7 +316,7 @@ func (x *MintSignerRunner) SyncTxs() bool {
 
 	var success bool = true
 	for _, mint := range results {
-		success = x.HandleMint(mint) && success
+		success = x.HandleMint(&mint) && success
 	}
 
 	log.Debug("[MINT SIGNER] Finished syncing pending txs")

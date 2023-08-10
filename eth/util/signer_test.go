@@ -121,7 +121,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Pocket.Confirmations = tc.requiredConfirmations
 
-			result, err := UpdateStatusAndConfirmationsForMint(tc.initialMint, tc.poktHeight)
+			result, err := UpdateStatusAndConfirmationsForMint(&tc.initialMint, tc.poktHeight)
 			if tc.expectedErr {
 				assert.Error(t, err)
 			} else {
@@ -286,7 +286,7 @@ func TestSignMint(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := SignMint(tc.initialMint, tc.data, tc.domain, tc.privateKey, tc.numSigners)
+			result, err := SignMint(&tc.initialMint, &tc.data, tc.domain, tc.privateKey, tc.numSigners)
 
 			if tc.expectedErr {
 				assert.Error(t, err)

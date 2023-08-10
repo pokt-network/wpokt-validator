@@ -1,15 +1,22 @@
 package pokt
 
 import (
+	"errors"
+	"fmt"
+	"math/big"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/eth/autogen"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
 	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/dan13ram/wpokt-validator/pokt/util"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -29,6 +36,7 @@ type BurnSignerRunner struct {
 	ethBlockNumber int64
 	vaultAddress   string
 	wpoktAddress   string
+	wpoktContract  *autogen.WrappedPocket
 }
 
 func (x *BurnSignerRunner) Run() {
@@ -54,7 +62,7 @@ func (x *BurnSignerRunner) UpdateBlocks() {
 
 	ethBlockNumber, err := x.ethClient.GetBlockNumber()
 	if err != nil {
-		log.Error("[BURN SIGNER] Error fetching eth block number: ", err)
+		log.Error("[BURN SIGNER] Error fetching egtggth block number: ", err)
 		return
 	}
 	x.ethBlockNumber = int64(ethBlockNumber)
@@ -62,8 +70,51 @@ func (x *BurnSignerRunner) UpdateBlocks() {
 	log.Info("[BURN SIGNER] Updated blocks")
 }
 
+func (x *BurnSignerRunner) ValidateInvalidMint(doc models.InvalidMint) (bool, error) {
+	log.Debug("[BURN SIGNER] Validating invalid mint: ", doc.TransactionHash)
+
+	tx, err := x.poktClient.GetTx(doc.TransactionHash)
+	if err != nil {
+		return false, errors.New("Error fetching transaction: " + err.Error())
+	}
+
+	if tx.Tx == "" || tx.TxResult.Code != 0 {
+		log.Debug("[BURN SIGNER] Transaction not found or failed")
+		return false, nil
+	}
+
+	if tx.TxResult.MessageType != "send" || tx.StdTx.Msg.Type != "pos/Send" {
+		log.Debug("[BURN SIGNER] Transaction message type is not send")
+		return false, nil
+	}
+
+	if strings.ToLower(tx.StdTx.Msg.Value.ToAddress) != strings.ToLower(x.vaultAddress) {
+		log.Debug("[BURN SIGNER] Transaction recipient is not vault address")
+		return false, nil
+	}
+
+	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(doc.SenderAddress) {
+		log.Debug("[BURN SIGNER] Transaction signer is not sender address")
+		return false, nil
+	}
+
+	if tx.StdTx.Msg.Value.Amount != doc.Amount {
+		log.Debug("[BURN SIGNER] Transaction amount does not match invalid mint amount")
+		return false, nil
+	}
+
+	_, valid := util.ValidateMemo(doc.Memo)
+	if valid {
+		log.Error("[BURN SIGNER] Memo is valid, should be invalid")
+		return false, nil
+	}
+
+	log.Debug("[BURN SIGNER] Validated invalid mint")
+	return true, nil
+}
+
 func (x *BurnSignerRunner) HandleInvalidMint(doc models.InvalidMint) bool {
-	log.Info("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
+	log.Debug("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
 
 	doc, err := util.UpdateStatusAndConfirmationsForInvalidMint(doc, x.poktHeight)
 	if err != nil {
@@ -73,32 +124,49 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 
 	var update bson.M
 
-	if doc.Status == models.StatusConfirmed {
-		log.Debug("[BURN SIGNER] Signing invalid mint")
+	valid, err := x.ValidateInvalidMint(doc)
+	if err != nil {
+		log.Error("[BURN SIGNER] Error validating invalid mint: ", err)
+		return false
+	}
 
-		doc, err = util.SignInvalidMint(doc, x.privateKey, x.multisigPubKey, x.numSigners)
-		if err != nil {
-			log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
-			return false
-		}
-
+	if !valid {
+		log.Error("[BURN SIGNER] Invalid mint failed validation")
 		update = bson.M{
 			"$set": bson.M{
-				"return_tx":     doc.ReturnTx,
-				"signers":       doc.Signers,
-				"status":        doc.Status,
-				"confirmations": doc.Confirmations,
-				"updated_at":    time.Now(),
+				"status":     models.StatusFailed,
+				"updated_at": time.Now(),
 			},
 		}
 	} else {
-		log.Debug("[BURN SIGNER] Not signing invalid mint")
-		update = bson.M{
-			"$set": bson.M{
-				"status":        doc.Status,
-				"confirmations": doc.Confirmations,
-				"updated_at":    time.Now(),
-			},
+
+		if doc.Status == models.StatusConfirmed {
+			log.Debug("[BURN SIGNER] Signing invalid mint")
+
+			doc, err = util.SignInvalidMint(doc, x.privateKey, x.multisigPubKey, x.numSigners)
+			if err != nil {
+				log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
+				return false
+			}
+
+			update = bson.M{
+				"$set": bson.M{
+					"return_tx":     doc.ReturnTx,
+					"signers":       doc.Signers,
+					"status":        doc.Status,
+					"confirmations": doc.Confirmations,
+					"updated_at":    time.Now(),
+				},
+			}
+		} else {
+			log.Debug("[BURN SIGNER] Not signing invalid mint")
+			update = bson.M{
+				"$set": bson.M{
+					"status":        doc.Status,
+					"confirmations": doc.Confirmations,
+					"updated_at":    time.Now(),
+				},
+			}
 		}
 	}
 
@@ -111,8 +179,63 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 		log.Error("[BURN SIGNER] Error updating invalid mint: ", err)
 		return false
 	}
-	log.Info("[BURN SIGNER] Updated invalid mint")
+	log.Info("[BURN SIGNER] Handled invalid mint: ", doc.TransactionHash)
 	return true
+}
+
+func (x *BurnSignerRunner) ValidateBurn(doc models.Burn) (bool, error) {
+	log.Debug("[BURN SIGNER] Validating burn: ", doc.TransactionHash)
+
+	txReceipt, err := x.ethClient.GetTransactionReceipt(doc.TransactionHash)
+
+	if err != nil {
+		return false, errors.New("Error fetching transaction receipt: " + err.Error())
+	}
+
+	logIndex, err := strconv.Atoi(doc.LogIndex)
+	if err != nil {
+		log.Debug("[BURN SIGNER] Error converting log index to int: ", err)
+		return false, nil
+	}
+
+	var burnLog *types.Log
+
+	for _, log := range txReceipt.Logs {
+		if log.Index == uint(logIndex) {
+			burnLog = log
+			break
+		}
+	}
+
+	if burnLog == nil {
+		log.Debug("[BURN SIGNER] Burn log not found")
+		return false, nil
+	}
+
+	burnEvent, err := x.wpoktContract.ParseBurnAndBridge(*burnLog)
+	if err != nil {
+		log.Error("[BURN SIGNER] Error parsing burn event: ", err)
+		return false, nil
+	}
+
+	amount := new(big.Int)
+	amount.SetString(doc.Amount, 10)
+	if burnEvent.Amount.Cmp(amount) != 0 {
+		log.Error("[BURN SIGNER] Invalid burn amount")
+		return false, nil
+	}
+	if strings.ToLower(burnEvent.From.Hex()) != strings.ToLower(doc.SenderAddress) {
+		log.Error("[BURN SIGNER] Invalid burn sender")
+		return false, nil
+	}
+	receiver := common.HexToAddress(fmt.Sprintf("0x%s", doc.RecipientAddress))
+	if strings.ToLower(burnEvent.PoktAddress.Hex()) != strings.ToLower(receiver.Hex()) {
+		log.Error("[BURN SIGNER] Invalid burn recipient")
+		return false, nil
+	}
+
+	log.Debug("[BURN SIGNER] Validated burn")
+	return true, nil
 }
 
 func (x *BurnSignerRunner) HandleBurn(doc models.Burn) bool {
@@ -126,31 +249,47 @@ func (x *BurnSignerRunner) HandleBurn(doc models.Burn) bool {
 
 	var update bson.M
 
-	if doc.Status == models.StatusConfirmed {
-		log.Debug("[BURN SIGNER] Signing burn")
-		doc, err = util.SignBurn(doc, x.privateKey, x.multisigPubKey, x.numSigners)
-		if err != nil {
-			log.Error("[BURN SIGNER] Error signing burn: ", err)
-			return false
-		}
-
+	valid, err := x.ValidateBurn(doc)
+	if err != nil {
+		log.Error("[BURN SIGNER] Error validating burn: ", err)
+		return false
+	}
+	if !valid {
+		log.Error("[BURN SIGNER] Burn failed validation")
 		update = bson.M{
 			"$set": bson.M{
-				"return_tx":     doc.ReturnTx,
-				"signers":       doc.Signers,
-				"status":        doc.Status,
-				"confirmations": doc.Confirmations,
-				"updated_at":    time.Now(),
+				"status":     models.StatusFailed,
+				"updated_at": time.Now(),
 			},
 		}
 	} else {
-		log.Debug("[BURN SIGNER] Not signing burn")
-		update = bson.M{
-			"$set": bson.M{
-				"status":        doc.Status,
-				"confirmations": doc.Confirmations,
-				"updated_at":    time.Now(),
-			},
+
+		if doc.Status == models.StatusConfirmed {
+			log.Debug("[BURN SIGNER] Signing burn")
+			doc, err = util.SignBurn(doc, x.privateKey, x.multisigPubKey, x.numSigners)
+			if err != nil {
+				log.Error("[BURN SIGNER] Error signing burn: ", err)
+				return false
+			}
+
+			update = bson.M{
+				"$set": bson.M{
+					"return_tx":     doc.ReturnTx,
+					"signers":       doc.Signers,
+					"status":        doc.Status,
+					"confirmations": doc.Confirmations,
+					"updated_at":    time.Now(),
+				},
+			}
+		} else {
+			log.Debug("[BURN SIGNER] Not signing burn")
+			update = bson.M{
+				"$set": bson.M{
+					"status":        doc.Status,
+					"confirmations": doc.Confirmations,
+					"updated_at":    time.Now(),
+				},
+			}
 		}
 	}
 
@@ -163,7 +302,7 @@ func (x *BurnSignerRunner) HandleBurn(doc models.Burn) bool {
 		log.Error("[BURN SIGNER] Error updating burn: ", err)
 		return false
 	}
-	log.Info("[BURN SIGNER] Updated burn")
+	log.Info("[BURN SIGNER] Handled burn: ", doc.TransactionHash)
 
 	return true
 }
@@ -244,6 +383,13 @@ func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 		log.Fatal("[BURN SIGNER] Error initializing ethereum client: ", err)
 	}
 
+	log.Debug("[BURN SIGNER] Connecting to wpokt contract at: ", app.Config.Ethereum.WrappedPocketAddress)
+	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WrappedPocketAddress), ethClient.GetClient())
+	if err != nil {
+		log.Fatal("[BURN SIGNER] Error initializing Wrapped Pocket contract", err)
+	}
+	log.Debug("[BURN SIGNER] Connected to wpokt contract")
+
 	x := &BurnSignerRunner{
 		privateKey:     pk,
 		multisigPubKey: multisigPk,
@@ -252,6 +398,7 @@ func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 		poktClient:     poktClient,
 		vaultAddress:   app.Config.Pocket.VaultAddress,
 		wpoktAddress:   app.Config.Ethereum.WrappedPocketAddress,
+		wpoktContract:  contract,
 	}
 
 	x.UpdateBlocks()
