@@ -1,6 +1,7 @@
 package pokt
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -36,9 +37,20 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 
 	var filter bson.M
 	var update bson.M
+	var lockId string
 
 	if doc.Status == models.StatusSigned {
 		log.Debug("[BURN EXECUTOR] Submitting invalid mint")
+
+		var err error
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
+		lockId, err = app.DB.XLock(models.CollectionInvalidMints, resourceId)
+		if err != nil {
+			log.Error("[BURN EXECUTOR] Error locking invalid mint: ", err)
+			return false
+		}
+		log.Debug("[BURN EXECUTOR] Locked invalid mint: ", doc.TransactionHash)
+
 		p := rpc.SendRawTxParams{
 			Addr:        x.multisigAddress,
 			RawHexBytes: doc.ReturnTx,
@@ -102,6 +114,16 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 		log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
 		return false
 	}
+
+	if lockId != "" && doc.Status == models.StatusSigned {
+		err = app.DB.Unlock(models.CollectionInvalidMints, lockId)
+		if err != nil {
+			log.Error("[BURN EXECUTOR] Error unlocking invalid mint: ", err)
+			return false
+		}
+		log.Debug("[BURN EXECUTOR] Unlocked invalid mint: ", doc.TransactionHash)
+	}
+
 	log.Info("[BURN EXECUTOR] Handled invalid mint")
 
 	return true
@@ -112,9 +134,20 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 
 	var filter bson.M
 	var update bson.M
+	var lockId string
 
 	if doc.Status == models.StatusSigned {
 		log.Debug("[BURN EXECUTOR] Submitting burn")
+
+		var err error
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
+		lockId, err = app.DB.XLock(models.CollectionBurns, resourceId)
+		if err != nil {
+			log.Error("[BURN EXECUTOR] Error locking burn: ", err)
+			return false
+		}
+		log.Debug("[BURN EXECUTOR] Locked burn: ", doc.TransactionHash)
+
 		p := rpc.SendRawTxParams{
 			Addr:        x.multisigAddress,
 			RawHexBytes: doc.ReturnTx,
@@ -178,6 +211,16 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 		log.Error("[BURN EXECUTOR] Error updating burn: ", err)
 		return false
 	}
+
+	if lockId != "" && doc.Status == models.StatusSigned {
+		err = app.DB.Unlock(models.CollectionBurns, lockId)
+		if err != nil {
+			log.Error("[BURN EXECUTOR] Error unlocking burn: ", err)
+			return false
+		}
+		log.Debug("[BURN EXECUTOR] Unlocked burn: ", doc.TransactionHash)
+	}
+
 	log.Info("[BURN EXECUTOR] Handled burn")
 	return true
 }

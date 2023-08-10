@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
+	"errors"
 	"time"
 
 	"github.com/dan13ram/wpokt-validator/models"
@@ -11,10 +13,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+
+	lock "github.com/square/mongo-lock"
 )
 
 type Database interface {
 	Connect() error
+	SetupLockers() error
 	SetupIndexes() error
 	Disconnect() error
 	InsertOne(collection string, data interface{}) error
@@ -22,11 +27,17 @@ type Database interface {
 	FindMany(collection string, filter interface{}, result interface{}) error
 	UpdateOne(collection string, filter interface{}, update interface{}) error
 	UpsertOne(collection string, filter interface{}, update interface{}) error
+
+	XLock(collection string, resourceId string) (string, error)
+	SLock(collection string, resourceId string) (string, error)
+	Unlock(collection string, lockId string) error
 }
 
 // mongoDatabase is a wrapper around the mongo database
 type mongoDatabase struct {
 	db *mongo.Database
+
+	lockers map[string]*lock.Client
 }
 
 var (
@@ -49,6 +60,88 @@ func (d *mongoDatabase) Connect() error {
 
 	log.Info("[DB] Connected to mongo database: ", Config.MongoDB.Database)
 	return nil
+}
+
+// SetupLocker sets up the locker
+func (d *mongoDatabase) SetupLockers() error {
+	log.Debug("[DB] Setting up locker")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
+	defer cancel()
+	d.lockers = make(map[string]*lock.Client)
+	var locker *lock.Client
+
+	locker = lock.NewClient(d.db.Collection(models.CollectionMints))
+	locker.CreateIndexes(ctx)
+	d.lockers[models.CollectionMints] = locker
+
+	locker = lock.NewClient(d.db.Collection(models.CollectionInvalidMints))
+	locker.CreateIndexes(ctx)
+	d.lockers[models.CollectionInvalidMints] = locker
+
+	locker = lock.NewClient(d.db.Collection(models.CollectionBurns))
+	locker.CreateIndexes(ctx)
+	d.lockers[models.CollectionBurns] = locker
+
+	locker = lock.NewClient(d.db.Collection(models.CollectionHealthChecks))
+	locker.CreateIndexes(ctx)
+	d.lockers[models.CollectionHealthChecks] = locker
+
+	log.Info("[DB] Locker setup")
+	return nil
+}
+
+func randomString(n int) string {
+	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, n)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	return string(bytes)
+}
+
+// XLock locks a resource for exclusive access
+func (d *mongoDatabase) XLock(collection string, resourceId string) (string, error) {
+	locker := d.lockers[collection]
+	if locker == nil {
+		return "", errors.New("Locker not found")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
+	defer cancel()
+
+	lockId := randomString(32)
+	err := locker.XLock(ctx, resourceId, lockId, lock.LockDetails{})
+	return lockId, err
+}
+
+// SLock locks a resource for shared access
+func (d *mongoDatabase) SLock(collection string, resourceId string) (string, error) {
+	locker := d.lockers[collection]
+	if locker == nil {
+		return "", errors.New("Locker not found")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
+	defer cancel()
+
+	lockId := randomString(32)
+	err := locker.SLock(ctx, resourceId, lockId, lock.LockDetails{}, -1)
+	return lockId, err
+}
+
+// Unlock unlocks a resource
+func (d *mongoDatabase) Unlock(collection string, lockId string) error {
+	locker := d.lockers[collection]
+	if locker == nil {
+		return errors.New("Locker not found")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
+	defer cancel()
+
+	_, err := locker.Unlock(ctx, lockId)
+	return err
 }
 
 // Setup Indexes
@@ -91,6 +184,18 @@ func (d *mongoDatabase) SetupIndexes() error {
 		return err
 	}
 
+	// setup unique index for healthchecks
+	log.Debug("[DB] Setting up indexes for healthchecks")
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(Config.MongoDB.TimeoutSecs))
+	defer cancel()
+	_, err = d.db.Collection(models.CollectionHealthChecks).Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "validator_id", Value: 1}, {Key: "hostname", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	})
+	if err != nil {
+		return err
+	}
+
 	log.Info("[DB] Indexes setup")
 
 	return nil
@@ -118,6 +223,7 @@ func InitDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = DB.SetupLockers()
 	log.Info("[DB] Database initialized")
 }
 
