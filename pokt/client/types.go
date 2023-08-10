@@ -29,6 +29,7 @@ type TxResponse struct {
 	Height   int64    `json:"height"`
 	Index    int64    `json:"index"`
 	StdTx    StdTx    `json:"stdTx"`
+	Tx       string   `json:"tx"`
 	TxResult TxResult `json:"tx_result"`
 }
 

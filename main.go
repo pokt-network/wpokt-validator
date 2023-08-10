@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -27,8 +28,12 @@ var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
 }
 
 func main() {
-
-	log.SetLevel(log.InfoLevel)
+	logLevel := strings.ToLower(os.Getenv("LOG_LEVEL"))
+	if logLevel == "debug" {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})

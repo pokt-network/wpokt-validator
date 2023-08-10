@@ -24,6 +24,7 @@ type EthereumClient interface {
 	GetChainId() (*big.Int, error)
 	GetClient() *ethclient.Client
 	GetTransactionByHash(txHash string) (*types.Transaction, bool, error)
+	GetTransactionReceipt(txHash string) (*types.Receipt, error)
 }
 
 type ethereumClient struct {
@@ -94,6 +95,14 @@ func (c *ethereumClient) GetTransactionByHash(txHash string) (*types.Transaction
 
 	tx, isPending, err := c.client.TransactionByHash(ctx, common.HexToHash(txHash))
 	return tx, isPending, err
+}
+
+func (c *ethereumClient) GetTransactionReceipt(txHash string) (*types.Receipt, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
+	defer cancel()
+
+	receipt, err := c.client.TransactionReceipt(ctx, common.HexToHash(txHash))
+	return receipt, err
 }
 
 func NewClient() (EthereumClient, error) {
