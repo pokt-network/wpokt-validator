@@ -199,5 +199,5 @@ func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Servic
 
 	log.Info("[MINT EXECUTOR] Initialized mint executor")
 
-	return app.NewRunnerService(MintExecutorName, x, wg, time.Duration(app.Config.MintExecutor.IntervalSecs)*time.Second)
+	return app.NewRunnerService(MintExecutorName, x, wg, time.Duration(app.Config.MintExecutor.IntervalMillis)*time.Millisecond)
 }

@@ -1,62 +1,62 @@
 mongodb:
-  uri: ""
-  database: ""
-  timeout_secs: 30
+  uri: "mongodb+srv://<mongodb-user>:<mongodb-password>@<mongodb-host>:<mongodb-port>/<mongodb-database>"
+  database: "mongodb-database"
+  timeout_ms: 2000
 
 ethereum:
-  start_block_number: 9398000
-  confirmations: 8
-  private_key: ""
-  rpc_url: ""
+  start_block_number: 0
+  confirmations: 0
+  private_key: "1234"
+  rpc_url: "https://<eth-node-host>:<eth-node-port>"
   chain_id: "5"
-  rpc_timeout_secs: 30
-  wrapped_pocket_address: "0x69E6049D2D055e67AC9235e9DF80cDBA370bA37C"
-  mint_controller_address: "0xd0D6D748B4Ef08536834c88ef005C37dB1a8a1b9"
+  rpc_timeout_ms: 2000
+  wrapped_pocket_address: "0x1234"
+  mint_controller_address: "0x1234"
   validator_addresses:
-    - "0x2CE62AAF07FCE166A329D89d76588f494e39A298"
-    - "0x162eFFA5a7aD26b9E1E8E70236007433270C059f"
-    - "0x5272015Be727C20C40dFDDDb3Df45Fa109C102E0"
+    - "0x1234"
+    - "0x1234"
+    - "0x1234"
 
 pocket:
-  start_height: 112665
-  confirmations: 1
-  private_key: ""
-  rpc_url: ""
+  start_height: 0
+  confirmations: 0
+  private_key: "1234"
+  rpc_url: "https://<pokt-node-host>:<pokt-node-port>"
   chain_id: "testnet"
-  rpc_timeout_secs: 30
+  rpc_timeout_ms: 2000
   tx_fee: 10000
-  vault_address: "7FB0A18CEB4E803F22911F5B85E2727BB3BDF04B"
+  vault_address: "1234"
   multisig_public_keys:
-    - "b051b20ad19432189aaea89642bf222af5c10b0c7730a374905953fd2d990715"
-    - "ad7a05bb00234484531c1f379e65c4ec7e2f0feeb5e27646e193578f0fb28bb6"
-    - "4294fd92033ab62cff7e49190413aa47fcb653dbfa4404fae940980bbc89227b"
+    - "1234"
+    - "1234"
+    - "1234"
 
 mint_monitor:
-  enabled: true
-  interval_secs: 300
+  enabled: false
+  interval_ms: 5000
 
 mint_signer:
-  enabled: true
-  interval_secs: 300
+  enabled: false
+  interval_ms: 5000
 
 mint_executor:
-  enabled: true
-  interval_secs: 300
+  enabled: false
+  interval_ms: 5000
 
 burn_monitor:
-  enabled: true
-  interval_secs: 300
+  enabled: false
+  interval_ms: 5000
 
 burn_signer:
-  enabled: true
-  interval_secs: 300
+  enabled: false
+  interval_ms: 5000
 
 burn_executor:
-  enabled: true
-  interval_secs: 300
+  enabled: false
+  interval_ms: 5000
 
 health_check:
-  interval_secs: 300
+  interval_ms: 5000
   read_last_health: false
 
 logger:
@@ -64,6 +64,6 @@ logger:
 
 google_secret_manager:
   enabled: false
-  mongo_secret_name: "" # projects/<project-id>/secrets/<secret-name>/versions/latest
-  pokt_secret_name: ""
-  eth_secret_name: ""
+  mongo_secret_name: "projects/<project-id>/secrets/<secret-name>/versions/latest"
+  pokt_secret_name: "projects/<project-id>/secrets/<secret-name>/versions/latest"
+  eth_secret_name: "projects/<project-id>/secrets/<secret-name>/versions/latest"

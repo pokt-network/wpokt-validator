@@ -167,6 +167,6 @@ func NewHealthCheck() *HealthCheckRunner {
 }
 
 func NewHealthService(x *HealthCheckRunner, wg *sync.WaitGroup) Service {
-	service := NewRunnerService(HealthCheckName, x, wg, time.Duration(Config.HealthCheck.IntervalSecs)*time.Second)
+	service := NewRunnerService(HealthCheckName, x, wg, time.Duration(Config.HealthCheck.IntervalMillis)*time.Millisecond)
 	return service
 }

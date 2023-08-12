@@ -90,26 +90,26 @@ func validateConfig() {
 	}
 
 	// services
-	if Config.MintMonitor.Enabled == true && Config.MintMonitor.IntervalSecs == 0 {
+	if Config.MintMonitor.Enabled == true && Config.MintMonitor.IntervalMillis == 0 {
 		log.Fatal("[CONFIG] MintMonitor.Interval is required")
 	}
-	if Config.MintSigner.Enabled == true && Config.MintSigner.IntervalSecs == 0 {
+	if Config.MintSigner.Enabled == true && Config.MintSigner.IntervalMillis == 0 {
 		log.Fatal("[CONFIG] MintSigner.Interval is required")
 	}
-	if Config.MintExecutor.Enabled == true && Config.MintExecutor.IntervalSecs == 0 {
+	if Config.MintExecutor.Enabled == true && Config.MintExecutor.IntervalMillis == 0 {
 		log.Fatal("[CONFIG] MintExecutor.Interval is required")
 	}
-	if Config.BurnMonitor.Enabled == true && Config.BurnMonitor.IntervalSecs == 0 {
+	if Config.BurnMonitor.Enabled == true && Config.BurnMonitor.IntervalMillis == 0 {
 		log.Fatal("[CONFIG] BurnMonitor.Interval is required")
 	}
-	if Config.BurnSigner.Enabled == true && Config.BurnSigner.IntervalSecs == 0 {
+	if Config.BurnSigner.Enabled == true && Config.BurnSigner.IntervalMillis == 0 {
 		log.Fatal("[CONFIG] BurnSigner.Interval is required")
 	}
-	if Config.BurnExecutor.Enabled == true && Config.BurnExecutor.IntervalSecs == 0 {
+	if Config.BurnExecutor.Enabled == true && Config.BurnExecutor.IntervalMillis == 0 {
 		log.Fatal("[CONFIG] BurnExecutor.Interval is required")
 	}
 
-	if Config.HealthCheck.IntervalSecs == 0 {
+	if Config.HealthCheck.IntervalMillis == 0 {
 		log.Fatal("[CONFIG] HealthCheck.Interval is required")
 	}
 

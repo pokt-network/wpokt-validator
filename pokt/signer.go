@@ -405,5 +405,5 @@ func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 
 	log.Info("[BURN SIGNER] Initialized")
 
-	return app.NewRunnerService(BurnSignerName, x, wg, time.Duration(app.Config.BurnSigner.IntervalSecs)*time.Second)
+	return app.NewRunnerService(BurnSignerName, x, wg, time.Duration(app.Config.BurnSigner.IntervalMillis)*time.Millisecond)
 }

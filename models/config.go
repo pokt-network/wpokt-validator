@@ -23,7 +23,7 @@ type GoogleSecretManagerConfig struct {
 }
 
 type HealthCheckConfig struct {
-	IntervalSecs   int64 `yaml:"interval_secs" json:"interval_secs"`
+	IntervalMillis int64 `yaml:"interval_ms" json:"interval_ms"`
 	ReadLastHealth bool  `yaml:"read_last_health" json:"read_last_health"`
 }
 
@@ -32,9 +32,9 @@ type LoggerConfig struct {
 }
 
 type MongoConfig struct {
-	URI         string `yaml:"uri" json:"uri"`
-	Database    string `yaml:"database" json:"database"`
-	TimeoutSecs int64  `yaml:"timeout_secs" json:"timeout_secs"`
+	URI           string `yaml:"uri" json:"uri"`
+	Database      string `yaml:"database" json:"database"`
+	TimeoutMillis int64  `yaml:"timeout_ms" json:"timeout_ms"`
 }
 
 type EthereumConfig struct {
@@ -42,7 +42,7 @@ type EthereumConfig struct {
 	Confirmations         int64    `yaml:"confirmations" json:"confirmations"`
 	PrivateKey            string   `yaml:"private_key" json:"private_key"`
 	RPCURL                string   `yaml:"rpc_url" json:"rpcurl"`
-	RPCTimeoutSecs        int64    `yaml:"rpc_timeout_secs" json:"rpc_time_out_secs"`
+	RPCTimeoutMillis      int64    `yaml:"rpc_timeout_ms" json:"rpc_time_out_ms"`
 	ChainId               string   `yaml:"chain_id" json:"chain_id"`
 	WrappedPocketAddress  string   `yaml:"wrapped_pocket_address" json:"wrapped_pocket_address"`
 	MintControllerAddress string   `yaml:"mint_controller_address" json:"mint_controller_address"`
@@ -54,7 +54,7 @@ type PocketConfig struct {
 	Confirmations      int64    `yaml:"confirmations" json:"confirmations"`
 	RPCURL             string   `yaml:"rpc_url" json:"rpcurl"`
 	PrivateKey         string   `yaml:"private_key" json:"private_key"`
-	RPCTimeoutSecs     int64    `yaml:"rpc_timeout_secs" json:"rpc_time_out_secs"`
+	RPCTimeoutMillis   int64    `yaml:"rpc_timeout_ms" json:"rpc_time_out_ms"`
 	ChainId            string   `yaml:"chain_id" json:"chain_id"`
 	TxFee              int64    `yaml:"tx_fee" json:"tx_fee"`
 	VaultAddress       string   `yaml:"vault_address" json:"vault_address"`
@@ -62,6 +62,6 @@ type PocketConfig struct {
 }
 
 type ServiceConfig struct {
-	Enabled      bool  `yaml:"enabled" json:"enabled"`
-	IntervalSecs int64 `yaml:"interval_secs" json:"interval_secs"`
+	Enabled        bool  `yaml:"enabled" json:"enabled"`
+	IntervalMillis int64 `yaml:"interval_ms" json:"interval_ms"`
 }

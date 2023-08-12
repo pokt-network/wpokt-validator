@@ -309,5 +309,5 @@ func NewExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 
 	log.Info("[BURN EXECUTOR] Initialized")
 
-	return app.NewRunnerService(BurnExecutorName, x, wg, time.Duration(app.Config.BurnExecutor.IntervalSecs)*time.Second)
+	return app.NewRunnerService(BurnExecutorName, x, wg, time.Duration(app.Config.BurnExecutor.IntervalMillis)*time.Millisecond)
 }

@@ -1,56 +1,56 @@
 mongodb:
   uri: ""
   database: ""
-  timeout_secs: 30
+  timeout_ms: 30000
 
 ethereum:
   start_block_number: 0
-  confirmations: 32
+  confirmations: 0
   private_key: ""
   rpc_url: ""
   chain_id: "5"
-  rpc_timeout_secs: 30
+  rpc_timeout_ms: 30000
   wrapped_pocket_address: ""
   mint_controller_address: ""
   validator_addresses:
 
 pocket:
   start_height: 0
-  confirmations: 3
+  confirmations: 0
   private_key: ""
   rpc_url: ""
   chain_id: "testnet"
-  rpc_timeout_secs: 30
+  rpc_timeout_ms: 30000
   tx_fee: 10000
   vault_address: ""
   multisig_public_keys:
 
 mint_monitor:
   enabled: true
-  interval_secs: 300
+  interval_ms: 30000
 
 mint_signer:
   enabled: true
-  interval_secs: 300
+  interval_ms: 30000
 
 mint_executor:
   enabled: true
-  interval_secs: 300
+  interval_ms: 30000
 
 burn_monitor:
   enabled: true
-  interval_secs: 300
+  interval_ms: 30000
 
 burn_signer:
   enabled: true
-  interval_secs: 300
+  interval_ms: 30000
 
 burn_executor:
   enabled: true
-  interval_secs: 300
+  interval_ms: 30000
 
 health_check:
-  interval_secs: 300
+  interval_ms: 30000
   read_last_health: true
 
 logger:

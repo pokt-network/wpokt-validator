@@ -28,7 +28,8 @@ type EthereumClient interface {
 }
 
 type ethereumClient struct {
-	client *ethclient.Client
+	client  *ethclient.Client
+	timeout time.Duration
 }
 
 var Client EthereumClient = &ethereumClient{}
@@ -37,7 +38,7 @@ func (c *ethereumClient) GetClient() *ethclient.Client {
 	return c.client
 }
 func (c *ethereumClient) GetBlockNumber() (uint64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
 	blockNumber, err := c.client.BlockNumber(ctx)
@@ -49,7 +50,7 @@ func (c *ethereumClient) GetBlockNumber() (uint64, error) {
 }
 
 func (c *ethereumClient) GetChainId() (*big.Int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
 	chainId, err := c.client.ChainID(ctx)
@@ -68,6 +69,7 @@ func (c *ethereumClient) ValidateNetwork() {
 		log.Fatalln("[ETH]", "Failed to connect to Ethereum node:", err)
 	}
 	c.client = client
+	c.timeout = time.Duration(app.Config.Ethereum.RPCTimeoutMillis) * time.Millisecond
 
 	chainId, err := c.GetChainId()
 	if err != nil {
@@ -90,7 +92,7 @@ func (c *ethereumClient) ValidateNetwork() {
 }
 
 func (c *ethereumClient) GetTransactionByHash(txHash string) (*types.Transaction, bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
 	tx, isPending, err := c.client.TransactionByHash(ctx, common.HexToHash(txHash))
@@ -98,7 +100,7 @@ func (c *ethereumClient) GetTransactionByHash(txHash string) (*types.Transaction
 }
 
 func (c *ethereumClient) GetTransactionReceipt(txHash string) (*types.Receipt, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
 	receipt, err := c.client.TransactionReceipt(ctx, common.HexToHash(txHash))

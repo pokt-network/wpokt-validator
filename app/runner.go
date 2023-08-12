@@ -26,10 +26,10 @@ type RunnerService struct {
 }
 
 func (x *RunnerService) Start() {
-	log.Infof("[%s] Started", x.name)
+	log.Infof("[%s] Service started", x.name)
 	stop := false
 	for !stop {
-		log.Infof("[%s] Running", x.name)
+		log.Infof("[%s] Run started", x.name)
 
 		x.runner.Run()
 
@@ -39,7 +39,7 @@ func (x *RunnerService) Start() {
 
 		select {
 		case <-x.stop:
-			log.Infof("[%s] Stopped", x.name)
+			log.Infof("[%s] Service stopped", x.name)
 			x.wg.Done()
 			stop = true
 		case <-time.After(x.interval):

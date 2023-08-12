@@ -28,15 +28,15 @@ var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
 }
 
 func main() {
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
 	logLevel := strings.ToLower(os.Getenv("LOG_LEVEL"))
 	if logLevel == "debug" {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
 
 	var configPath string
 	var envPath string
