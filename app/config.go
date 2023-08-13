@@ -22,10 +22,10 @@ func InitConfig(configFile string, envFile string) {
 	log.Info("[CONFIG] Config initialized")
 }
 
-func readConfigFromConfigFile(configFile string) {
+func readConfigFromConfigFile(configFile string) bool {
 	if configFile == "" {
 		log.Debug("[CONFIG] No config file provided")
-		return
+		return false
 	}
 	log.Debugf("[CONFIG] Reading config file %s", configFile)
 	var yamlFile, err = os.ReadFile(configFile)
@@ -37,6 +37,7 @@ func readConfigFromConfigFile(configFile string) {
 		log.Fatalf("[CONFIG] Error unmarshalling config file %q: %s\n", configFile, err.Error())
 	}
 	log.Debugf("[CONFIG] Config loaded from %s", configFile)
+	return true
 }
 
 func validateConfig() {

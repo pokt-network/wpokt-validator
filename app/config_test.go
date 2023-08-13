@@ -15,6 +15,50 @@ func init() {
 	log.SetOutput(io.Discard)
 }
 
+func TestReadConfigFromConfigFile(t *testing.T) {
+	t.Run("Config File Provided", func(t *testing.T) {
+		// Provide valid config file (adjust the path accordingly)
+		configFile := "../config.sample.yml"
+
+		read := readConfigFromConfigFile(configFile)
+
+		assert.Equal(t, read, true)
+		assert.Equal(t, Config.MongoDB.Database, "mongodb-database")
+		assert.Equal(t, Config.MongoDB.TimeoutMillis, 2000)
+	})
+
+	t.Run("No Config File Provided", func(t *testing.T) {
+		// Provide empty config file
+		configFile := ""
+
+		read := readConfigFromConfigFile(configFile)
+		assert.Equal(t, read, false)
+	})
+
+	t.Run("Invalid Config File Path", func(t *testing.T) {
+		// Provide invalid config file (adjust the path accordingly)
+		configFile := "../config.sample.invalid.yml"
+
+		defer func() { log.StandardLogger().ExitFunc = nil }()
+		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
+
+		// Call the validateConfig function
+		assert.Panics(t, func() { readConfigFromConfigFile(configFile) }, "readConfigFromConfigFile should panic")
+	})
+
+	t.Run("Invalid Config File Contents", func(t *testing.T) {
+		// Provide invalid config file (adjust the path accordingly)
+		configFile := "../README.md"
+
+		defer func() { log.StandardLogger().ExitFunc = nil }()
+		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
+
+		// Call the validateConfig function
+		assert.Panics(t, func() { readConfigFromConfigFile(configFile) }, "readConfigFromConfigFile should panic")
+	})
+
+}
+
 func TestInitConfig(t *testing.T) {
 	t.Run("Config Initialization Success", func(t *testing.T) {
 		// Provide valid config and env files (adjust the paths accordingly)
