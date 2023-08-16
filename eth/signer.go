@@ -79,7 +79,7 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 
 	if nonce == nil || nonce.Cmp(big.NewInt(0)) == 0 {
 		log.Debug("[MINT SIGNER] Mint nonce not set, fetching from contract")
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
 		defer cancel()
 		opts := &bind.CallOpts{Context: ctx, Pending: false}
 		currentNonce, err := x.wpoktContract.GetUserNonce(opts, common.HexToAddress(mint.RecipientAddress))
@@ -358,7 +358,7 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service 
 	log.Debug("[MINT SIGNER] Connected to mint controller contract")
 
 	log.Debug("[MINT SIGNER] Fetching mint controller domain data")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutSecs)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
 	defer cancel()
 	opts := &bind.CallOpts{Context: ctx, Pending: false}
 	domain, err := mintControllerContract.Eip712Domain(opts)
@@ -385,5 +385,5 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service 
 
 	log.Info("[MINT SIGNER] Initialized mint signer")
 
-	return app.NewRunnerService(MintSignerName, x, wg, time.Duration(app.Config.MintSigner.IntervalSecs)*time.Second)
+	return app.NewRunnerService(MintSignerName, x, wg, time.Duration(app.Config.MintSigner.IntervalMillis)*time.Millisecond)
 }

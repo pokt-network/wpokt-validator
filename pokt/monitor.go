@@ -188,5 +188,5 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service
 
 	log.Info("[MINT MONITOR] Initialized")
 
-	return app.NewRunnerService(MintMonitorName, x, wg, time.Duration(app.Config.MintMonitor.IntervalSecs)*time.Second)
+	return app.NewRunnerService(MintMonitorName, x, wg, time.Duration(app.Config.MintMonitor.IntervalMillis)*time.Millisecond)
 }

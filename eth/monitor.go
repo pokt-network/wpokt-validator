@@ -166,6 +166,6 @@ func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 		BurnMonitorName,
 		x,
 		wg,
-		time.Duration(app.Config.BurnMonitor.IntervalSecs)*time.Second,
+		time.Duration(app.Config.BurnMonitor.IntervalMillis)*time.Millisecond,
 	)
 }

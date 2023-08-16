@@ -29,12 +29,12 @@ func readConfigFromENV(envFile string) {
 	if os.Getenv("MONGODB_DATABASE") != "" {
 		Config.MongoDB.Database = os.Getenv("MONGODB_DATABASE")
 	}
-	if os.Getenv("MONGODB_TIMEOUT_SECS") != "" {
-		timeoutSecs, err := strconv.ParseInt(os.Getenv("MONGODB_TIMEOUT_SECS"), 10, 64)
+	if os.Getenv("MONGODB_TIMEOUT_MS") != "" {
+		timeoutMillis, err := strconv.ParseInt(os.Getenv("MONGODB_TIMEOUT_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing MONGODB_TIMEOUT_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing MONGODB_TIMEOUT_MS: ", err.Error())
 		} else {
-			Config.MongoDB.TimeoutSecs = timeoutSecs
+			Config.MongoDB.TimeoutMillis = timeoutMillis
 		}
 	}
 
@@ -64,12 +64,12 @@ func readConfigFromENV(envFile string) {
 			Config.Ethereum.Confirmations = confirmations
 		}
 	}
-	if os.Getenv("ETH_RPC_TIMEOUT_SECS") != "" {
-		timeoutSecs, err := strconv.ParseInt(os.Getenv("ETH_RPC_TIMEOUT_SECS"), 10, 64)
+	if os.Getenv("ETH_RPC_TIMEOUT_MS") != "" {
+		timeoutMillis, err := strconv.ParseInt(os.Getenv("ETH_RPC_TIMEOUT_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing ETH_RPC_TIMEOUT_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing ETH_RPC_TIMEOUT_MS: ", err.Error())
 		} else {
-			Config.Ethereum.RPCTimeoutSecs = timeoutSecs
+			Config.Ethereum.RPCTimeoutMillis = timeoutMillis
 		}
 	}
 	if os.Getenv("ETH_WRAPPED_POCKET_ADDRESS") != "" {
@@ -108,12 +108,12 @@ func readConfigFromENV(envFile string) {
 			Config.Pocket.Confirmations = confirmations
 		}
 	}
-	if os.Getenv("POKT_RPC_TIMEOUT_SECS") != "" {
-		timeoutSecs, err := strconv.ParseInt(os.Getenv("POKT_RPC_TIMEOUT_SECS"), 10, 64)
+	if os.Getenv("POKT_RPC_TIMEOUT_MS") != "" {
+		timeoutMillis, err := strconv.ParseInt(os.Getenv("POKT_RPC_TIMEOUT_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing POKT_RPC_TIMEOUT_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing POKT_RPC_TIMEOUT_MS: ", err.Error())
 		} else {
-			Config.Pocket.RPCTimeoutSecs = timeoutSecs
+			Config.Pocket.RPCTimeoutMillis = timeoutMillis
 		}
 	}
 	if os.Getenv("POKT_TX_FEE") != "" {
@@ -141,12 +141,12 @@ func readConfigFromENV(envFile string) {
 			Config.MintMonitor.Enabled = enabled
 		}
 	}
-	if os.Getenv("MINT_MONITOR_INTERVAL_SECS") != "" {
-		intervalSecs, err := strconv.ParseInt(os.Getenv("MINT_MONITOR_INTERVAL_SECS"), 10, 64)
+	if os.Getenv("MINT_MONITOR_INTERVAL_MS") != "" {
+		intervalMillis, err := strconv.ParseInt(os.Getenv("MINT_MONITOR_INTERVAL_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing MINT_MONITOR_INTERVAL_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing MINT_MONITOR_INTERVAL_MS: ", err.Error())
 		} else {
-			Config.MintMonitor.IntervalSecs = intervalSecs
+			Config.MintMonitor.IntervalMillis = intervalMillis
 		}
 	}
 
@@ -159,12 +159,12 @@ func readConfigFromENV(envFile string) {
 			Config.MintSigner.Enabled = enabled
 		}
 	}
-	if os.Getenv("MINT_SIGNER_INTERVAL_SECS") != "" {
-		intervalSecs, err := strconv.ParseInt(os.Getenv("MINT_SIGNER_INTERVAL_SECS"), 10, 64)
+	if os.Getenv("MINT_SIGNER_INTERVAL_MS") != "" {
+		intervalMillis, err := strconv.ParseInt(os.Getenv("MINT_SIGNER_INTERVAL_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing MINT_SIGNER_INTERVAL_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing MINT_SIGNER_INTERVAL_MS: ", err.Error())
 		} else {
-			Config.MintSigner.IntervalSecs = intervalSecs
+			Config.MintSigner.IntervalMillis = intervalMillis
 		}
 	}
 
@@ -177,12 +177,12 @@ func readConfigFromENV(envFile string) {
 			Config.MintExecutor.Enabled = enabled
 		}
 	}
-	if os.Getenv("MINT_EXECUTOR_INTERVAL_SECS") != "" {
-		intervalSecs, err := strconv.ParseInt(os.Getenv("MINT_EXECUTOR_INTERVAL_SECS"), 10, 64)
+	if os.Getenv("MINT_EXECUTOR_INTERVAL_MS") != "" {
+		intervalMillis, err := strconv.ParseInt(os.Getenv("MINT_EXECUTOR_INTERVAL_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing MINT_EXECUTOR_INTERVAL_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing MINT_EXECUTOR_INTERVAL_MS: ", err.Error())
 		} else {
-			Config.MintExecutor.IntervalSecs = intervalSecs
+			Config.MintExecutor.IntervalMillis = intervalMillis
 		}
 	}
 
@@ -195,12 +195,12 @@ func readConfigFromENV(envFile string) {
 			Config.BurnMonitor.Enabled = enabled
 		}
 	}
-	if os.Getenv("BURN_MONITOR_INTERVAL_SECS") != "" {
-		intervalSecs, err := strconv.ParseInt(os.Getenv("BURN_MONITOR_INTERVAL_SECS"), 10, 64)
+	if os.Getenv("BURN_MONITOR_INTERVAL_MS") != "" {
+		intervalMillis, err := strconv.ParseInt(os.Getenv("BURN_MONITOR_INTERVAL_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing BURN_MONITOR_INTERVAL_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing BURN_MONITOR_INTERVAL_MS: ", err.Error())
 		} else {
-			Config.BurnMonitor.IntervalSecs = intervalSecs
+			Config.BurnMonitor.IntervalMillis = intervalMillis
 		}
 	}
 
@@ -213,12 +213,12 @@ func readConfigFromENV(envFile string) {
 			Config.BurnSigner.Enabled = enabled
 		}
 	}
-	if os.Getenv("BURN_SIGNER_INTERVAL_SECS") != "" {
-		intervalSecs, err := strconv.ParseInt(os.Getenv("BURN_SIGNER_INTERVAL_SECS"), 10, 64)
+	if os.Getenv("BURN_SIGNER_INTERVAL_MS") != "" {
+		intervalMillis, err := strconv.ParseInt(os.Getenv("BURN_SIGNER_INTERVAL_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing BURN_SIGNER_INTERVAL_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing BURN_SIGNER_INTERVAL_MS: ", err.Error())
 		} else {
-			Config.BurnSigner.IntervalSecs = intervalSecs
+			Config.BurnSigner.IntervalMillis = intervalMillis
 		}
 	}
 
@@ -231,22 +231,22 @@ func readConfigFromENV(envFile string) {
 			Config.BurnExecutor.Enabled = enabled
 		}
 	}
-	if os.Getenv("BURN_EXECUTOR_INTERVAL_SECS") != "" {
-		intervalSecs, err := strconv.ParseInt(os.Getenv("BURN_EXECUTOR_INTERVAL_SECS"), 10, 64)
+	if os.Getenv("BURN_EXECUTOR_INTERVAL_MS") != "" {
+		intervalMillis, err := strconv.ParseInt(os.Getenv("BURN_EXECUTOR_INTERVAL_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing BURN_EXECUTOR_INTERVAL_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing BURN_EXECUTOR_INTERVAL_MS: ", err.Error())
 		} else {
-			Config.BurnExecutor.IntervalSecs = intervalSecs
+			Config.BurnExecutor.IntervalMillis = intervalMillis
 		}
 	}
 
 	// health check
-	if os.Getenv("HEALTH_CHECK_INTERVAL_SECS") != "" {
-		intervalSecs, err := strconv.ParseInt(os.Getenv("HEALTH_CHECK_INTERVAL_SECS"), 10, 64)
+	if os.Getenv("HEALTH_CHECK_INTERVAL_MS") != "" {
+		intervalMillis, err := strconv.ParseInt(os.Getenv("HEALTH_CHECK_INTERVAL_MS"), 10, 64)
 		if err != nil {
-			log.Warn("[ENV] Error parsing HEALTH_CHECK_INTERVAL_SECS: ", err.Error())
+			log.Warn("[ENV] Error parsing HEALTH_CHECK_INTERVAL_MS: ", err.Error())
 		} else {
-			Config.HealthCheck.IntervalSecs = intervalSecs
+			Config.HealthCheck.IntervalMillis = intervalMillis
 		}
 	}
 	if os.Getenv("HEALTH_CHECK_READ_LAST_HEALTH") != "" {

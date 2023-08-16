@@ -292,7 +292,7 @@ func TestSignMint(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedMint, result)
+				assert.Equal(t, tc.expectedMint, *result)
 			}
 
 		})
