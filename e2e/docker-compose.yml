@@ -8,25 +8,24 @@ services:
       - "27017:27017"
     expose:
       - "27017"
-    logging:
-      driver: "none"
+    command: mongod --quiet --logpath /dev/null
   wpokt.validator1:
     image: dan13ram/wpokt-validator
     build:
       context: ..
       dockerfile: ./e2e/Dockerfile
-    command: "/validator --config /app/e2e/one.yml"
+    command: "/validator --config /app/e2e/config.one.yml"
 
   wpokt.validator2:
     image: dan13ram/wpokt-validator
     build:
       context: ..
       dockerfile: ./e2e/Dockerfile
-    command: "/validator --config /app/e2e/two.yml"
+    command: "/validator --config /app/e2e/config.two.yml"
 
   wpokt.validator3:
     image: dan13ram/wpokt-validator
     build:
       context: ..
       dockerfile: ./e2e/Dockerfile
-    command: "/validator --config /app/e2e/three.yml"
+    command: "/validator --config /app/e2e/config.three.yml"
