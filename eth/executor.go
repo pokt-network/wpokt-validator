@@ -46,7 +46,7 @@ func (x *MintExecutorRunner) Status() models.RunnerStatus {
 func (x *MintExecutorRunner) UpdateCurrentBlockNumber() {
 	res, err := x.client.GetBlockNumber()
 	if err != nil {
-		log.Error(err)
+		log.Error("[MINT EXECUTOR] Error while getting current block number: ", err)
 		return
 	}
 

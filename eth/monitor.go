@@ -43,7 +43,7 @@ func (x *BurnMonitorRunner) Status() models.RunnerStatus {
 func (x *BurnMonitorRunner) UpdateCurrentBlockNumber() {
 	res, err := x.client.GetBlockNumber()
 	if err != nil {
-		log.Error(err)
+		log.Error("[BURN MONITOR] Error while getting current block number: ", err)
 		return
 	}
 	x.currentBlockNumber = int64(res)

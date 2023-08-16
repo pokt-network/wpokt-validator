@@ -62,7 +62,7 @@ func (x *BurnSignerRunner) UpdateBlocks() {
 
 	ethBlockNumber, err := x.ethClient.GetBlockNumber()
 	if err != nil {
-		log.Error("[BURN SIGNER] Error fetching egtggth block number: ", err)
+		log.Error("[BURN SIGNER] Error fetching eth block number: ", err)
 		return
 	}
 	x.ethBlockNumber = int64(ethBlockNumber)

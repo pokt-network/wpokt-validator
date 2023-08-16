@@ -44,7 +44,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 
 		var err error
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
-		lockId, err = app.DB.XLock(models.CollectionInvalidMints, resourceId)
+		lockId, err = app.DB.XLock(resourceId)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error locking invalid mint: ", err)
 			return false
@@ -116,7 +116,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 	}
 
 	if lockId != "" && doc.Status == models.StatusSigned {
-		err = app.DB.Unlock(models.CollectionInvalidMints, lockId)
+		err = app.DB.Unlock(lockId)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error unlocking invalid mint: ", err)
 			return false
@@ -141,7 +141,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 
 		var err error
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
-		lockId, err = app.DB.XLock(models.CollectionBurns, resourceId)
+		lockId, err = app.DB.XLock(resourceId)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error locking burn: ", err)
 			return false
@@ -213,7 +213,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 	}
 
 	if lockId != "" && doc.Status == models.StatusSigned {
-		err = app.DB.Unlock(models.CollectionBurns, lockId)
+		err = app.DB.Unlock(lockId)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error unlocking burn: ", err)
 			return false

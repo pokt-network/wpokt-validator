@@ -110,7 +110,7 @@ func (x *MintMonitorService) SyncTxs() bool {
 
 	txs, err := x.client.GetAccountTxsByHeight(x.vaultAddress, x.startHeight)
 	if err != nil {
-		log.Error(err)
+		log.Error("[MINT MONITOR] Error getting txs: ", err)
 		return false
 	}
 	log.Info("[MINT MONITOR] Found ", len(txs), " txs to sync")
