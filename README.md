@@ -102,6 +102,27 @@ docker run -d --env-file .env docker.io/dan13ram/wpokt-validator:latest
 
 Ensure you have set the required environment variables in the `.env` file or directly in the command above.
 
+## Running End-to-End Tests
+
+To test the core functionalities of the wPOKT Validator in a controlled environment, follow these steps:
+
+1. **Navigate to E2E Directory:**
+   - Open your terminal and move to the `./e2e` directory in the project.
+
+2. **Start Local Network:**
+   - Within the `./e2e` directory, execute the following commands to set up the local network:
+     ```shell
+     make clean
+     make network
+     ```
+   - Please allow up to 5 minutes for the local network to be fully operational.
+
+3. **Run Tests:**
+   - Once the local network is ready, initiate the end-to-end tests using the command:
+     ```shell
+     make test
+     ```
+
 ## License
 
 This project is licensed under the MIT License.
