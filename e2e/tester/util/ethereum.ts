@@ -6,6 +6,8 @@ import {
   WalletClient,
   createPublicClient,
   createWalletClient,
+  decodeEventLog,
+  encodeEventTopics,
   http,
   parseAbi,
   parseUnits,
@@ -13,6 +15,8 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { Chain, goerli, hardhat, mainnet } from "viem/chains";
 import { config } from "./config";
+import { MintData } from "../types";
+import {MINT_CONTROLLER_ABI, WRAPPED_POCKET_ABI} from "./abis";
 
 const ETH_CHAIN = (() => {
   switch (config.ethereum.chain_id) {
@@ -48,12 +52,12 @@ const getBalance = async (address: Hex): Promise<bigint> => {
 const getWPOKTBalance = async (address: Hex): Promise<bigint> => {
   const balance = await publicClient.readContract({
     address: config.ethereum.wrapped_pocket_address as Hex,
-    abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
+    abi: WRAPPED_POCKET_ABI,
     functionName: "balanceOf",
     args: [address],
   });
 
-  return balance;
+  return balance as bigint;
 };
 
 const sendETH = async (
@@ -76,9 +80,7 @@ const sendWPOKT = async (
 ): Promise<TransactionReceipt> => {
   const hash = await wallet.writeContract({
     address: config.ethereum.wrapped_pocket_address as Hex,
-    abi: parseAbi([
-      "function transfer(address _to, uint256 _value) public returns (bool success)",
-    ]),
+    abi: WRAPPED_POCKET_ABI,
     functionName: "transfer",
     args: [recipient, amount],
   });
@@ -111,20 +113,46 @@ const getAddress = async (): Promise<Hex> => {
 
 const mintWPOKT = async (
   wallet: WalletClient<Transport, Chain, Account>,
-  data: { recipient: Hex; amount: bigint; nonce: bigint },
-  signatures: Array<Hex>
+  data: MintData,
+  signatures: string[]
 ): Promise<TransactionReceipt> => {
   const hash = await wallet.writeContract({
     address: config.ethereum.mint_controller_address as Hex,
-    abi: parseAbi([
-      "function mintWrappedPocket(tuple(address recipient, uint256 amount, uint256 nonce), bytes[] signatures) public",
-    ]),
+    abi: MINT_CONTROLLER_ABI,
     functionName: "mintWrappedPocket",
     args: [data, signatures],
   });
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   return receipt;
+};
+
+type MintedEvent = {
+  recipient: Hex;
+  amount: bigint;
+  nonce: bigint;
+};
+
+const findMintedEvent = (receipt: TransactionReceipt): MintedEvent | null => {
+  const eventTops = encodeEventTopics({
+    abi: WRAPPED_POCKET_ABI,
+    eventName: "Minted",
+  });
+
+  const event = receipt.logs.find((log) => log.topics[0] === eventTops[0]);
+
+  if (!event) {
+    return null;
+  }
+
+  const decodedLog = decodeEventLog({
+    abi: WRAPPED_POCKET_ABI,
+    eventName: "Minted",
+    data: event.data,
+    topics: event.topics,
+  });
+
+  return decodedLog.args as MintedEvent;
 };
 
 const burnAndBridgeWPOKT = async (
@@ -134,9 +162,7 @@ const burnAndBridgeWPOKT = async (
 ): Promise<TransactionReceipt> => {
   const hash = await wallet.writeContract({
     address: config.ethereum.wrapped_pocket_address as Hex,
-    abi: parseAbi([
-      "function burnAndBridge(uint256 amount, address poktAddress) public",
-    ]),
+    abi: WRAPPED_POCKET_ABI,
     functionName: "burnAndBridge",
     args: [amount, poktAddress],
   });
@@ -146,11 +172,13 @@ const burnAndBridgeWPOKT = async (
 };
 
 export default {
+  walletPromise,
   CHAIN: ETH_CHAIN,
   getBalance,
   getWPOKTBalance,
   getAddress,
   sendWPOKT,
   mintWPOKT,
+  findMintedEvent,
   burnAndBridgeWPOKT,
 };

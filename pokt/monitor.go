@@ -117,7 +117,7 @@ func (x *MintMonitorService) SyncTxs() bool {
 	log.Info("[MINT MONITOR] Found ", len(txs), " txs to sync")
 	var success bool = true
 	for _, tx := range txs {
-		if tx.Tx == "" || tx.TxResult.Code != 0 || tx.TxResult.Recipient != x.vaultAddress || tx.TxResult.MessageType != "send" {
+		if tx.Tx == "" || tx.TxResult.Code != 0 || strings.ToLower(tx.TxResult.Recipient) != x.vaultAddress || tx.TxResult.MessageType != "send" {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", tx.Hash, " with code: ", tx.TxResult.Code)
 			success = x.HandleFailedMint(tx) && success
 			continue

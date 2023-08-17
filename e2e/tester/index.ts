@@ -1,17 +1,13 @@
 import { formatUnits } from "viem";
-import { databasePromise } from "./util/mongodb";
+import { findHealthChecks } from "./util/mongodb";
 import pocket from "./util/pocket";
 import ethereum from "./util/ethereum";
 import { mintFlow } from "./flows/mint";
 
 const init = async () => {
-  const db = await databasePromise;
+  const healths = await findHealthChecks();
 
-  const collection = db.collection("healthchecks");
-
-  const result = await collection.find({}).toArray();
-
-  console.log("Number of validators:", result.length);
+  console.log("Number of validators:", healths.length);
 
   const pocketAddress = await pocket.getAddress();
 

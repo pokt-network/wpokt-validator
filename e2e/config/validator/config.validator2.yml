@@ -5,7 +5,7 @@ mongodb:
 
 ethereum:
   start_block_number: 0
-  confirmations: 0
+  confirmations: 10
   private_key: "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
   rpc_url: "http://wpokt.localnet:8545"
   chain_id: "31337"
@@ -19,7 +19,7 @@ ethereum:
 
 pocket:
   start_height: 0
-  confirmations: 0
+  confirmations: 10
   private_key: "f1f0b5ab116830b0bd0f8eb24544fe90580f80940cf05bd90297826de91ebc4aec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2"
   rpc_url: "http://node1.pokt.localnet:8081"
   chain_id: "localnet"

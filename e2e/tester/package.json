@@ -5,8 +5,8 @@
   "author": "dan13ram",
   "license": "MIT",
   "scripts": {
-    "start": "mocha -t 10000 -r ts-node/register index.ts",
-    "dev": "nodemon --exec \"yarn start\""
+    "test": "mocha -t 60000 -r ts-node/register index.ts",
+    "debug": "DEBUG=true yarn test"
   },
   "dependencies": {
     "@pokt-foundation/pocketjs-provider": "^2.1.3",

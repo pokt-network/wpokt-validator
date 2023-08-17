@@ -3,7 +3,7 @@ import { AbstractSigner, KeyManager } from "@pokt-foundation/pocketjs-signer";
 import { TransactionBuilder } from "@pokt-foundation/pocketjs-transaction-builder";
 import { config } from "./config";
 import { Transaction } from "@pokt-foundation/pocketjs-types";
-import { sleep } from "./helpers";
+import { debug, sleep } from "./helpers";
 import { parseUnits } from "viem";
 
 const CHAIN = {
@@ -48,7 +48,7 @@ const pollForTransaction = async (
 
 const sendPOKT = async (
   signer: AbstractSigner,
-  recipient: string = VAULT_ADDRESS,
+  recipient: string,
   amount: string,
   memo: string = "",
   fee: string = "10000"
@@ -70,6 +70,8 @@ const sendPOKT = async (
     txMsg,
     fee,
   });
+
+  debug("Sent POKT transaction:", txHash);
 
   const tx = await pollForTransaction(txHash);
 
