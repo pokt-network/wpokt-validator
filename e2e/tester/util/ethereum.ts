@@ -9,14 +9,15 @@ import {
   decodeEventLog,
   encodeEventTopics,
   http,
-  parseAbi,
   parseUnits,
 } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { Chain, goerli, hardhat, mainnet } from "viem/chains";
 import { config } from "./config";
 import { MintData } from "../types";
-import {MINT_CONTROLLER_ABI, WRAPPED_POCKET_ABI} from "./abis";
+import { MINT_CONTROLLER_ABI, WRAPPED_POCKET_ABI } from "./abis";
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const ETH_CHAIN = (() => {
   switch (config.ethereum.chain_id) {
@@ -174,6 +175,7 @@ const burnAndBridgeWPOKT = async (
 export default {
   walletPromise,
   CHAIN: ETH_CHAIN,
+  ZERO_ADDRESS,
   getBalance,
   getWPOKTBalance,
   getAddress,

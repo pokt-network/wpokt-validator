@@ -3,8 +3,10 @@ import { Db, MongoClient } from "mongodb";
 import { config } from "./config";
 import {
   CollectionHealthChecks,
+  CollectionInvalidMints,
   CollectionMints,
   Health,
+  InvalidMint,
   Mint,
 } from "../types";
 
@@ -31,9 +33,16 @@ export const findHealthChecks = async (): Promise<Health[]> => {
 
 export const findMint = async (txHash: string): Promise<Mint | null> => {
   const db = await databasePromise;
-  return db
-    .collection(CollectionMints)
-    .findOne({
-      transaction_hash: txHash.toLowerCase(),
-    }) as Promise<Mint | null>;
+  return db.collection(CollectionMints).findOne({
+    transaction_hash: txHash.toLowerCase(),
+  }) as Promise<Mint | null>;
+};
+
+export const findInvalidMint = async (
+  txHash: string
+): Promise<InvalidMint | null> => {
+  const db = await databasePromise;
+  return db.collection(CollectionInvalidMints).findOne({
+    transaction_hash: txHash.toLowerCase(),
+  }) as Promise<InvalidMint | null>;
 };

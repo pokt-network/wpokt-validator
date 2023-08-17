@@ -3,7 +3,7 @@ import { AbstractSigner, KeyManager } from "@pokt-foundation/pocketjs-signer";
 import { TransactionBuilder } from "@pokt-foundation/pocketjs-transaction-builder";
 import { config } from "./config";
 import { Transaction } from "@pokt-foundation/pocketjs-types";
-import { debug, sleep } from "./helpers";
+import { sleep } from "./helpers";
 import { parseUnits } from "viem";
 
 const CHAIN = {
@@ -11,6 +11,7 @@ const CHAIN = {
   rpcUrl: config.pocket.rpc_url,
 };
 
+const ZERO_ADDRESS = "0000000000000000000000000000000000000000";
 const VAULT_ADDRESS = config.pocket.vault_address;
 
 const provider = new JsonRpcProvider({
@@ -71,8 +72,6 @@ const sendPOKT = async (
     fee,
   });
 
-  debug("Sent POKT transaction:", txHash);
-
   const tx = await pollForTransaction(txHash);
 
   return tx;
@@ -94,9 +93,11 @@ const signerPromise = (async (): Promise<AbstractSigner> => {
 
 export default {
   CHAIN,
+  ZERO_ADDRESS,
   VAULT_ADDRESS,
   getBalance,
   getAddress,
   sendPOKT,
   signerPromise,
+  getTransction: pollForTransaction,
 };
