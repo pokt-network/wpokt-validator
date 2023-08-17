@@ -309,10 +309,12 @@ func (x *BurnSignerRunner) HandleBurn(doc models.Burn) bool {
 
 func (x *BurnSignerRunner) SyncTxs() bool {
 	log.Info("[BURN SIGNER] Syncing txs")
+	signersFilter := bson.M{"$nin": []string{strings.ToLower(x.privateKey.PublicKey().RawString())}}
+	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
 	filter := bson.M{
 		"vault_address": x.vaultAddress,
-		"status":        bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
-		"signers":       bson.M{"$nin": []string{x.privateKey.PublicKey().RawString()}},
+		"status":        statusFilter,
+		"signers":       signersFilter,
 	}
 
 	invalidMints := []models.InvalidMint{}
@@ -330,8 +332,8 @@ func (x *BurnSignerRunner) SyncTxs() bool {
 
 	filter = bson.M{
 		"wpokt_address": x.wpoktAddress,
-		"status":        bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
-		"signers":       bson.M{"$nin": []string{x.privateKey.PublicKey().RawString()}},
+		"status":        statusFilter,
+		"signers":       signersFilter,
 	}
 
 	burns := []models.Burn{}
@@ -396,8 +398,8 @@ func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 		numSigners:     len(pks),
 		ethClient:      ethClient,
 		poktClient:     poktClient,
-		vaultAddress:   app.Config.Pocket.VaultAddress,
-		wpoktAddress:   app.Config.Ethereum.WrappedPocketAddress,
+		vaultAddress:   strings.ToLower(app.Config.Pocket.VaultAddress),
+		wpoktAddress:   strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		wpoktContract:  contract,
 	}
 

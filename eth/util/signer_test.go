@@ -3,6 +3,7 @@ package util
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/dan13ram/wpokt-validator/app"
@@ -157,7 +158,7 @@ func TestSignMint(t *testing.T) {
 		Nonce:     big.NewInt(1),
 	}
 
-	testAddress := crypto.PubkeyToAddress(testPrivateKey.PublicKey).Hex()
+	testAddress := strings.ToLower(crypto.PubkeyToAddress(testPrivateKey.PublicKey).Hex())
 
 	testCases := []struct {
 		name         string

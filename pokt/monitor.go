@@ -2,6 +2,7 @@ package pokt
 
 import (
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -150,19 +151,19 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			log.Error("[MINT MONITOR] Error parsing multisig public key: ", err)
+			log.Error("[MINT MONITOR] Error parsing public key of vault multisig: ", err)
 			continue
 		}
 		pks = append(pks, p)
 	}
 
-	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	multisigAddress := multisigPk.Address().String()
-	log.Debug("[MINT EXECUTOR] Multisig address: ", multisigAddress)
+	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
+	vaultAddress := vaultPk.Address().String()
+	log.Debug("[MINT EXECUTOR] Vault address: ", vaultAddress)
 
 	x := &MintMonitorService{
-		vaultAddress:  multisigAddress,
-		wpoktAddress:  app.Config.Ethereum.WrappedPocketAddress,
+		vaultAddress:  strings.ToLower(vaultAddress),
+		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		startHeight:   0,
 		currentHeight: 0,
 		client:        pokt.NewClient(),

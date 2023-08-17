@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -153,6 +154,39 @@ func UpdateStatusAndConfirmationsForMint(mint *models.Mint, poktHeight int64) (*
 	return mint, nil
 }
 
+func sortSignersAndSignatures(signers, signatures []string) ([]string, []string) {
+	type SignerSignaturePair struct {
+		Signer    string
+		Signature string
+	}
+
+	if len(signers) != len(signatures) {
+		return []string{}, []string{}
+	}
+
+	// Pair up signers and signatures
+	pairs := make([]SignerSignaturePair, len(signers))
+	for i := range signers {
+		pairs[i] = SignerSignaturePair{
+			Signer:    signers[i],
+			Signature: signatures[i],
+		}
+	}
+
+	// Sort pairs based on signer
+	sort.Slice(pairs, func(i, j int) bool {
+		return common.HexToAddress(pairs[i].Signer).Big().Cmp(common.HexToAddress(pairs[j].Signer).Big()) == -1
+	})
+
+	// Extract sorted signers and signatures
+	for i := range pairs {
+		signers[i] = pairs[i].Signer
+		signatures[i] = pairs[i].Signature
+	}
+
+	return signers, signatures
+}
+
 func SignMint(
 	mint *models.Mint,
 	data *autogen.MintControllerMintData,
@@ -166,29 +200,16 @@ func SignMint(
 	}
 
 	signatureEncoded := "0x" + hex.EncodeToString(signature)
-	if mint.Signatures == nil {
-		mint.Signatures = []string{}
+	signatures := mint.Signatures
+	signers := mint.Signers
+	if signatures == nil || signers == nil || len(signatures) != len(signers) || len(signatures) == 0 {
+		signatures = []string{}
+		signers = []string{}
 	}
-	if mint.Signers == nil {
-		mint.Signers = []string{}
-	}
-	signatures := append(mint.Signatures, signatureEncoded)
-	signers := append(mint.Signers, crypto.PubkeyToAddress(privateKey.PublicKey).Hex())
-	sortedSigners := sortAddresses(signers)
+	signatures = append(signatures, signatureEncoded)
+	signers = append(signers, strings.ToLower(crypto.PubkeyToAddress(privateKey.PublicKey).Hex()))
 
-	sortedSignatures := make([]string, len(signatures))
-
-	for i, signature := range signatures {
-		signer := signers[i]
-		index := -1
-		for j, validator := range sortedSigners {
-			if validator == signer {
-				index = j
-				break
-			}
-		}
-		sortedSignatures[index] = signature
-	}
+	sortedSigners, sortedSignatures := sortSignersAndSignatures(signers, signatures)
 
 	if len(sortedSignatures) == numSigners {
 		mint.Status = models.StatusSigned

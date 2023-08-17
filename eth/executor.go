@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -60,7 +61,7 @@ func (x *MintExecutorRunner) HandleMintEvent(event *autogen.WrappedPocketMinted)
 	filter := bson.M{
 		"wpokt_address":     x.wpoktAddress,
 		"vault_address":     x.vaultAddress,
-		"recipient_address": event.Recipient.Hex(),
+		"recipient_address": strings.ToLower(event.Recipient.Hex()),
 		"amount":            event.Amount.String(),
 		"nonce":             event.Nonce.String(),
 		"status": bson.M{
@@ -71,7 +72,7 @@ func (x *MintExecutorRunner) HandleMintEvent(event *autogen.WrappedPocketMinted)
 	update := bson.M{
 		"$set": bson.M{
 			"status":       models.StatusSuccess,
-			"mint_tx_hash": event.Raw.TxHash.String(),
+			"mint_tx_hash": strings.ToLower(event.Raw.TxHash.String()),
 			"updated_at":   time.Now(),
 		},
 	}
@@ -176,8 +177,8 @@ func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Servic
 		wpoktContract:      contract,
 		mintControllerAbi:  mintControllerAbi,
 		client:             client,
-		wpoktAddress:       app.Config.Ethereum.WrappedPocketAddress,
-		vaultAddress:       app.Config.Pocket.VaultAddress,
+		wpoktAddress:       strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		vaultAddress:       strings.ToLower(app.Config.Pocket.VaultAddress),
 	}
 
 	x.UpdateCurrentBlockNumber()

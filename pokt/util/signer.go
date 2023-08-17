@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/hex"
 	"strconv"
+	"strings"
 
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/models"
@@ -232,7 +233,7 @@ func SignInvalidMint(
 		returnTx = hex.EncodeToString(returnTxBytes)
 	}
 
-	signers = append(signers, privateKey.PublicKey().RawString())
+	signers = append(signers, strings.ToLower(privateKey.PublicKey().RawString()))
 
 	if len(signers) == numSigners {
 		doc.Status = models.StatusSigned
@@ -323,7 +324,7 @@ func SignBurn(
 
 	}
 
-	signers = append(signers, privateKey.PublicKey().RawString())
+	signers = append(signers, strings.ToLower(privateKey.PublicKey().RawString()))
 
 	if len(signers) == numSigners {
 		doc.Status = models.StatusSigned

@@ -29,7 +29,7 @@ services:
   wpokt.mongodb:
     image: mongo
     volumes:
-      - ./data/validator/mongodb:/data/db
+      - /tmp/data/validator/mongodb:/data/db
     ports:
       - "27017:27017"
     expose:
@@ -57,7 +57,7 @@ services:
       - "46656"
     volumes:
       - ./config/node/config.node1.json:/root/.pocket/config/config.json
-      - ./data/node/node1.pokt.localnet:/root/.pocket/data
+      - /tmp/data/node/node1.pokt.localnet:/root/.pocket/data
     env_file:
       - ./config/node/node1.env
 
@@ -74,7 +74,7 @@ services:
       - "46656"
     volumes:
       - ./config/node/config.node2.json:/root/.pocket/config/config.json
-      - ./data/node/node2.pokt.localnet:/root/.pocket/data
+      - /tmp/data/node/node2.pokt.localnet:/root/.pocket/data
     env_file:
       - ./config/node/node2.env
 
@@ -91,6 +91,6 @@ services:
       - "46656"
     volumes:
       - ./config/node/config.node3.json:/root/.pocket/config/config.json
-      - ./data/node/node3.pokt.localnet:/root/.pocket/data
+      - /tmp/data/node/node3.pokt.localnet:/root/.pocket/data
     env_file:
       - ./config/node/node3.env
