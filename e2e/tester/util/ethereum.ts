@@ -159,17 +159,47 @@ const findMintedEvent = (receipt: TransactionReceipt): MintedEvent | null => {
 const burnAndBridgeWPOKT = async (
   wallet: WalletClient<Transport, Chain, Account>,
   amount: bigint,
-  poktAddress: Hex
+  poktAddress: string
 ): Promise<TransactionReceipt> => {
   const hash = await wallet.writeContract({
     address: config.ethereum.wrapped_pocket_address as Hex,
     abi: WRAPPED_POCKET_ABI,
     functionName: "burnAndBridge",
-    args: [amount, poktAddress],
+    args: [amount, `0x${poktAddress}`],
   });
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   return receipt;
+};
+
+type BurnAndBridgeEvent = {
+  amount: bigint;
+  poktAddress: Hex;
+  from: Hex;
+};
+
+const findBurnAndBridgeEvent = (
+  receipt: TransactionReceipt
+): BurnAndBridgeEvent | null => {
+  const eventTops = encodeEventTopics({
+    abi: WRAPPED_POCKET_ABI,
+    eventName: "BurnAndBridge",
+  });
+
+  const event = receipt.logs.find((log) => log.topics[0] === eventTops[0]);
+
+  if (!event) {
+    return null;
+  }
+
+  const decodedLog = decodeEventLog({
+    abi: WRAPPED_POCKET_ABI,
+    eventName: "BurnAndBridge",
+    data: event.data,
+    topics: event.topics,
+  });
+
+  return decodedLog.args as BurnAndBridgeEvent;
 };
 
 export default {
@@ -183,4 +213,5 @@ export default {
   mintWPOKT,
   findMintedEvent,
   burnAndBridgeWPOKT,
+  findBurnAndBridgeEvent,
 };

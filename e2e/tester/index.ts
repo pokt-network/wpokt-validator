@@ -3,6 +3,7 @@ import { findHealthChecks } from "./util/mongodb";
 import pocket from "./util/pocket";
 import ethereum from "./util/ethereum";
 import { mintFlow } from "./flows/mint";
+import { burnFlow } from "./flows/burn";
 
 const init = async () => {
   const healths = await findHealthChecks();
@@ -47,4 +48,5 @@ before(async () => {
 
 describe("E2E tests", async () => {
   describe("Mint flow", mintFlow);
+  describe("Burn flow", burnFlow);
 });

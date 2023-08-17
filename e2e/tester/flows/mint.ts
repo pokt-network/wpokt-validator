@@ -273,6 +273,7 @@ export const mintFlow = async () => {
       Status.CONFIRMED,
       Status.SIGNED,
       Status.SUMBITTED,
+      Status.SUCCESS,
     ]);
     debug("InvalidMint confirmed");
 

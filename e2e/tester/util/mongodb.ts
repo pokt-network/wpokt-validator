@@ -2,6 +2,8 @@ import { Db, MongoClient } from "mongodb";
 
 import { config } from "./config";
 import {
+  Burn,
+  CollectionBurns,
   CollectionHealthChecks,
   CollectionInvalidMints,
   CollectionMints,
@@ -45,4 +47,11 @@ export const findInvalidMint = async (
   return db.collection(CollectionInvalidMints).findOne({
     transaction_hash: txHash.toLowerCase(),
   }) as Promise<InvalidMint | null>;
+};
+
+export const findBurn = async (txHash: string): Promise<Burn | null> => {
+  const db = await databasePromise;
+  return db.collection(CollectionBurns).findOne({
+    transaction_hash: txHash.toLowerCase(),
+  }) as Promise<Burn | null>;
 };
