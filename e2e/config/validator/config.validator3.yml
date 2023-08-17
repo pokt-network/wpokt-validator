@@ -6,8 +6,8 @@ mongodb:
 ethereum:
   start_block_number: 0
   confirmations: 0
-  private_key: "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-  rpc_url: "http://172.17.0.1:8545"
+  private_key: "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+  rpc_url: "http://wpokt.localnet:8545"
   chain_id: "31337"
   rpc_timeout_ms: 30000
   wrapped_pocket_address: "0x5fbdb2315678afecb367f032d93f642f64180aa3"
@@ -20,8 +20,8 @@ ethereum:
 pocket:
   start_height: 0
   confirmations: 0
-  private_key: "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
-  rpc_url: "http://172.17.0.1:8081"
+  private_key: "91d19aec06f084ca925b15641fae86111d7e2fe4a0eed1f26b28bf6c65156b8aabc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283"
+  rpc_url: "http://node1.pokt.localnet:8081"
   chain_id: "localnet"
   rpc_timeout_ms: 30000
   tx_fee: 10000

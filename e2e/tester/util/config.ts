@@ -2,7 +2,8 @@ import yaml from "js-yaml";
 import fs from "fs";
 import { ChainID } from "@pokt-foundation/pocketjs-transaction-builder";
 
-const CONFIG_PATH = process.env.CONFIG_PATH || "./config.local.yml";
+const CONFIG_PATH =
+  process.env.CONFIG_PATH || "../config/tester/config.local.yml";
 
 export type Config = {
   mongodb: {

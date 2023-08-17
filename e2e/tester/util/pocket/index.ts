@@ -1,29 +1,26 @@
-import { JsonRpcProvider } from "./pocket/provider";
+import { JsonRpcProvider } from "./provider";
 import { KeyManager } from "@pokt-foundation/pocketjs-signer";
 import { TransactionBuilder } from "@pokt-foundation/pocketjs-transaction-builder";
-import { config } from "./config";
+import { config } from "../config";
 import { TransactionResponse } from "@pokt-foundation/pocketjs-types";
 
-// Instantiate a provider for querying information on the chain!
-export const provider = new JsonRpcProvider({
+const provider = new JsonRpcProvider({
   rpcUrl: config.pocket.rpc_url,
 });
 
-export const getBalance = async (address: string): Promise<bigint> => {
+const getBalance = async (address: string): Promise<bigint> => {
   const balance = await provider.getBalance(address);
   return balance;
 };
 
-export const getAddress = async (): Promise<string> => {
+const getAddress = async (): Promise<string> => {
   const signer = await signerPromise;
   return signer.getAddress();
 };
 
-export const signerPromise = KeyManager.fromPrivateKey(
-  config.pocket.private_key
-);
+const signerPromise = KeyManager.fromPrivateKey(config.pocket.private_key);
 
-export const sendPOKT = async (
+const sendPOKT = async (
   address: string,
   amount: string,
   memo: string
@@ -47,4 +44,10 @@ export const sendPOKT = async (
   });
 
   return txresponse;
+};
+
+export default {
+  getBalance,
+  getAddress,
+  sendPOKT,
 };
