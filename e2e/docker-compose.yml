@@ -1,0 +1,96 @@
+services:
+  wpokt.validator1:
+    image: dan13ram/wpokt-validator:latest
+    restart: always
+    volumes:
+      - ./config/validator/config.validator1.yml:/root/config.yml
+    command: sh -c "sleep 30 && /validator --config /root/config.yml"
+    environment:
+      LOG_LEVEL: debug
+
+  wpokt.validator2:
+    image: dan13ram/wpokt-validator:latest
+    restart: always
+    volumes:
+      - ./config/validator/config.validator2.yml:/root/config.yml
+    command: sh -c "sleep 30 && /validator --config /root/config.yml"
+    environment:
+      LOG_LEVEL: debug
+
+  wpokt.validator3:
+    image: dan13ram/wpokt-validator:latest
+    restart: always
+    volumes:
+      - ./config/validator/config.validator3.yml:/root/config.yml
+    command: sh -c "sleep 30 && /validator --config /root/config.yml"
+    environment:
+      LOG_LEVEL: debug
+
+  wpokt.mongodb:
+    image: mongo
+    volumes:
+      - /tmp/data/validator/mongodb:/data/db
+    ports:
+      - "27017:27017"
+    expose:
+      - "27017"
+    command: mongod --quiet --logpath /dev/null
+
+  wpokt.localnet:
+    image: dan13ram/wpokt-localnet:latest
+    command: "/app/docker/entrypoint.sh"
+    ports:
+      - "8545:8545"
+    expose:
+      - "8545"
+
+  node1.pokt.localnet:
+    image: dan13ram/pokt-localnet:latest
+    command: "/usr/bin/expect /root/entrypoint.sh"
+    ports:
+      - "8081:8081"
+      - "26657:26657"
+    expose:
+      - "8081"
+      - "26656"
+      - "26657"
+      - "46656"
+    volumes:
+      - ./config/node/config.node1.json:/root/.pocket/config/config.json
+      - /tmp/data/node/node1.pokt.localnet:/root/.pocket/data
+    env_file:
+      - ./config/node/node1.env
+
+  node2.pokt.localnet:
+    image: dan13ram/pokt-localnet:latest
+    command: "/usr/bin/expect /root/entrypoint.sh"
+    ports:
+      - "8082:8081"
+      - "26658:26657"
+    expose:
+      - "8081"
+      - "26656"
+      - "26657"
+      - "46656"
+    volumes:
+      - ./config/node/config.node2.json:/root/.pocket/config/config.json
+      - /tmp/data/node/node2.pokt.localnet:/root/.pocket/data
+    env_file:
+      - ./config/node/node2.env
+
+  node3.pokt.localnet:
+    image: dan13ram/pokt-localnet:latest
+    command: "/usr/bin/expect /root/entrypoint.sh"
+    ports:
+      - "8083:8081"
+      - "26659:26657"
+    expose:
+      - "8081"
+      - "26656"
+      - "26657"
+      - "46656"
+    volumes:
+      - ./config/node/config.node3.json:/root/.pocket/config/config.json
+      - /tmp/data/node/node3.pokt.localnet:/root/.pocket/data
+    env_file:
+      - ./config/node/node3.env

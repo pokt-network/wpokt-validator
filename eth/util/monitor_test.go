@@ -2,6 +2,7 @@ package util
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,9 +48,9 @@ func TestCreateBurn(t *testing.T) {
 				TransactionHash:  TX_HASH,
 				LogIndex:         "0",
 				WPOKTAddress:     ZERO_ADDRESS,
-				SenderAddress:    SENDER_ADDRESS,
+				SenderAddress:    strings.ToLower(SENDER_ADDRESS),
 				SenderChainId:    app.Config.Ethereum.ChainId,
-				RecipientAddress: RECIPIENT_ADDRESS,
+				RecipientAddress: strings.ToLower(RECIPIENT_ADDRESS),
 				RecipientChainId: app.Config.Pocket.ChainId,
 				Amount:           "100",
 				CreatedAt:        time.Time{}, // We'll use assert.WithinDuration to check if within an acceptable range

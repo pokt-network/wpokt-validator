@@ -94,7 +94,7 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 			"_id":               bson.M{"$ne": mint.Id},
 			"vault_address":     x.vaultAddress,
 			"wpokt_address":     x.wpoktAddress,
-			"recipient_address": mint.RecipientAddress,
+			"recipient_address": strings.ToLower(mint.RecipientAddress),
 			"status":            bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed, models.StatusSigned}},
 		}
 		err = app.DB.FindMany(models.CollectionMints, filter, &pendingMints)
@@ -174,7 +174,7 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint, data *autogen.MintCon
 		return false, nil
 	}
 
-	if memo.Address != mint.RecipientAddress {
+	if strings.ToLower(memo.Address) != strings.ToLower(mint.RecipientAddress) {
 		log.Debug("[MINT SIGNER] Memo address does not match recipient address")
 		return false, nil
 	}
@@ -253,7 +253,7 @@ func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
 			update = bson.M{
 				"$set": bson.M{
 					"data": models.MintData{
-						Recipient: data.Recipient.Hex(),
+						Recipient: strings.ToLower(data.Recipient.Hex()),
 						Amount:    data.Amount.String(),
 						Nonce:     data.Nonce.String(),
 					},
@@ -370,9 +370,9 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service 
 
 	x := &MintSignerRunner{
 		privateKey:             privateKey,
-		address:                address,
-		wpoktAddress:           app.Config.Ethereum.WrappedPocketAddress,
-		vaultAddress:           app.Config.Pocket.VaultAddress,
+		address:                strings.ToLower(address),
+		wpoktAddress:           strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		vaultAddress:           strings.ToLower(app.Config.Pocket.VaultAddress),
 		wpoktContract:          contract,
 		mintControllerContract: mintControllerContract,
 		numSigners:             len(app.Config.Ethereum.ValidatorAddresses),

@@ -248,14 +248,13 @@ func (c *pocketClient) GetAccountTxsByHeight(address string, height int64) ([]*T
 		if err != nil {
 			return nil, err
 		}
-		lastHeight := res.Txs[len(res.Txs)-1].Height
 		// filter only type pos/Send
 		for _, tx := range res.Txs {
 			if tx.StdTx.Msg.Type == "pos/Send" && tx.Height >= height {
 				txs = append(txs, tx)
 			}
 		}
-		if len(txs) >= int(res.TotalTxs) || lastHeight < height || len(res.Txs) == 0 {
+		if len(res.Txs) == 0 || len(txs) >= int(res.TotalTxs) || res.Txs[len(res.Txs)-1].Height < height {
 			break
 		}
 		page++

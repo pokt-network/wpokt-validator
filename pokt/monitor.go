@@ -2,6 +2,7 @@ package pokt
 
 import (
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -110,13 +111,13 @@ func (x *MintMonitorService) SyncTxs() bool {
 
 	txs, err := x.client.GetAccountTxsByHeight(x.vaultAddress, x.startHeight)
 	if err != nil {
-		log.Error(err)
+		log.Error("[MINT MONITOR] Error getting txs: ", err)
 		return false
 	}
 	log.Info("[MINT MONITOR] Found ", len(txs), " txs to sync")
 	var success bool = true
 	for _, tx := range txs {
-		if tx.Tx == "" || tx.TxResult.Code != 0 || tx.TxResult.Recipient != x.vaultAddress || tx.TxResult.MessageType != "send" {
+		if tx.Tx == "" || tx.TxResult.Code != 0 || strings.ToLower(tx.TxResult.Recipient) != x.vaultAddress || tx.TxResult.MessageType != "send" {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", tx.Hash, " with code: ", tx.TxResult.Code)
 			success = x.HandleFailedMint(tx) && success
 			continue
@@ -150,19 +151,19 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			log.Error("[MINT MONITOR] Error parsing multisig public key: ", err)
+			log.Error("[MINT MONITOR] Error parsing public key of vault multisig: ", err)
 			continue
 		}
 		pks = append(pks, p)
 	}
 
-	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	multisigAddress := multisigPk.Address().String()
-	log.Debug("[MINT EXECUTOR] Multisig address: ", multisigAddress)
+	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
+	vaultAddress := vaultPk.Address().String()
+	log.Debug("[MINT EXECUTOR] Vault address: ", vaultAddress)
 
 	x := &MintMonitorService{
-		vaultAddress:  multisigAddress,
-		wpoktAddress:  app.Config.Ethereum.WrappedPocketAddress,
+		vaultAddress:  strings.ToLower(vaultAddress),
+		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		startHeight:   0,
 		currentHeight: 0,
 		client:        pokt.NewClient(),

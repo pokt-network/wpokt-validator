@@ -2,6 +2,7 @@ package pokt
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,9 +20,9 @@ const (
 )
 
 type BurnExecutorRunner struct {
-	client          pokt.PocketClient
-	wpoktAddress    string
-	multisigAddress string
+	client       pokt.PocketClient
+	wpoktAddress string
+	vaultAddress string
 }
 
 func (x *BurnExecutorRunner) Run() {
@@ -44,7 +45,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 
 		var err error
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
-		lockId, err = app.DB.XLock(models.CollectionInvalidMints, resourceId)
+		lockId, err = app.DB.XLock(resourceId)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error locking invalid mint: ", err)
 			return false
@@ -52,7 +53,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 		log.Debug("[BURN EXECUTOR] Locked invalid mint: ", doc.TransactionHash)
 
 		p := rpc.SendRawTxParams{
-			Addr:        x.multisigAddress,
+			Addr:        x.vaultAddress,
 			RawHexBytes: doc.ReturnTx,
 		}
 
@@ -116,7 +117,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 	}
 
 	if lockId != "" && doc.Status == models.StatusSigned {
-		err = app.DB.Unlock(models.CollectionInvalidMints, lockId)
+		err = app.DB.Unlock(lockId)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error unlocking invalid mint: ", err)
 			return false
@@ -141,7 +142,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 
 		var err error
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
-		lockId, err = app.DB.XLock(models.CollectionBurns, resourceId)
+		lockId, err = app.DB.XLock(resourceId)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error locking burn: ", err)
 			return false
@@ -149,7 +150,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 		log.Debug("[BURN EXECUTOR] Locked burn: ", doc.TransactionHash)
 
 		p := rpc.SendRawTxParams{
-			Addr:        x.multisigAddress,
+			Addr:        x.vaultAddress,
 			RawHexBytes: doc.ReturnTx,
 		}
 
@@ -213,7 +214,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 	}
 
 	if lockId != "" && doc.Status == models.StatusSigned {
-		err = app.DB.Unlock(models.CollectionBurns, lockId)
+		err = app.DB.Unlock(lockId)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error unlocking burn: ", err)
 			return false
@@ -233,7 +234,7 @@ func (x *BurnExecutorRunner) SyncTxs() bool {
 				string(models.StatusSubmitted),
 			},
 		},
-		"vault_address": x.multisigAddress,
+		"vault_address": x.vaultAddress,
 	}
 	invalidMints := []models.InvalidMint{}
 
@@ -288,23 +289,23 @@ func NewExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			log.Error("[BURN EXECUTOR] Error parsing multisig public key: ", err)
+			log.Error("[BURN EXECUTOR] Error parsing public key of vault multisig: ", err)
 			continue
 		}
 		pks = append(pks, p)
 	}
 
-	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	multisigAddress := multisigPk.Address().String()
-	log.Debug("[BURN EXECUTOR] Multisig address: ", multisigAddress)
-	if multisigAddress != app.Config.Pocket.VaultAddress {
+	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
+	vaultAddress := vaultPk.Address().String()
+	log.Debug("[BURN EXECUTOR] Vault address: ", vaultAddress)
+	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
 		log.Fatal("[BURN EXECUTOR] Multisig address does not match vault address")
 	}
 
 	x := &BurnExecutorRunner{
-		multisigAddress: multisigAddress,
-		wpoktAddress:    app.Config.Ethereum.WrappedPocketAddress,
-		client:          pokt.NewClient(),
+		vaultAddress: strings.ToLower(vaultAddress),
+		wpoktAddress: strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		client:       pokt.NewClient(),
 	}
 
 	log.Info("[BURN EXECUTOR] Initialized")

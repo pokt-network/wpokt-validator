@@ -24,7 +24,7 @@ func TestReadConfigFromConfigFile(t *testing.T) {
 
 		assert.Equal(t, read, true)
 		assert.Equal(t, Config.MongoDB.Database, "mongodb-database")
-		assert.Equal(t, Config.MongoDB.TimeoutMillis, 2000)
+		assert.Equal(t, Config.MongoDB.TimeoutMillis, int64(2000))
 	})
 
 	t.Run("No Config File Provided", func(t *testing.T) {
