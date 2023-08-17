@@ -5,7 +5,7 @@
   "author": "dan13ram",
   "license": "MIT",
   "scripts": {
-    "test": "ts-node index.ts"
+    "start": "ts-node index.ts"
   },
   "dependencies": {
     "@pokt-foundation/pocketjs-provider": "^2.1.3",

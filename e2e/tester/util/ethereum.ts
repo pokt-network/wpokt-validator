@@ -1,4 +1,5 @@
 import {
+  Hex,
   TransactionReceipt,
   createPublicClient,
   createWalletClient,
@@ -34,16 +35,16 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
-const getBalance = async (address: `0x{string}`): Promise<bigint> => {
+const getBalance = async (address: Hex): Promise<bigint> => {
   const balance = await publicClient.getBalance({
     address,
   });
   return balance;
 };
 
-const getWPOKTBalance = async (address: `0x{string}`): Promise<bigint> => {
+const getWPOKTBalance = async (address: Hex): Promise<bigint> => {
   const balance = await publicClient.readContract({
-    address: config.ethereum.wrapped_pocket_address as `0x{string}`,
+    address: config.ethereum.wrapped_pocket_address as Hex,
     abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
     functionName: "balanceOf",
     args: [address],
@@ -52,16 +53,16 @@ const getWPOKTBalance = async (address: `0x{string}`): Promise<bigint> => {
   return balance;
 };
 
-const getAddress = async (): Promise<`0x${string}`> => {
+const getAddress = async (): Promise<Hex> => {
   return account.address;
 };
 
 const sendWPOKT = async (
-  recipient: `0x{string}`,
+  recipient: Hex,
   amount: bigint
 ): Promise<TransactionReceipt> => {
   const hash = await walletClient.writeContract({
-    address: config.ethereum.wrapped_pocket_address as `0x{string}`,
+    address: config.ethereum.wrapped_pocket_address as Hex,
     abi: parseAbi([
       "function transfer(address _to, uint256 _value) public returns (bool success)",
     ]),
@@ -73,11 +74,11 @@ const sendWPOKT = async (
 };
 
 const mintWPOKT = async (
-  data: { recipient: `0x{string}`; amount: bigint; nonce: bigint },
-  signatures: Array<`0x{string}`>
+  data: { recipient: Hex; amount: bigint; nonce: bigint },
+  signatures: Array<Hex>
 ): Promise<TransactionReceipt> => {
   const hash = await walletClient.writeContract({
-    address: config.ethereum.mint_controller_address as `0x{string}`,
+    address: config.ethereum.mint_controller_address as Hex,
     abi: parseAbi([
       "function mintWrappedPocket(tuple(address recipient, uint256 amount, uint256 nonce), bytes[] signatures) public",
     ]),
@@ -91,10 +92,10 @@ const mintWPOKT = async (
 
 const burnAndBridgeWPOKT = async (
   amount: bigint,
-  poktAddress: `0x{string}`
+  poktAddress: Hex
 ): Promise<TransactionReceipt> => {
   const hash = await walletClient.writeContract({
-    address: config.ethereum.wrapped_pocket_address as `0x{string}`,
+    address: config.ethereum.wrapped_pocket_address as Hex,
     abi: parseAbi([
       "function burnAndBridge(uint256 amount, address poktAddress) public",
     ]),
