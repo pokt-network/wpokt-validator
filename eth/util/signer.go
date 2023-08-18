@@ -19,16 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
-func sortAddresses(addresses []string) []string {
-	for i, address := range addresses {
-		addresses[i] = common.HexToAddress(address).Hex()
-	}
-	sort.Slice(addresses, func(i, j int) bool {
-		return common.HexToAddress(addresses[i]).Big().Cmp(common.HexToAddress(addresses[j]).Big()) == -1
-	})
-	return addresses
-}
-
 const primaryType = "MintData"
 
 var typesStandard = apitypes.Types{
@@ -116,14 +106,11 @@ func signTypedData(
 	sighash := crypto.Keccak256(rawData)
 
 	signature, err := crypto.Sign(sighash, key)
-	if err != nil {
-		return nil, err
-	}
 	if signature[64] == 0 || signature[64] == 1 {
 		signature[64] += 27
 	}
 
-	return signature, nil
+	return signature, err
 }
 
 func UpdateStatusAndConfirmationsForMint(mint *models.Mint, poktHeight int64) (*models.Mint, error) {
@@ -158,10 +145,6 @@ func sortSignersAndSignatures(signers, signatures []string) ([]string, []string)
 	type SignerSignaturePair struct {
 		Signer    string
 		Signature string
-	}
-
-	if len(signers) != len(signatures) {
-		return []string{}, []string{}
 	}
 
 	// Pair up signers and signatures
