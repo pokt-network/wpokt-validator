@@ -102,7 +102,23 @@ docker run -d --env-file .env docker.io/dan13ram/wpokt-validator:latest
 
 Ensure you have set the required environment variables in the `.env` file or directly in the command above.
 
-## Running End-to-End Tests
+## Unit Tests
+
+To assess the individual components of the wPOKT Validator, follow these steps:
+
+1. **Execute Unit Tests:**
+   - Open your terminal and run the unit tests using the command:
+     ```shell
+     go test -v ./...
+     ```
+
+2. **Check Coverage:**
+   - To check the test coverage of the codebase, use the following command:
+     ```shell
+     ./coverage.sh
+     ```
+
+## End-to-End Tests
 
 To test the core functionalities of the wPOKT Validator in a controlled environment, follow these steps:
 

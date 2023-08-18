@@ -18,9 +18,8 @@ import (
 
 type Database interface {
 	Connect() error
-	SetupLockers() error
-	SetupIndexes() error
 	Disconnect() error
+
 	InsertOne(collection string, data interface{}) error
 	FindOne(collection string, filter interface{}, result interface{}) error
 	FindMany(collection string, filter interface{}, result interface{}) error
@@ -63,7 +62,7 @@ func (d *mongoDatabase) Connect() error {
 }
 
 // SetupLocker sets up the locker
-func (d *mongoDatabase) SetupLockers() error {
+func (d *mongoDatabase) SetupLocker() error {
 	log.Debug("[DB] Setting up locker")
 	var locker *lock.Client
 
@@ -232,19 +231,21 @@ func (d *mongoDatabase) UpsertOne(collection string, filter interface{}, update 
 
 // InitDB creates a new database wrapper
 func InitDB() {
-	DB = &mongoDatabase{
+	db := &mongoDatabase{
 		uri:      Config.MongoDB.URI,
 		database: Config.MongoDB.Database,
 	}
 
-	err := DB.Connect()
+	err := db.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = DB.SetupIndexes()
+	err = db.SetupIndexes()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = DB.SetupLockers()
+	err = db.SetupLocker()
 	log.Info("[DB] Database initialized")
+
+	DB = db
 }

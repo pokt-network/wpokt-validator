@@ -153,6 +153,69 @@ func TestCreateInvalidMint(t *testing.T) {
 	}
 }
 
+func TestCreateFailedMint(t *testing.T) {
+	testCases := []struct {
+		name                string
+		tx                  *pokt.TxResponse
+		vaultAddress        string
+		expectedInvalidMint models.InvalidMint
+		expectedErr         bool
+		expectedUpdated     time.Duration
+	}{
+		{
+			name: "Valid Invalid Mint",
+			tx: &pokt.TxResponse{
+				Height: 12345,
+				Hash:   "0x1234567890abcdef",
+				StdTx: pokt.StdTx{
+					Msg: pokt.Msg{
+						Value: pokt.Value{
+							FromAddress: "0xabcdef",
+							Amount:      "100",
+						},
+					},
+					Memo: "Invalid mint memo",
+				},
+			},
+			vaultAddress: "0xabc123def",
+			expectedInvalidMint: models.InvalidMint{
+				Height:          "12345",
+				Confirmations:   "0",
+				TransactionHash: "0x1234567890abcdef",
+				SenderAddress:   "0xabcdef",
+				SenderChainId:   app.Config.Pocket.ChainId,
+				Memo:            "Invalid mint memo",
+				Amount:          "100",
+				VaultAddress:    "0xabc123def",
+				CreatedAt:       time.Time{}, // We'll use assert.WithinDuration to check if within an acceptable range
+				UpdatedAt:       time.Time{}, // We'll use assert.WithinDuration to check if within an acceptable range
+				Status:          models.StatusFailed,
+				Signers:         []string{},
+				ReturnTx:        "",
+				ReturnTxHash:    "",
+			},
+			expectedErr:     false,
+			expectedUpdated: 2 * time.Second,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			app.Config.Pocket.ChainId = "0001"
+
+			result := CreateFailedMint(tc.tx, tc.vaultAddress)
+
+			assert.WithinDuration(t, time.Now(), result.CreatedAt, tc.expectedUpdated)
+			assert.WithinDuration(t, time.Now(), result.UpdatedAt, tc.expectedUpdated)
+
+			result.CreatedAt = time.Time{}
+			result.UpdatedAt = time.Time{}
+
+			assert.Equal(t, tc.expectedInvalidMint, result)
+		})
+	}
+}
+
 func TestValidateMemo(t *testing.T) {
 	address := common.HexToAddress("0x1234567890")
 
