@@ -101,7 +101,7 @@ const walletPromise: Promise<WalletClient<Transport, Chain, Account>> =
     await sendETH(
       defaultWalletClient,
       walletClient.account.address,
-      parseUnits("1000", 18)
+      parseUnits("10", 18)
     );
 
     return walletClient;

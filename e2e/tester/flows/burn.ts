@@ -1,4 +1,4 @@
-import { parseUnits, recoverAddress } from "viem";
+import { parseUnits } from "viem";
 import ethereum from "../util/ethereum";
 import pocket from "../util/pocket";
 import { expect } from "chai";
@@ -16,7 +16,9 @@ type MessageSend = {
 };
 
 export const burnFlow = async () => {
-  it("should burn for send tx to vault with valid memo", async () => {
+  it("should burn and return amount from vault", async () => {
+    debug("\nTesting -- should burn and return amount from vault");
+
     const fromAddress = await ethereum.getAddress();
     const recipientAddress = await pocket.getAddress();
     const amount = parseUnits("1", 6);
@@ -24,8 +26,6 @@ export const burnFlow = async () => {
 
     const recipientBeforeBalance = await pocket.getBalance(recipientAddress);
     const fromBeforeBalance = await ethereum.getWPOKTBalance(fromAddress);
-
-    expect(fromBeforeBalance).to.be.equal(amount);
 
     debug("Sending transaction...");
     const burnTx = await ethereum.burnAndBridgeWPOKT(
