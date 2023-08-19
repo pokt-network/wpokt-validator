@@ -85,7 +85,7 @@ const signerPromise = (async (): Promise<AbstractSigner> => {
   await sendPOKT(
     defaultSigner,
     newSigner.getAddress(),
-    parseUnits("1000", 6).toString(),
+    parseUnits("100", 6).toString(),
     "init"
   );
   return newSigner;
