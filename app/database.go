@@ -31,8 +31,8 @@ type Database interface {
 	Unlock(lockId string) error
 }
 
-// mongoDatabase is a wrapper around the mongo database
-type mongoDatabase struct {
+// MongoDatabase is a wrapper around the mongo database
+type MongoDatabase struct {
 	db       *mongo.Database
 	uri      string
 	database string
@@ -44,7 +44,7 @@ var (
 )
 
 // Connect connects to the database
-func (d *mongoDatabase) Connect() error {
+func (d *MongoDatabase) Connect() error {
 	log.Debug("[DB] Connecting to database")
 	wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond))
 
@@ -62,7 +62,7 @@ func (d *mongoDatabase) Connect() error {
 }
 
 // SetupLocker sets up the locker
-func (d *mongoDatabase) SetupLocker() error {
+func (d *MongoDatabase) SetupLocker() error {
 	log.Debug("[DB] Setting up locker")
 	var locker *lock.Client
 
@@ -88,7 +88,7 @@ func randomString(n int) string {
 }
 
 // XLock locks a resource for exclusive access
-func (d *mongoDatabase) XLock(resourceId string) (string, error) {
+func (d *MongoDatabase) XLock(resourceId string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 
@@ -98,7 +98,7 @@ func (d *mongoDatabase) XLock(resourceId string) (string, error) {
 }
 
 // SLock locks a resource for shared access
-func (d *mongoDatabase) SLock(resourceId string) (string, error) {
+func (d *MongoDatabase) SLock(resourceId string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 
@@ -108,7 +108,7 @@ func (d *mongoDatabase) SLock(resourceId string) (string, error) {
 }
 
 // Unlock unlocks a resource
-func (d *mongoDatabase) Unlock(lockId string) error {
+func (d *MongoDatabase) Unlock(lockId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 
@@ -117,7 +117,7 @@ func (d *mongoDatabase) Unlock(lockId string) error {
 }
 
 // Setup Indexes
-func (d *mongoDatabase) SetupIndexes() error {
+func (d *MongoDatabase) SetupIndexes() error {
 	log.Debug("[DB] Setting up indexes")
 
 	// setup unique index for mints
@@ -174,7 +174,7 @@ func (d *mongoDatabase) SetupIndexes() error {
 }
 
 // Disconnect disconnects from the database
-func (d *mongoDatabase) Disconnect() error {
+func (d *MongoDatabase) Disconnect() error {
 	log.Debug("[DB] Disconnecting from database")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
@@ -184,7 +184,7 @@ func (d *mongoDatabase) Disconnect() error {
 }
 
 // method for insert single value in a collection
-func (d *mongoDatabase) InsertOne(collection string, data interface{}) error {
+func (d *MongoDatabase) InsertOne(collection string, data interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 	_, err := d.db.Collection(collection).InsertOne(ctx, data)
@@ -192,7 +192,7 @@ func (d *mongoDatabase) InsertOne(collection string, data interface{}) error {
 }
 
 // method for find single value in a collection
-func (d *mongoDatabase) FindOne(collection string, filter interface{}, result interface{}) error {
+func (d *MongoDatabase) FindOne(collection string, filter interface{}, result interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 	err := d.db.Collection(collection).FindOne(ctx, filter).Decode(result)
@@ -200,7 +200,7 @@ func (d *mongoDatabase) FindOne(collection string, filter interface{}, result in
 }
 
 // method for find multiple values in a collection
-func (d *mongoDatabase) FindMany(collection string, filter interface{}, result interface{}) error {
+func (d *MongoDatabase) FindMany(collection string, filter interface{}, result interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 	cursor, err := d.db.Collection(collection).Find(ctx, filter)
@@ -212,7 +212,7 @@ func (d *mongoDatabase) FindMany(collection string, filter interface{}, result i
 }
 
 //method for update single value in a collection
-func (d *mongoDatabase) UpdateOne(collection string, filter interface{}, update interface{}) error {
+func (d *MongoDatabase) UpdateOne(collection string, filter interface{}, update interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 	_, err := d.db.Collection(collection).UpdateOne(ctx, filter, update)
@@ -220,7 +220,7 @@ func (d *mongoDatabase) UpdateOne(collection string, filter interface{}, update 
 }
 
 //method for upsert single value in a collection
-func (d *mongoDatabase) UpsertOne(collection string, filter interface{}, update interface{}) error {
+func (d *MongoDatabase) UpsertOne(collection string, filter interface{}, update interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 
@@ -231,7 +231,7 @@ func (d *mongoDatabase) UpsertOne(collection string, filter interface{}, update 
 
 // InitDB creates a new database wrapper
 func InitDB() {
-	db := &mongoDatabase{
+	db := &MongoDatabase{
 		uri:      Config.MongoDB.URI,
 		database: Config.MongoDB.Database,
 	}
