@@ -60,7 +60,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 		res, err := x.client.SubmitRawTx(p)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
-			if lockId != "" && doc.Status == models.StatusSigned {
+			if lockId != "" {
 				err = app.DB.Unlock(lockId)
 				if err != nil {
 					log.Error("[BURN EXECUTOR] Error unlocking invalid mint: ", err)
@@ -124,7 +124,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 		log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
 	}
 
-	if lockId != "" && doc.Status == models.StatusSigned {
+	if lockId != "" {
 		err = app.DB.Unlock(lockId)
 		success = success && err == nil
 		if err != nil {
@@ -168,7 +168,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 		res, err := x.client.SubmitRawTx(p)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
-			if lockId != "" && doc.Status == models.StatusSigned {
+			if lockId != "" {
 				err = app.DB.Unlock(lockId)
 				if err != nil {
 					log.Error("[BURN EXECUTOR] Error unlocking burn: ", err)
@@ -232,7 +232,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 		log.Error("[BURN EXECUTOR] Error updating burn: ", err)
 	}
 
-	if lockId != "" && doc.Status == models.StatusSigned {
+	if lockId != "" {
 		err = app.DB.Unlock(lockId)
 		success = success && err == nil
 		if err != nil {
