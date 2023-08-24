@@ -25,7 +25,7 @@ const (
 type BurnMonitorRunner struct {
 	startBlockNumber   int64
 	currentBlockNumber int64
-	wpoktContract      *autogen.WrappedPocket
+	wpoktContract      eth.WrappedPocketContract
 	client             eth.EthereumClient
 }
 
@@ -77,6 +77,8 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 		Context: context.Background(),
 	}, []*big.Int{}, []common.Address{}, []common.Address{})
 
+	defer filter.Close()
+
 	if err != nil {
 		log.Error("[BURN MONITOR] Error while syncing burn events: ", err)
 		return false
@@ -84,7 +86,7 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 
 	var success bool = true
 	for filter.Next() {
-		success = success && x.HandleBurnEvent(filter.Event)
+		success = success && x.HandleBurnEvent(filter.Event())
 	}
 	return success
 }
@@ -139,7 +141,7 @@ func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 	x := &BurnMonitorRunner{
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
-		wpoktContract:      contract,
+		wpoktContract:      eth.NewWrappedPocketContract(contract),
 		client:             client,
 	}
 

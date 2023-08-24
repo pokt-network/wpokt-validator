@@ -26,7 +26,7 @@ const (
 type MintExecutorRunner struct {
 	startBlockNumber   int64
 	currentBlockNumber int64
-	wpoktContract      *autogen.WrappedPocket
+	wpoktContract      eth.WrappedPocketContract
 	mintControllerAbi  *abi.ABI
 	client             eth.EthereumClient
 	vaultAddress       string
@@ -96,6 +96,8 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 		Context: context.Background(),
 	}, []common.Address{}, []*big.Int{}, []*big.Int{})
 
+	defer filter.Close()
+
 	if err != nil {
 		log.Errorln("[MINT EXECUTOR] Error while syncing mint events: ", err)
 		return false
@@ -103,7 +105,7 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 
 	var success bool = true
 	for filter.Next() {
-		success = success && x.HandleMintEvent(filter.Event)
+		success = success && x.HandleMintEvent(filter.Event())
 	}
 
 	return success
@@ -174,7 +176,7 @@ func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Servic
 	x := &MintExecutorRunner{
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
-		wpoktContract:      contract,
+		wpoktContract:      eth.NewWrappedPocketContract(contract),
 		mintControllerAbi:  mintControllerAbi,
 		client:             client,
 		wpoktAddress:       strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),

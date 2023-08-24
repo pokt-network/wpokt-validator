@@ -30,17 +30,16 @@ const (
 )
 
 type MintSignerRunner struct {
-	address                string
-	privateKey             *ecdsa.PrivateKey
-	vaultAddress           string
-	wpoktAddress           string
-	wpoktContract          *autogen.WrappedPocket
-	mintControllerContract *autogen.MintController
-	numSigners             int
-	domain                 util.DomainData
-	poktClient             pokt.PocketClient
-	ethClient              eth.EthereumClient
-	poktHeight             int64
+	address       string
+	privateKey    *ecdsa.PrivateKey
+	vaultAddress  string
+	wpoktAddress  string
+	wpoktContract eth.WrappedPocketContract
+	numSigners    int
+	domain        util.DomainData
+	poktClient    pokt.PocketClient
+	ethClient     eth.EthereumClient
+	poktHeight    int64
 }
 
 func (x *MintSignerRunner) Run() {
@@ -369,16 +368,15 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service 
 	log.Debug("[MINT SIGNER] Fetched mint controller domain data")
 
 	x := &MintSignerRunner{
-		privateKey:             privateKey,
-		address:                strings.ToLower(address),
-		wpoktAddress:           strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		vaultAddress:           strings.ToLower(app.Config.Pocket.VaultAddress),
-		wpoktContract:          contract,
-		mintControllerContract: mintControllerContract,
-		numSigners:             len(app.Config.Ethereum.ValidatorAddresses),
-		domain:                 domain,
-		ethClient:              ethClient,
-		poktClient:             pokt.NewClient(),
+		privateKey:    privateKey,
+		address:       strings.ToLower(address),
+		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		vaultAddress:  strings.ToLower(app.Config.Pocket.VaultAddress),
+		wpoktContract: eth.NewWrappedPocketContract(contract),
+		numSigners:    len(app.Config.Ethereum.ValidatorAddresses),
+		domain:        domain,
+		ethClient:     ethClient,
+		poktClient:    pokt.NewClient(),
 	}
 
 	x.UpdateBlocks()
