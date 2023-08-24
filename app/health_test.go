@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dan13ram/wpokt-validator/mocks"
 	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -42,7 +41,7 @@ func TestHealthStatus(t *testing.T) {
 func TestFindLastHealth(t *testing.T) {
 
 	t.Run("No Error", func(t *testing.T) {
-		mockDB := mocks.NewMockDatabase(t)
+		mockDB := NewMockDatabase(t)
 		DB = mockDB
 
 		x := NewTestHealthCheck()
@@ -59,7 +58,7 @@ func TestFindLastHealth(t *testing.T) {
 	})
 
 	t.Run("With Error", func(t *testing.T) {
-		mockDB := mocks.NewMockDatabase(t)
+		mockDB := NewMockDatabase(t)
 		DB = mockDB
 
 		x := NewTestHealthCheck()
@@ -146,7 +145,7 @@ func TestPostHealth(t *testing.T) {
 			NewMockService(),
 		})
 
-		mockDB := mocks.NewMockDatabase(t)
+		mockDB := NewMockDatabase(t)
 		DB = mockDB
 
 		filter := bson.M{
@@ -201,7 +200,7 @@ func TestPostHealth(t *testing.T) {
 			NewMockService(),
 		})
 
-		mockDB := mocks.NewMockDatabase(t)
+		mockDB := NewMockDatabase(t)
 		DB = mockDB
 
 		call := mockDB.EXPECT().UpsertOne(mock.Anything, mock.Anything, mock.Anything)
@@ -220,7 +219,7 @@ func TestPostHealth(t *testing.T) {
 			NewMockService(),
 		})
 
-		mockDB := mocks.NewMockDatabase(t)
+		mockDB := NewMockDatabase(t)
 		DB = mockDB
 
 		call := mockDB.EXPECT().UpsertOne(mock.Anything, mock.Anything, mock.Anything)

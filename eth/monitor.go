@@ -51,6 +51,11 @@ func (x *BurnMonitorRunner) UpdateCurrentBlockNumber() {
 }
 
 func (x *BurnMonitorRunner) HandleBurnEvent(event *autogen.WrappedPocketBurnAndBridge) bool {
+	if event == nil {
+		log.Error("[BURN MONITOR] Error while handling burn event: event is nil")
+		return false
+	}
+
 	doc := util.CreateBurn(event)
 
 	// each event is a combination of transaction hash and log index
@@ -77,7 +82,9 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 		Context: context.Background(),
 	}, []*big.Int{}, []common.Address{}, []common.Address{})
 
-	defer filter.Close()
+	if filter != nil {
+		defer filter.Close()
+	}
 
 	if err != nil {
 		log.Error("[BURN MONITOR] Error while syncing burn events: ", err)
@@ -88,6 +95,12 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 	for filter.Next() {
 		success = success && x.HandleBurnEvent(filter.Event())
 	}
+
+	if err := filter.Error(); err != nil {
+		log.Error("[BURN MONITOR] Error while syncing burn events: ", err)
+		return false
+	}
+
 	return success
 }
 
@@ -120,33 +133,7 @@ func (x *BurnMonitorRunner) SyncTxs() bool {
 	return success
 }
 
-func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
-	if app.Config.BurnMonitor.Enabled == false {
-		log.Debug("[BURM MONITOR] Disabled")
-		return app.NewEmptyService(wg)
-	}
-
-	log.Debug("[BURN MONITOR] Initializing burn monitor")
-	client, err := eth.NewClient()
-	if err != nil {
-		log.Fatal("[BURN MONITOR] Error initializing ethereum client: ", err)
-	}
-	log.Debug("[BURN MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WrappedPocketAddress)
-	contract, err := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WrappedPocketAddress), client.GetClient())
-	if err != nil {
-		log.Fatal("[BURN MONITOR] Error initializing Wrapped Pocket contract", err)
-	}
-	log.Debug("[BURN MONITOR] Connected to wpokt contract")
-
-	x := &BurnMonitorRunner{
-		startBlockNumber:   0,
-		currentBlockNumber: 0,
-		wpoktContract:      eth.NewWrappedPocketContract(contract),
-		client:             client,
-	}
-
-	x.UpdateCurrentBlockNumber()
-
+func (x *BurnMonitorRunner) InitStartBlockNumber(lastHealth models.ServiceHealth) {
 	startBlockNumber := int64(app.Config.Ethereum.StartBlockNumber)
 
 	if lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64); err == nil {
@@ -161,6 +148,33 @@ func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 	}
 
 	log.Info("[BURN MONITOR] Start block number: ", x.startBlockNumber)
+}
+
+func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
+	if app.Config.BurnMonitor.Enabled == false {
+		log.Debug("[BURM MONITOR] Disabled")
+		return app.NewEmptyService(wg)
+	}
+
+	log.Debug("[BURN MONITOR] Initializing burn monitor")
+	client, err := eth.NewClient()
+	if err != nil {
+		log.Fatal("[BURN MONITOR] Error initializing ethereum client: ", err)
+	}
+	log.Debug("[BURN MONITOR] Connecting to wpokt contract at: ", app.Config.Ethereum.WrappedPocketAddress)
+	contract, _ := autogen.NewWrappedPocket(common.HexToAddress(app.Config.Ethereum.WrappedPocketAddress), client.GetClient())
+	log.Debug("[BURN MONITOR] Connected to wpokt contract")
+
+	x := &BurnMonitorRunner{
+		startBlockNumber:   0,
+		currentBlockNumber: 0,
+		wpoktContract:      eth.NewWrappedPocketContract(contract),
+		client:             client,
+	}
+
+	x.UpdateCurrentBlockNumber()
+
+	x.InitStartBlockNumber(lastHealth)
 
 	log.Info("[BURN MONITOR] Initialized burn monitor")
 
