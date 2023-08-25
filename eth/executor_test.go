@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
@@ -16,7 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -25,32 +27,36 @@ func init() {
 	log.SetOutput(io.Discard)
 }
 
-func NewTestBurnMonitor(t *testing.T, mockContract *eth.MockWrappedPocketContract, mockClient *eth.MockEthereumClient) *BurnMonitorRunner {
-	x := &BurnMonitorRunner{
+func NewTestMintExecutor(t *testing.T, mockContract *eth.MockWrappedPocketContract, mockClient *eth.MockEthereumClient) *MintExecutorRunner {
+	mintControllerAbi, _ := autogen.MintControllerMetaData.GetAbi()
+	x := &MintExecutorRunner{
 		startBlockNumber:   0,
 		currentBlockNumber: 100,
 		wpoktContract:      mockContract,
+		mintControllerAbi:  mintControllerAbi,
 		client:             mockClient,
+		vaultAddress:       "vaultAddress",
+		wpoktAddress:       "wpoktAddress",
 	}
 	return x
 }
 
-func TestBurnMonitorStatus(t *testing.T) {
+func TestMintExecutorStatus(t *testing.T) {
 	mockContract := eth.NewMockWrappedPocketContract(t)
 	mockClient := eth.NewMockEthereumClient(t)
-	x := NewTestBurnMonitor(t, mockContract, mockClient)
+	x := NewTestMintExecutor(t, mockContract, mockClient)
 
 	status := x.Status()
 	assert.Equal(t, status.EthBlockNumber, "0")
 	assert.Equal(t, status.PoktHeight, "")
 }
 
-func TestBurnMonitorUpdateCurrentBlockNumber(t *testing.T) {
+func TestMintExecutorUpdateCurrentBlockNumber(t *testing.T) {
 
 	t.Run("No Error", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 
 		mockClient.EXPECT().GetBlockNumber().Return(uint64(200), nil)
 
@@ -62,7 +68,7 @@ func TestBurnMonitorUpdateCurrentBlockNumber(t *testing.T) {
 	t.Run("With Error", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 
 		mockClient.EXPECT().GetBlockNumber().Return(uint64(200), errors.New("error"))
 
@@ -73,16 +79,16 @@ func TestBurnMonitorUpdateCurrentBlockNumber(t *testing.T) {
 
 }
 
-func TestBurnMonitorHandleBurnEvent(t *testing.T) {
+func TestMintExecutorHandleMintEvent(t *testing.T) {
 
 	t.Run("Nil event", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 
-		success := x.HandleBurnEvent(nil)
+		success := x.HandleMintEvent(nil)
 
 		assert.False(t, success)
 	})
@@ -92,53 +98,64 @@ func TestBurnMonitorHandleBurnEvent(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 
-		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil)
+		event := &autogen.WrappedPocketMinted{}
 
-		success := x.HandleBurnEvent(&autogen.WrappedPocketBurnAndBridge{})
+		filter := bson.M{
+			"wpokt_address":     x.wpoktAddress,
+			"vault_address":     x.vaultAddress,
+			"recipient_address": strings.ToLower(event.Recipient.Hex()),
+			"amount":            event.Amount.String(),
+			"nonce":             event.Nonce.String(),
+			"status": bson.M{
+				"$in": []string{models.StatusConfirmed, models.StatusSigned},
+			},
+		}
+
+		update := bson.M{
+			"$set": bson.M{
+				"status":       models.StatusSuccess,
+				"mint_tx_hash": strings.ToLower(event.Raw.TxHash.String()),
+				"updated_at":   time.Now(),
+			},
+		}
+
+		mockDB.EXPECT().UpdateOne(models.CollectionMints, filter, mock.Anything).Return(nil).
+			Run(func(_ string, _ interface{}, gotUpdate interface{}) {
+				gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
+				assert.Equal(t, update, gotUpdate)
+			}).Once()
+
+		success := x.HandleMintEvent(&autogen.WrappedPocketMinted{})
 
 		assert.True(t, success)
 	})
 
-	t.Run("With Duplicate Key Error", func(t *testing.T) {
+	t.Run("With Error", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 
-		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(mongo.CommandError{Code: 11000})
+		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(errors.New("error"))
 
-		success := x.HandleBurnEvent(&autogen.WrappedPocketBurnAndBridge{})
-
-		assert.True(t, success)
-	})
-
-	t.Run("With Other Error", func(t *testing.T) {
-		mockContract := eth.NewMockWrappedPocketContract(t)
-		mockClient := eth.NewMockEthereumClient(t)
-		mockDB := app.NewMockDatabase(t)
-		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
-
-		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(errors.New("error"))
-
-		success := x.HandleBurnEvent(&autogen.WrappedPocketBurnAndBridge{})
+		success := x.HandleMintEvent(&autogen.WrappedPocketMinted{})
 
 		assert.False(t, success)
 	})
 
 }
 
-func TestBurnMonitorInitStartBlockNumber(t *testing.T) {
+func TestMintExecutorInitStartBlockNumber(t *testing.T) {
 
 	t.Run("Last Health Eth Block Number is valid", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 
 		lastHealth := models.ServiceHealth{
 			EthBlockNumber: "10",
@@ -154,7 +171,7 @@ func TestBurnMonitorInitStartBlockNumber(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 
 		lastHealth := models.ServiceHealth{
 			EthBlockNumber: "invalid",
@@ -167,28 +184,28 @@ func TestBurnMonitorInitStartBlockNumber(t *testing.T) {
 
 }
 
-func TestBurnMonitorSyncBlocks(t *testing.T) {
+func TestMintExecutorSyncBlocks(t *testing.T) {
 
 	t.Run("Successful Case", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
-		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{})
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Once()
 		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
 
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
-		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(mockFilter, nil).
-			Run(func(opts *bind.FilterOpts, amount []*big.Int, to []common.Address, from []common.Address) {
+			Run(func(opts *bind.FilterOpts, recipient []common.Address, amount []*big.Int, nonce []*big.Int) {
 				assert.Equal(t, opts.Start, uint64(1))
 				assert.Equal(t, *opts.End, uint64(100))
 			}).Once()
-		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil).Once()
+		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Once()
 
 		success := x.SyncBlocks(1, 100)
 		assert.True(t, success)
@@ -199,8 +216,8 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
-		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(nil, errors.New("some error")).Once()
 
 		success := x.SyncBlocks(1, 100)
@@ -211,7 +228,7 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
-		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
 		mockFilter.EXPECT().Event().Return(nil)
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
@@ -219,8 +236,8 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
 
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
-		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(mockFilter, nil).Once()
 
 		assert.False(t, x.SyncBlocks(1, 100))
@@ -230,18 +247,18 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
-		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
 		mockFilter.EXPECT().Event().Return(nil).Once()
-		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{}).Once()
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{}).Once()
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Times(2)
 		mockFilter.EXPECT().Next().Return(false).Once()
-		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil).Once()
+		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Once()
 		app.DB = mockDB
 
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
-		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(mockFilter, nil).Once()
 
 		assert.False(t, x.SyncBlocks(1, 100))
@@ -251,7 +268,7 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
-		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
 		mockFilter.EXPECT().Event().Return(nil)
 		mockFilter.EXPECT().Error().Return(errors.New("iteration error"))
 		mockFilter.EXPECT().Close().Return(nil)
@@ -259,22 +276,22 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
 
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
-		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(mockFilter, nil).Once()
 
 		assert.False(t, x.SyncBlocks(1, 100))
 	})
 }
 
-func TestBurnMonitorSyncTxs(t *testing.T) {
+func TestMintExecutorSyncTxs(t *testing.T) {
 
 	t.Run("Start & Current Block Number are equal", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 		x.currentBlockNumber = 100
 		x.startBlockNumber = 100
 
@@ -288,7 +305,7 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		app.DB = mockDB
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 		x.currentBlockNumber = 100
 		x.startBlockNumber = 101
 
@@ -301,25 +318,25 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
-		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{})
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Once()
 		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
 
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 		x.currentBlockNumber = 100
 		x.startBlockNumber = 1
 
-		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(mockFilter, nil).
-			Run(func(opts *bind.FilterOpts, amount []*big.Int, to []common.Address, from []common.Address) {
+			Run(func(opts *bind.FilterOpts, recipient []common.Address, amount []*big.Int, nonce []*big.Int) {
 				assert.Equal(t, opts.Start, uint64(1))
 				assert.Equal(t, *opts.End, uint64(100))
 			}).Once()
-		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil).Once()
+		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Once()
 
 		success := x.SyncTxs()
 
@@ -333,8 +350,8 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
-		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{})
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Once()
@@ -343,13 +360,13 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
 
-		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		x := NewTestMintExecutor(t, mockContract, mockClient)
 		x.currentBlockNumber = 200000
 		x.startBlockNumber = 1
 
-		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(mockFilter, nil).Times(2)
-		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil)
+		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil)
 
 		success := x.SyncTxs()
 
@@ -360,13 +377,13 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 
 }
 
-func TestNewBurnMonitor(t *testing.T) {
+func TestNewMintExecutor(t *testing.T) {
 
 	t.Run("Disabled", func(t *testing.T) {
 
-		app.Config.BurnMonitor.Enabled = false
+		app.Config.MintExecutor.Enabled = false
 
-		service := NewBurnMonitor(&sync.WaitGroup{}, models.ServiceHealth{})
+		service := NewMintExecutor(&sync.WaitGroup{}, models.ServiceHealth{})
 
 		health := service.Health()
 
@@ -377,70 +394,70 @@ func TestNewBurnMonitor(t *testing.T) {
 
 	t.Run("Invalid ETH RPC", func(t *testing.T) {
 
-		app.Config.BurnMonitor.Enabled = true
+		app.Config.MintExecutor.Enabled = true
 		app.Config.Ethereum.RPCURL = ""
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
 
 		assert.Panics(t, func() {
-			NewBurnMonitor(&sync.WaitGroup{}, models.ServiceHealth{})
+			NewMintExecutor(&sync.WaitGroup{}, models.ServiceHealth{})
 		})
 
 	})
 
 	t.Run("Interval is 0", func(t *testing.T) {
 
-		app.Config.BurnMonitor.Enabled = true
+		app.Config.MintExecutor.Enabled = true
 		app.Config.Ethereum.RPCURL = "https://eth.llamarpc.com"
 
-		service := NewBurnMonitor(&sync.WaitGroup{}, models.ServiceHealth{})
+		service := NewMintExecutor(&sync.WaitGroup{}, models.ServiceHealth{})
 
 		assert.Nil(t, service)
 	})
 
 	t.Run("Valid", func(t *testing.T) {
 
-		app.Config.BurnMonitor.Enabled = true
-		app.Config.BurnMonitor.IntervalMillis = 1
+		app.Config.MintExecutor.Enabled = true
+		app.Config.MintExecutor.IntervalMillis = 1
 		app.Config.Ethereum.RPCURL = "https://eth.llamarpc.com"
 
-		service := NewBurnMonitor(&sync.WaitGroup{}, models.ServiceHealth{})
+		service := NewMintExecutor(&sync.WaitGroup{}, models.ServiceHealth{})
 
 		health := service.Health()
 
 		assert.NotNil(t, health)
-		assert.Equal(t, health.Name, BurnMonitorName)
+		assert.Equal(t, health.Name, MintExecutorName)
 
 	})
 
 }
 
-func TestBurnMonitorRun(t *testing.T) {
+func TestMintExecutorRun(t *testing.T) {
 
 	mockContract := eth.NewMockWrappedPocketContract(t)
 	mockClient := eth.NewMockEthereumClient(t)
 	mockDB := app.NewMockDatabase(t)
-	mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-	mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+	mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
+	mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{})
 	mockFilter.EXPECT().Error().Return(nil)
 	mockFilter.EXPECT().Close().Return(nil)
 	mockFilter.EXPECT().Next().Return(true).Once()
 	mockFilter.EXPECT().Next().Return(false).Once()
 
 	app.DB = mockDB
-	x := NewTestBurnMonitor(t, mockContract, mockClient)
+	x := NewTestMintExecutor(t, mockContract, mockClient)
 	x.currentBlockNumber = 100
 	x.startBlockNumber = 1
 
 	mockClient.EXPECT().GetBlockNumber().Return(uint64(100), nil)
-	mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+	mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 		Return(mockFilter, nil).
-		Run(func(opts *bind.FilterOpts, amount []*big.Int, to []common.Address, from []common.Address) {
+		Run(func(opts *bind.FilterOpts, recipient []common.Address, amount []*big.Int, nonce []*big.Int) {
 			assert.Equal(t, opts.Start, uint64(1))
 			assert.Equal(t, *opts.End, uint64(100))
 		}).Once()
-	mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil).Once()
+	mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Once()
 
 	x.Run()
 

@@ -24,7 +24,7 @@ var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
 	pokt.BurnExecutorName: pokt.NewExecutor,
 	eth.BurnMonitorName:   eth.NewBurnMonitor,
 	eth.MintSignerName:    eth.NewSigner,
-	eth.MintExecutorName:  eth.NewExecutor,
+	eth.MintExecutorName:  eth.NewMintExecutor,
 }
 
 func main() {

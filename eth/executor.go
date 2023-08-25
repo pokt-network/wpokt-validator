@@ -56,6 +56,11 @@ func (x *MintExecutorRunner) UpdateCurrentBlockNumber() {
 }
 
 func (x *MintExecutorRunner) HandleMintEvent(event *autogen.WrappedPocketMinted) bool {
+	if event == nil {
+		log.Error("[MINT EXECUTOR] Invalid mint event")
+		return false
+	}
+
 	log.Debug("[MINT EXECUTOR] Handling mint event: ", event.Raw.TxHash, " ", event.Raw.Index)
 
 	filter := bson.M{
@@ -96,7 +101,9 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 		Context: context.Background(),
 	}, []common.Address{}, []*big.Int{}, []*big.Int{})
 
-	defer filter.Close()
+	if filter != nil {
+		defer filter.Close()
+	}
 
 	if err != nil {
 		log.Errorln("[MINT EXECUTOR] Error while syncing mint events: ", err)
@@ -105,7 +112,7 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 
 	var success bool = true
 	for filter.Next() {
-		success = success && x.HandleMintEvent(filter.Event())
+		success = x.HandleMintEvent(filter.Event()) && success
 	}
 
 	if err = filter.Error(); err != nil {
@@ -150,7 +157,24 @@ func (x *MintExecutorRunner) SyncTxs() bool {
 	return success
 }
 
-func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
+func (x *MintExecutorRunner) InitStartBlockNumber(lastHealth models.ServiceHealth) {
+	startBlockNumber := int64(app.Config.Ethereum.StartBlockNumber)
+
+	if lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64); err == nil {
+		startBlockNumber = lastBlockNumber
+	}
+
+	if startBlockNumber > 0 {
+		x.startBlockNumber = startBlockNumber
+	} else {
+		log.Warn("Found invalid start block number, updating to current block number")
+		x.startBlockNumber = x.currentBlockNumber
+	}
+
+	log.Info("[MINT EXECUTOR] Start block number: ", x.startBlockNumber)
+}
+
+func NewMintExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if app.Config.MintExecutor.Enabled == false {
 		log.Debug("[MINT EXECUTOR] Disabled")
 		return app.NewEmptyService(wg)
@@ -190,20 +214,7 @@ func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Servic
 
 	x.UpdateCurrentBlockNumber()
 
-	startBlockNumber := int64(app.Config.Ethereum.StartBlockNumber)
-
-	if lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64); err == nil {
-		startBlockNumber = lastBlockNumber
-	}
-
-	if startBlockNumber > 0 {
-		x.startBlockNumber = startBlockNumber
-	} else {
-		log.Warn("[MINT EXECUTOR] Found invalid start block number, updating to current block number")
-		x.startBlockNumber = x.currentBlockNumber
-	}
-
-	log.Info("[MINT EXECUTOR] Start block number: ", x.startBlockNumber)
+	x.InitStartBlockNumber(lastHealth)
 
 	log.Info("[MINT EXECUTOR] Initialized mint executor")
 
