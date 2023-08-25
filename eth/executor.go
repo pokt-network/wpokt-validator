@@ -108,6 +108,11 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 		success = success && x.HandleMintEvent(filter.Event())
 	}
 
+	if err = filter.Error(); err != nil {
+		log.Errorln("[MINT EXECUTOR] Error while syncing mint events: ", err)
+		return false
+	}
+
 	return success
 }
 

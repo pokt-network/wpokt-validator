@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math/big"
 	"sort"
 	"strconv"
@@ -315,7 +316,25 @@ func (x *MintSignerRunner) SyncTxs() bool {
 
 	var success bool = true
 	for _, mint := range results {
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionMints, strings.ToLower(mint.RecipientAddress))
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[MINT SIGNER] Error locking mint: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[MINT SIGNER] Locked mint: ", mint.TransactionHash)
+
 		success = x.HandleMint(&mint) && success
+
+		if err = app.DB.Unlock(lockId); err != nil {
+			log.Error("[MINT SIGNER] Error unlocking mint: ", err)
+			success = false
+		} else {
+			log.Debug("[MINT SIGNER] Unlocked mint: ", mint.TransactionHash)
+		}
+
 	}
 
 	log.Debug("[MINT SIGNER] Finished syncing pending txs")

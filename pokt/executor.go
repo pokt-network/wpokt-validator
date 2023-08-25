@@ -38,19 +38,11 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 
 	var filter bson.M
 	var update bson.M
-	var lockId string
 
 	if doc.Status == models.StatusSigned {
 		log.Debug("[BURN EXECUTOR] Submitting invalid mint")
 
 		var err error
-		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
-		lockId, err = app.DB.XLock(resourceId)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error locking invalid mint: ", err)
-			return false
-		}
-		log.Debug("[BURN EXECUTOR] Locked invalid mint: ", doc.TransactionHash)
 
 		p := rpc.SendRawTxParams{
 			Addr:        x.vaultAddress,
@@ -60,14 +52,6 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 		res, err := x.client.SubmitRawTx(p)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
-			if lockId != "" {
-				err = app.DB.Unlock(lockId)
-				if err != nil {
-					log.Error("[BURN EXECUTOR] Error unlocking invalid mint: ", err)
-				} else {
-					log.Debug("[BURN EXECUTOR] Unlocked invalid mint: ", doc.TransactionHash)
-				}
-			}
 			return false
 		}
 
@@ -118,27 +102,13 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 		}
 	}
 
-	err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
-	success := err == nil
-	if err != nil {
+	if err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update); err != nil {
 		log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
+		return false
 	}
 
-	if lockId != "" {
-		err = app.DB.Unlock(lockId)
-		success = success && err == nil
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error unlocking invalid mint: ", err)
-		} else {
-			log.Debug("[BURN EXECUTOR] Unlocked invalid mint: ", doc.TransactionHash)
-		}
-	}
-
-	if success {
-		log.Info("[BURN EXECUTOR] Handled invalid mint")
-	}
-
-	return success
+	log.Info("[BURN EXECUTOR] Handled invalid mint")
+	return true
 }
 
 func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
@@ -146,19 +116,9 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 
 	var filter bson.M
 	var update bson.M
-	var lockId string
 
 	if doc.Status == models.StatusSigned {
 		log.Debug("[BURN EXECUTOR] Submitting burn")
-
-		var err error
-		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
-		lockId, err = app.DB.XLock(resourceId)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error locking burn: ", err)
-			return false
-		}
-		log.Debug("[BURN EXECUTOR] Locked burn: ", doc.TransactionHash)
 
 		p := rpc.SendRawTxParams{
 			Addr:        x.vaultAddress,
@@ -168,14 +128,6 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 		res, err := x.client.SubmitRawTx(p)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
-			if lockId != "" {
-				err = app.DB.Unlock(lockId)
-				if err != nil {
-					log.Error("[BURN EXECUTOR] Error unlocking burn: ", err)
-				} else {
-					log.Debug("[BURN EXECUTOR] Unlocked burn: ", doc.TransactionHash)
-				}
-			}
 			return false
 		}
 
@@ -226,29 +178,18 @@ func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
 		}
 	}
 
-	err := app.DB.UpdateOne(models.CollectionBurns, filter, update)
-	success := err == nil
-	if err != nil {
+	if err := app.DB.UpdateOne(models.CollectionBurns, filter, update); err != nil {
 		log.Error("[BURN EXECUTOR] Error updating burn: ", err)
+		return false
 	}
 
-	if lockId != "" {
-		err = app.DB.Unlock(lockId)
-		success = success && err == nil
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error unlocking burn: ", err)
-		} else {
-			log.Debug("[BURN EXECUTOR] Unlocked burn: ", doc.TransactionHash)
-		}
-	}
-
-	if success {
-		log.Info("[BURN EXECUTOR] Handled burn")
-	}
-	return success
+	log.Info("[BURN EXECUTOR] Handled burn")
+	return true
 }
 
-func (x *BurnExecutorRunner) SyncTxs() bool {
+func (x *BurnExecutorRunner) SyncInvalidMints() bool {
+	log.Debug("[BURN EXECUTOR] Syncing invalid mints")
+
 	filter := bson.M{
 		"status": bson.M{
 			"$in": []string{
@@ -270,10 +211,35 @@ func (x *BurnExecutorRunner) SyncTxs() bool {
 
 	var success bool = true
 	for _, doc := range invalidMints {
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[BURN EXECUTOR] Error locking invalid mint: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[BURN EXECUTOR] Locked invalid mint: ", doc.TransactionHash)
+
 		success = x.HandleInvalidMint(doc) && success
+
+		if err := app.DB.Unlock(lockId); err != nil {
+			log.Error("[BURN EXECUTOR] Error unlocking invalid mint: ", err)
+			success = false
+		} else {
+			log.Debug("[BURN EXECUTOR] Unlocked invalid mint: ", doc.TransactionHash)
+		}
+
 	}
 
-	filter = bson.M{
+	log.Debug("[BURN EXECUTOR] Synced invalid mints")
+	return success
+}
+
+func (x *BurnExecutorRunner) SyncBurns() bool {
+	log.Debug("[BURN EXECUTOR] Syncing burns")
+
+	filter := bson.M{
 		"status": bson.M{
 			"$in": []string{
 				string(models.StatusSigned),
@@ -284,7 +250,7 @@ func (x *BurnExecutorRunner) SyncTxs() bool {
 	}
 	burns := []models.Burn{}
 
-	err = app.DB.FindMany(models.CollectionBurns, filter, &burns)
+	err := app.DB.FindMany(models.CollectionBurns, filter, &burns)
 	if err != nil {
 		log.Error("[BURN EXECUTOR] Error fetching burns: ", err)
 		return false
@@ -292,10 +258,41 @@ func (x *BurnExecutorRunner) SyncTxs() bool {
 
 	log.Info("[BURN EXECUTOR] Found burns: ", len(burns))
 
+	var success bool = true
+
 	for _, doc := range burns {
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[BURN EXECUTOR] Error locking burn: ", err)
+			success = false
+			continue
+		}
+		log.Debugln("[BURN EXECUTOR] Locked burn:", doc.TransactionHash, doc.LogIndex)
+
 		success = x.HandleBurn(doc) && success
+
+		if err := app.DB.Unlock(lockId); err != nil {
+			log.Error("[BURN EXECUTOR] Error unlocking burn: ", err)
+			success = false
+		} else {
+			log.Debugln("[BURN EXECUTOR] Unlocked burn:", doc.TransactionHash, doc.LogIndex)
+		}
+
 	}
 
+	log.Debug("[BURN EXECUTOR] Synced burns")
+	return success
+}
+
+func (x *BurnExecutorRunner) SyncTxs() bool {
+	log.Debug("[BURN EXECUTOR] Syncing")
+
+	success := x.SyncInvalidMints()
+	success = x.SyncBurns() && success
+
+	log.Info("[BURN EXECUTOR] Synced txs")
 	return success
 }
 

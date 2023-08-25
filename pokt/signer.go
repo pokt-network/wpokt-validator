@@ -307,8 +307,9 @@ func (x *BurnSignerRunner) HandleBurn(doc models.Burn) bool {
 	return true
 }
 
-func (x *BurnSignerRunner) SyncTxs() bool {
-	log.Info("[BURN SIGNER] Syncing txs")
+func (x *BurnSignerRunner) SyncInvalidMints() bool {
+	log.Debug("[BURN SIGNER] Syncing invalid mints")
+
 	signersFilter := bson.M{"$nin": []string{strings.ToLower(x.privateKey.PublicKey().RawString())}}
 	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
 	filter := bson.M{
@@ -327,27 +328,85 @@ func (x *BurnSignerRunner) SyncTxs() bool {
 
 	var success bool = true
 	for _, doc := range invalidMints {
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[BURN SIGNER] Error locking invalid mint: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[BURN SIGNER] Locked invalid mint: ", doc.TransactionHash)
+
 		success = x.HandleInvalidMint(doc) && success
+
+		if err = app.DB.Unlock(lockId); err != nil {
+			log.Error("[BURN SIGNER] Error unlocking invalid mint: ", err)
+			success = false
+		} else {
+			log.Debug("[BURN SIGNER] Unlocked invalid mint: ", doc.TransactionHash)
+		}
+
 	}
 
-	filter = bson.M{
+	log.Info("[BURN SIGNER] Synced invalid mints")
+	return success
+}
+
+func (x *BurnSignerRunner) SyncBurns() bool {
+	log.Debug("[BURN SIGNER] Syncing burns")
+
+	signersFilter := bson.M{"$nin": []string{strings.ToLower(x.privateKey.PublicKey().RawString())}}
+	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
+	filter := bson.M{
 		"wpokt_address": x.wpoktAddress,
 		"status":        statusFilter,
 		"signers":       signersFilter,
 	}
 
 	burns := []models.Burn{}
-	err = app.DB.FindMany(models.CollectionBurns, filter, &burns)
+	err := app.DB.FindMany(models.CollectionBurns, filter, &burns)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error fetching burns: ", err)
 		return false
 	}
 	log.Info("[BURN SIGNER] Found burns: ", len(burns))
-	for _, doc := range burns {
-		success = x.HandleBurn(doc) && success
-	}
-	log.Info("[BURN SIGNER] Synced txs")
 
+	var success bool = true
+
+	for _, doc := range burns {
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[BURN SIGNER] Error locking burn: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[BURN SIGNER] Locked burn: ", doc.TransactionHash)
+
+		success = x.HandleBurn(doc) && success
+
+		if err = app.DB.Unlock(lockId); err != nil {
+			log.Error("[BURN SIGNER] Error unlocking burn: ", err)
+			success = false
+		} else {
+			log.Debug("[BURN SIGNER] Unlocked burn: ", doc.TransactionHash)
+		}
+
+	}
+
+	log.Info("[BURN SIGNER] Synced burns")
+	return success
+}
+
+func (x *BurnSignerRunner) SyncTxs() bool {
+	log.Debug("[BURN SIGNER] Syncing")
+
+	success := x.SyncInvalidMints()
+	success = x.SyncBurns() && success
+
+	log.Info("[BURN SIGNER] Synced txs")
 	return success
 }
 
