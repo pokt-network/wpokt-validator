@@ -167,46 +167,23 @@ func TestBurnMonitorInitStartBlockNumber(t *testing.T) {
 
 }
 
-type MockLogFilter struct {
-	shouldNext   bool
-	shouldHandle bool
-	called       bool
-	filterError  error
-}
-
-func (m *MockLogFilter) Close() error {
-	return nil
-}
-
-func (m *MockLogFilter) Error() error {
-	return m.filterError
-}
-
-func (m *MockLogFilter) Next() bool {
-	if m.called {
-		return false
-	}
-	m.called = true
-	return m.shouldNext
-}
-
-func (m *MockLogFilter) Event() *autogen.WrappedPocketBurnAndBridge {
-	if !m.shouldHandle {
-		return nil
-	}
-	return &autogen.WrappedPocketBurnAndBridge{}
-}
-
 func TestBurnMonitorSyncBlocks(t *testing.T) {
 
 	t.Run("Successful Case", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
+
 		x := NewTestBurnMonitor(t, mockContract, mockClient)
 		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
-			Return(&MockLogFilter{shouldNext: true, shouldHandle: true}, nil).
+			Return(mockFilter, nil).
 			Run(func(opts *bind.FilterOpts, amount []*big.Int, to []common.Address, from []common.Address) {
 				assert.Equal(t, opts.Start, uint64(1))
 				assert.Equal(t, *opts.End, uint64(100))
@@ -234,10 +211,38 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(nil)
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
+
 		x := NewTestBurnMonitor(t, mockContract, mockClient)
 		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
-			Return(&MockLogFilter{shouldNext: true, shouldHandle: false}, nil).Once()
+			Return(mockFilter, nil).Once()
+
+		assert.False(t, x.SyncBlocks(1, 100))
+	})
+
+	t.Run("Error in Handling First Event", func(t *testing.T) {
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockClient := eth.NewMockEthereumClient(t)
+		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(nil).Once()
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{}).Once()
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Times(2)
+		mockFilter.EXPECT().Next().Return(false).Once()
+		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil).Once()
+		app.DB = mockDB
+
+		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+			Return(mockFilter, nil).Once()
 
 		assert.False(t, x.SyncBlocks(1, 100))
 	})
@@ -246,10 +251,17 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(nil)
+		mockFilter.EXPECT().Error().Return(errors.New("iteration error"))
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
+
 		x := NewTestBurnMonitor(t, mockContract, mockClient)
 		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
-			Return(&MockLogFilter{shouldNext: true, filterError: errors.New("iteration error")}, nil).Once()
+			Return(mockFilter, nil).Once()
 
 		assert.False(t, x.SyncBlocks(1, 100))
 	})
@@ -289,13 +301,20 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
+
 		x := NewTestBurnMonitor(t, mockContract, mockClient)
 		x.currentBlockNumber = 100
 		x.startBlockNumber = 1
 
 		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
-			Return(&MockLogFilter{shouldNext: true, shouldHandle: true}, nil).
+			Return(mockFilter, nil).
 			Run(func(opts *bind.FilterOpts, amount []*big.Int, to []common.Address, from []common.Address) {
 				assert.Equal(t, opts.Start, uint64(1))
 				assert.Equal(t, *opts.End, uint64(100))
@@ -314,13 +333,22 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
 		app.DB = mockDB
+
 		x := NewTestBurnMonitor(t, mockContract, mockClient)
 		x.currentBlockNumber = 200000
 		x.startBlockNumber = 1
 
 		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
-			Return(&MockLogFilter{shouldNext: true, shouldHandle: true}, nil).Times(2)
+			Return(mockFilter, nil).Times(2)
 		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil)
 
 		success := x.SyncTxs()
@@ -390,6 +418,13 @@ func TestBurnMonitorRun(t *testing.T) {
 	mockContract := eth.NewMockWrappedPocketContract(t)
 	mockClient := eth.NewMockEthereumClient(t)
 	mockDB := app.NewMockDatabase(t)
+	mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+	mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+	mockFilter.EXPECT().Error().Return(nil)
+	mockFilter.EXPECT().Close().Return(nil)
+	mockFilter.EXPECT().Next().Return(true).Once()
+	mockFilter.EXPECT().Next().Return(false).Once()
+
 	app.DB = mockDB
 	x := NewTestBurnMonitor(t, mockContract, mockClient)
 	x.currentBlockNumber = 100
@@ -397,7 +432,7 @@ func TestBurnMonitorRun(t *testing.T) {
 
 	mockClient.EXPECT().GetBlockNumber().Return(uint64(100), nil)
 	mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
-		Return(&MockLogFilter{shouldNext: true, shouldHandle: true}, nil).
+		Return(mockFilter, nil).
 		Run(func(opts *bind.FilterOpts, amount []*big.Int, to []common.Address, from []common.Address) {
 			assert.Equal(t, opts.Start, uint64(1))
 			assert.Equal(t, *opts.End, uint64(100))
