@@ -19,7 +19,7 @@ import (
 type ServiceFactory = func(*sync.WaitGroup, models.ServiceHealth) app.Service
 
 var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
-	pokt.MintMonitorName:  pokt.NewMonitor,
+	pokt.MintMonitorName:  pokt.NewMintMonitor,
 	pokt.BurnSignerName:   pokt.NewSigner,
 	pokt.BurnExecutorName: pokt.NewExecutor,
 	eth.BurnMonitorName:   eth.NewBurnMonitor,
