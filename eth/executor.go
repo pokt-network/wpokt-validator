@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -112,7 +113,31 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 
 	var success bool = true
 	for filter.Next() {
-		success = x.HandleMintEvent(filter.Event()) && success
+
+		event := filter.Event()
+
+		if event == nil {
+			success = false
+			continue
+		}
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionMints, strings.ToLower(event.Recipient.Hex()))
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[MINT EXECUTOR] Error locking mint: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[MINT EXECUTOR] Locked mint: ", event.Raw.TxHash)
+
+		success = x.HandleMintEvent(event) && success
+
+		if err = app.DB.Unlock(lockId); err != nil {
+			log.Error("[MINT EXECUTOR] Error unlocking mint: ", err)
+			success = false
+		} else {
+			log.Debug("[MINT EXECUTOR] Unlocked mint: ", event.Raw.TxHash)
+		}
 	}
 
 	if err = filter.Error(); err != nil {

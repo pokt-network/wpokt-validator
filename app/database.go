@@ -93,7 +93,9 @@ func (d *MongoDatabase) XLock(resourceId string) (string, error) {
 	defer cancel()
 
 	lockId := randomString(32)
-	err := d.locker.XLock(ctx, resourceId, lockId, lock.LockDetails{})
+	err := d.locker.XLock(ctx, resourceId, lockId, lock.LockDetails{
+		TTL: 60, // locks expire in 60 seconds
+	})
 	return lockId, err
 }
 
@@ -103,7 +105,9 @@ func (d *MongoDatabase) SLock(resourceId string) (string, error) {
 	defer cancel()
 
 	lockId := randomString(32)
-	err := d.locker.SLock(ctx, resourceId, lockId, lock.LockDetails{}, -1)
+	err := d.locker.SLock(ctx, resourceId, lockId, lock.LockDetails{
+		TTL: 60, // locks expire in 60 seconds
+	}, -1)
 	return lockId, err
 }
 
@@ -211,7 +215,7 @@ func (d *MongoDatabase) FindMany(collection string, filter interface{}, result i
 	return err
 }
 
-//method for update single value in a collection
+// method for update single value in a collection
 func (d *MongoDatabase) UpdateOne(collection string, filter interface{}, update interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
@@ -219,7 +223,7 @@ func (d *MongoDatabase) UpdateOne(collection string, filter interface{}, update 
 	return err
 }
 
-//method for upsert single value in a collection
+// method for upsert single value in a collection
 func (d *MongoDatabase) UpsertOne(collection string, filter interface{}, update interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()

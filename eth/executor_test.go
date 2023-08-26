@@ -207,8 +207,65 @@ func TestMintExecutorSyncBlocks(t *testing.T) {
 			}).Once()
 		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Once()
 
+		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+		mockDB.EXPECT().Unlock("lockId").Return(nil)
+
 		success := x.SyncBlocks(1, 100)
 		assert.True(t, success)
+	})
+
+	t.Run("Error locking", func(t *testing.T) {
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockClient := eth.NewMockEthereumClient(t)
+		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{})
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
+		app.DB = mockDB
+
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
+			Return(mockFilter, nil).
+			Run(func(opts *bind.FilterOpts, recipient []common.Address, amount []*big.Int, nonce []*big.Int) {
+				assert.Equal(t, opts.Start, uint64(1))
+				assert.Equal(t, *opts.End, uint64(100))
+			}).Once()
+
+		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", errors.New("error"))
+
+		success := x.SyncBlocks(1, 100)
+		assert.False(t, success)
+	})
+
+	t.Run("Error unlocking", func(t *testing.T) {
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockClient := eth.NewMockEthereumClient(t)
+		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{})
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
+		app.DB = mockDB
+
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
+			Return(mockFilter, nil).
+			Run(func(opts *bind.FilterOpts, recipient []common.Address, amount []*big.Int, nonce []*big.Int) {
+				assert.Equal(t, opts.Start, uint64(1))
+				assert.Equal(t, *opts.End, uint64(100))
+			}).Once()
+		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Once()
+
+		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+		mockDB.EXPECT().Unlock("lockId").Return(errors.New("error"))
+
+		success := x.SyncBlocks(1, 100)
+		assert.False(t, success)
 	})
 
 	t.Run("Error in Filtering", func(t *testing.T) {
@@ -260,6 +317,8 @@ func TestMintExecutorSyncBlocks(t *testing.T) {
 		x := NewTestMintExecutor(t, mockContract, mockClient)
 		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(mockFilter, nil).Once()
+		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+		mockDB.EXPECT().Unlock("lockId").Return(nil)
 
 		assert.False(t, x.SyncBlocks(1, 100))
 	})
@@ -337,6 +396,8 @@ func TestMintExecutorSyncTxs(t *testing.T) {
 				assert.Equal(t, *opts.End, uint64(100))
 			}).Once()
 		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Once()
+		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+		mockDB.EXPECT().Unlock("lockId").Return(nil)
 
 		success := x.SyncTxs()
 
@@ -367,6 +428,8 @@ func TestMintExecutorSyncTxs(t *testing.T) {
 		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
 			Return(mockFilter, nil).Times(2)
 		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil)
+		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+		mockDB.EXPECT().Unlock("lockId").Return(nil)
 
 		success := x.SyncTxs()
 
@@ -458,6 +521,8 @@ func TestMintExecutorRun(t *testing.T) {
 			assert.Equal(t, *opts.End, uint64(100))
 		}).Once()
 	mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Once()
+	mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+	mockDB.EXPECT().Unlock("lockId").Return(nil)
 
 	x.Run()
 

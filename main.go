@@ -23,7 +23,7 @@ var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
 	pokt.BurnSignerName:   pokt.NewSigner,
 	pokt.BurnExecutorName: pokt.NewExecutor,
 	eth.BurnMonitorName:   eth.NewBurnMonitor,
-	eth.MintSignerName:    eth.NewSigner,
+	eth.MintSignerName:    eth.NewMintSigner,
 	eth.MintExecutorName:  eth.NewMintExecutor,
 }
 

@@ -135,7 +135,7 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 	return nonce, nil
 }
 
-func (x *MintSignerRunner) ValidateMint(mint *models.Mint, data *autogen.MintControllerMintData) (bool, error) {
+func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 	log.Debug("[MINT SIGNER] Validating mint: ", mint.TransactionHash)
 
 	tx, err := x.poktClient.GetTx(mint.TransactionHash)
@@ -189,6 +189,11 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint, data *autogen.MintCon
 }
 
 func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
+	if mint == nil {
+		log.Error("[MINT EXECUTOR] Invalid mint")
+		return false
+	}
+
 	log.Debug("[MINT SIGNER] Handling mint: ", mint.TransactionHash)
 
 	address := common.HexToAddress(mint.RecipientAddress)
@@ -225,7 +230,7 @@ func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
 
 	var update bson.M
 
-	valid, err := x.ValidateMint(mint, data)
+	valid, err := x.ValidateMint(mint)
 	if err != nil {
 		log.Error("[MINT SIGNER] Error validating mint: ", err)
 		return false
@@ -341,7 +346,7 @@ func (x *MintSignerRunner) SyncTxs() bool {
 	return success
 }
 
-func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
+func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if app.Config.MintSigner.Enabled == false {
 		log.Debug("[MINT SIGNER] Disabled")
 		return app.NewEmptyService(wg)
