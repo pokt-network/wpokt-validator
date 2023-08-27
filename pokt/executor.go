@@ -33,7 +33,13 @@ func (x *BurnExecutorRunner) Status() models.RunnerStatus {
 	return models.RunnerStatus{}
 }
 
-func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
+func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
+
+	if doc == nil || (doc.Status != models.StatusSigned && doc.Status != models.StatusSubmitted) {
+		log.Error("[BURN EXECUTOR] Invalid mint is nil or has invalid status")
+		return false
+	}
+
 	log.Debug("[BURN EXECUTOR] Handling invalid mint: ", doc.TransactionHash)
 
 	var filter bson.M
@@ -111,7 +117,13 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 	return true
 }
 
-func (x *BurnExecutorRunner) HandleBurn(doc models.Burn) bool {
+func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
+
+	if doc == nil || (doc.Status != models.StatusSigned && doc.Status != models.StatusSubmitted) {
+		log.Error("[BURN EXECUTOR] Burn is nil or has invalid status")
+		return false
+	}
+
 	log.Debug("[BURN EXECUTOR] Handling burn: ", doc.TransactionHash)
 
 	var filter bson.M
@@ -221,7 +233,7 @@ func (x *BurnExecutorRunner) SyncInvalidMints() bool {
 		}
 		log.Debug("[BURN EXECUTOR] Locked invalid mint: ", doc.TransactionHash)
 
-		success = x.HandleInvalidMint(doc) && success
+		success = x.HandleInvalidMint(&doc) && success
 
 		if err := app.DB.Unlock(lockId); err != nil {
 			log.Error("[BURN EXECUTOR] Error unlocking invalid mint: ", err)
@@ -271,7 +283,7 @@ func (x *BurnExecutorRunner) SyncBurns() bool {
 		}
 		log.Debugln("[BURN EXECUTOR] Locked burn:", doc.TransactionHash, doc.LogIndex)
 
-		success = x.HandleBurn(doc) && success
+		success = x.HandleBurn(&doc) && success
 
 		if err := app.DB.Unlock(lockId); err != nil {
 			log.Error("[BURN EXECUTOR] Error unlocking burn: ", err)
@@ -296,7 +308,7 @@ func (x *BurnExecutorRunner) SyncTxs() bool {
 	return success
 }
 
-func NewExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
+func NewBurnExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 	if !app.Config.BurnExecutor.Enabled {
 		log.Debug("[BURN EXECUTOR] Disabled")
 		return app.NewEmptyService(wg)
