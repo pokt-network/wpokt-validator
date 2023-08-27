@@ -93,7 +93,14 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 
 	var success bool = true
 	for filter.Next() {
-		success = x.HandleBurnEvent(filter.Event()) && success
+		event := filter.Event()
+
+		if event == nil || event.Raw.Removed {
+			success = false
+			continue
+		}
+
+		success = x.HandleBurnEvent(event) && success
 	}
 
 	if err := filter.Error(); err != nil {

@@ -36,7 +36,7 @@ type BurnSignerRunner struct {
 	ethBlockNumber int64
 	vaultAddress   string
 	wpoktAddress   string
-	wpoktContract  *autogen.WrappedPocket
+	wpoktContract  eth.WrappedPocketContract
 }
 
 func (x *BurnSignerRunner) Run() {
@@ -70,7 +70,7 @@ func (x *BurnSignerRunner) UpdateBlocks() {
 	log.Info("[BURN SIGNER] Updated blocks")
 }
 
-func (x *BurnSignerRunner) ValidateInvalidMint(doc models.InvalidMint) (bool, error) {
+func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, error) {
 	log.Debug("[BURN SIGNER] Validating invalid mint: ", doc.TransactionHash)
 
 	tx, err := x.poktClient.GetTx(doc.TransactionHash)
@@ -103,6 +103,11 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc models.InvalidMint) (bool, er
 		return false, nil
 	}
 
+	if tx.StdTx.Memo != doc.Memo {
+		log.Debug("[BURN SIGNER] Memo mismatch")
+		return false, nil
+	}
+
 	_, valid := util.ValidateMemo(doc.Memo)
 	if valid {
 		log.Error("[BURN SIGNER] Memo is valid, should be invalid")
@@ -113,7 +118,11 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc models.InvalidMint) (bool, er
 	return true, nil
 }
 
-func (x *BurnSignerRunner) HandleInvalidMint(doc models.InvalidMint) bool {
+func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
+	if doc == nil {
+		log.Error("[BURN SIGNER] Invalid mint is nil")
+		return false
+	}
 	log.Debug("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
 
 	doc, err := util.UpdateStatusAndConfirmationsForInvalidMint(doc, x.poktHeight)
@@ -183,7 +192,7 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 	return true
 }
 
-func (x *BurnSignerRunner) ValidateBurn(doc models.Burn) (bool, error) {
+func (x *BurnSignerRunner) ValidateBurn(doc *models.Burn) (bool, error) {
 	log.Debug("[BURN SIGNER] Validating burn: ", doc.TransactionHash)
 
 	txReceipt, err := x.ethClient.GetTransactionReceipt(doc.TransactionHash)
@@ -238,7 +247,11 @@ func (x *BurnSignerRunner) ValidateBurn(doc models.Burn) (bool, error) {
 	return true, nil
 }
 
-func (x *BurnSignerRunner) HandleBurn(doc models.Burn) bool {
+func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
+	if doc == nil {
+		log.Error("[BURN SIGNER] Burn is nil")
+		return false
+	}
 	log.Debug("[BURN SIGNER] Handling burn: ", doc.TransactionHash)
 
 	doc, err := util.UpdateStatusAndConfirmationsForBurn(doc, x.ethBlockNumber)
@@ -338,7 +351,7 @@ func (x *BurnSignerRunner) SyncInvalidMints() bool {
 		}
 		log.Debug("[BURN SIGNER] Locked invalid mint: ", doc.TransactionHash)
 
-		success = x.HandleInvalidMint(doc) && success
+		success = x.HandleInvalidMint(&doc) && success
 
 		if err = app.DB.Unlock(lockId); err != nil {
 			log.Error("[BURN SIGNER] Error unlocking invalid mint: ", err)
@@ -385,7 +398,7 @@ func (x *BurnSignerRunner) SyncBurns() bool {
 		}
 		log.Debug("[BURN SIGNER] Locked burn: ", doc.TransactionHash)
 
-		success = x.HandleBurn(doc) && success
+		success = x.HandleBurn(&doc) && success
 
 		if err = app.DB.Unlock(lockId); err != nil {
 			log.Error("[BURN SIGNER] Error unlocking burn: ", err)
@@ -410,7 +423,7 @@ func (x *BurnSignerRunner) SyncTxs() bool {
 	return success
 }
 
-func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
+func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 	if app.Config.BurnSigner.Enabled == false {
 		log.Debug("[BURN SIGNER] Disabled")
 		return app.NewEmptyService(wg)
@@ -427,11 +440,7 @@ func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
-		p, err := crypto.NewPublicKey(pk)
-		if err != nil {
-			log.Error("[BURN SIGNER] Error parsing multisig public key: ", err)
-			continue
-		}
+		p, _ := crypto.NewPublicKey(pk) // not validating errors since they are checked in health check service
 		pks = append(pks, p)
 	}
 
@@ -459,7 +468,7 @@ func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 		poktClient:     poktClient,
 		vaultAddress:   strings.ToLower(app.Config.Pocket.VaultAddress),
 		wpoktAddress:   strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		wpoktContract:  contract,
+		wpoktContract:  eth.NewWrappedPocketContract(contract),
 	}
 
 	x.UpdateBlocks()

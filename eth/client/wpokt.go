@@ -6,12 +6,14 @@ import (
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type WrappedPocketContract interface {
 	GetUserNonce(opts *bind.CallOpts, user common.Address) (*big.Int, error)
 	FilterMinted(opts *bind.FilterOpts, recipient []common.Address, amount []*big.Int, nonce []*big.Int) (WrappedPocketMintedIterator, error)
 	FilterBurnAndBridge(opts *bind.FilterOpts, amount []*big.Int, poktAddress []common.Address, from []common.Address) (WrappedPocketBurnAndBridgeIterator, error)
+	ParseBurnAndBridge(log types.Log) (*autogen.WrappedPocketBurnAndBridge, error)
 }
 
 type WrappedPocketBurnAndBridgeIterator interface {
@@ -70,6 +72,10 @@ func (x *WrappedPocketMintedIteratorImpl) Error() error {
 
 type WrappedPocketContractImpl struct {
 	contract *autogen.WrappedPocket
+}
+
+func (x *WrappedPocketContractImpl) ParseBurnAndBridge(log types.Log) (*autogen.WrappedPocketBurnAndBridge, error) {
+	return x.contract.ParseBurnAndBridge(log)
 }
 
 func (x *WrappedPocketContractImpl) FilterBurnAndBridge(opts *bind.FilterOpts, amount []*big.Int, poktAddress []common.Address, from []common.Address) (WrappedPocketBurnAndBridgeIterator, error) {
