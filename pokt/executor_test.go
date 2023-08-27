@@ -2,6 +2,7 @@ package pokt
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 	"testing"
@@ -1123,11 +1124,45 @@ func TestNewBurnExecutor(t *testing.T) {
 
 	})
 
+	t.Run("Invalid Multisig keys", func(t *testing.T) {
+
+		app.Config.BurnExecutor.Enabled = true
+		app.Config.Pocket.MultisigPublicKeys = []string{
+			"invalid",
+			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
+			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
+		}
+
+		defer func() { log.StandardLogger().ExitFunc = nil }()
+		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
+
+		assert.Panics(t, func() {
+			NewBurnExecutor(&sync.WaitGroup{}, models.ServiceHealth{})
+		})
+	})
+
+	t.Run("Invalid Vault Address", func(t *testing.T) {
+
+		app.Config.BurnExecutor.Enabled = true
+		app.Config.Pocket.VaultAddress = ""
+		app.Config.Pocket.MultisigPublicKeys = []string{
+			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
+			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
+			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
+		}
+
+		defer func() { log.StandardLogger().ExitFunc = nil }()
+		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
+
+		assert.Panics(t, func() {
+			NewBurnExecutor(&sync.WaitGroup{}, models.ServiceHealth{})
+		})
+	})
+
 	t.Run("Interval is 0", func(t *testing.T) {
 
 		app.Config.BurnExecutor.Enabled = true
 		app.Config.Pocket.VaultAddress = "E3BB46007E9BF127FD69B02DD5538848A80CADCE"
-
 		app.Config.Pocket.MultisigPublicKeys = []string{
 			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
 			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",

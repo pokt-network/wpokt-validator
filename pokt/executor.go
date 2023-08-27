@@ -320,8 +320,7 @@ func NewBurnExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Servic
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			log.Error("[BURN EXECUTOR] Error parsing public key of vault multisig: ", err)
-			continue
+			log.Fatal("[BURN EXECUTOR] Error parsing multisig public key: ", err)
 		}
 		pks = append(pks, p)
 	}

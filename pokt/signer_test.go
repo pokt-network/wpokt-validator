@@ -2052,11 +2052,57 @@ func TestNewBurnSigner(t *testing.T) {
 		})
 	})
 
+	t.Run("Invalid Multisig keys", func(t *testing.T) {
+
+		app.Config.BurnSigner.Enabled = true
+		app.Config.Pocket.PrivateKey = "8d8da5d374c559b2f80c99c0f4cfb4405b6095487989bb8a5d5a7e579a4e76646a456564a026788cd201a1a324a26d090e8df3dd0f3a233796552bdcaa95ad82"
+		app.Config.Ethereum.RPCURL = ""
+		app.Config.Pocket.MultisigPublicKeys = []string{
+			"invalid",
+			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
+			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
+		}
+
+		defer func() { log.StandardLogger().ExitFunc = nil }()
+		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
+
+		assert.Panics(t, func() {
+			NewBurnSigner(&sync.WaitGroup{}, models.ServiceHealth{})
+		})
+	})
+
+	t.Run("Invalid Vault Address", func(t *testing.T) {
+
+		app.Config.BurnSigner.Enabled = true
+		app.Config.Pocket.PrivateKey = "8d8da5d374c559b2f80c99c0f4cfb4405b6095487989bb8a5d5a7e579a4e76646a456564a026788cd201a1a324a26d090e8df3dd0f3a233796552bdcaa95ad82"
+		app.Config.Ethereum.RPCURL = ""
+		app.Config.Pocket.VaultAddress = ""
+		app.Config.Pocket.MultisigPublicKeys = []string{
+			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
+			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
+			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
+		}
+
+		defer func() { log.StandardLogger().ExitFunc = nil }()
+		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
+
+		assert.Panics(t, func() {
+			NewBurnSigner(&sync.WaitGroup{}, models.ServiceHealth{})
+		})
+	})
+
 	t.Run("Invalid ETH RPC", func(t *testing.T) {
 
 		app.Config.BurnSigner.Enabled = true
 		app.Config.Pocket.PrivateKey = "8d8da5d374c559b2f80c99c0f4cfb4405b6095487989bb8a5d5a7e579a4e76646a456564a026788cd201a1a324a26d090e8df3dd0f3a233796552bdcaa95ad82"
 		app.Config.Ethereum.RPCURL = ""
+		app.Config.Pocket.VaultAddress = "E3BB46007E9BF127FD69B02DD5538848A80CADCE"
+
+		app.Config.Pocket.MultisigPublicKeys = []string{
+			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
+			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
+			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
+		}
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
@@ -2071,6 +2117,7 @@ func TestNewBurnSigner(t *testing.T) {
 		app.Config.BurnSigner.Enabled = true
 		app.Config.Pocket.PrivateKey = "8d8da5d374c559b2f80c99c0f4cfb4405b6095487989bb8a5d5a7e579a4e76646a456564a026788cd201a1a324a26d090e8df3dd0f3a233796552bdcaa95ad82"
 		app.Config.Ethereum.RPCURL = "https://eth.llamarpc.com"
+		app.Config.Pocket.VaultAddress = "E3BB46007E9BF127FD69B02DD5538848A80CADCE"
 
 		app.Config.Pocket.MultisigPublicKeys = []string{
 			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
@@ -2089,6 +2136,7 @@ func TestNewBurnSigner(t *testing.T) {
 		app.Config.Pocket.PrivateKey = "8d8da5d374c559b2f80c99c0f4cfb4405b6095487989bb8a5d5a7e579a4e76646a456564a026788cd201a1a324a26d090e8df3dd0f3a233796552bdcaa95ad82"
 		app.Config.BurnSigner.IntervalMillis = 1
 		app.Config.Ethereum.RPCURL = "https://eth.llamarpc.com"
+		app.Config.Pocket.VaultAddress = "E3BB46007E9BF127FD69B02DD5538848A80CADCE"
 
 		app.Config.Pocket.MultisigPublicKeys = []string{
 			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",

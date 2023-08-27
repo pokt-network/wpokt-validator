@@ -297,6 +297,7 @@ func TestNewHealthCheck(t *testing.T) {
 	t.Run("With Valid MultiSig Keys but Empty Vault Address", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 		Config.Pocket.PrivateKey = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.VaultAddress = ""
 		Config.Pocket.MultisigPublicKeys = []string{
 			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
 			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",

@@ -181,13 +181,19 @@ func NewMintMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 	log.Debug("[MINT MONITOR] Initializing")
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
-		p, _ := crypto.NewPublicKey(pk) // not validating errors since they are checked in health check service
+		p, err := crypto.NewPublicKey(pk)
+		if err != nil {
+			log.Fatal("[MINT MONITOR] Error parsing multisig public key: ", err)
+		}
 		pks = append(pks, p)
 	}
 
 	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	vaultAddress := vaultPk.Address().String() // vault address validated in health check service
-	log.Debug("[MINT EXECUTOR] Vault address: ", vaultAddress)
+	vaultAddress := vaultPk.Address().String()
+	log.Debug("[MINT MONITOR] Vault address: ", vaultAddress)
+	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
+		log.Fatal("[MINT MONITOR] Multisig address does not match vault address")
+	}
 
 	x := &MintMonitorRunner{
 		vaultAddress:  strings.ToLower(vaultAddress),

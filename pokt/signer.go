@@ -440,12 +440,19 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 
 	var pks []crypto.PublicKey
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
-		p, _ := crypto.NewPublicKey(pk) // not validating errors since they are checked in health check service
+		p, err := crypto.NewPublicKey(pk)
+		if err != nil {
+			log.Fatal("[BURN SIGNER] Error parsing multisig public key: ", err)
+		}
 		pks = append(pks, p)
 	}
 
 	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	log.Debug("[BURN SIGNER] Multisig address: ", multisigPk.Address().String())
+	vaultAddress := multisigPk.Address().String()
+	log.Debug("[BURN SIGNER] Vault address: ", vaultAddress)
+	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
+		log.Fatal("[BURN SIGNER] Multisig address does not match vault address")
+	}
 
 	poktClient := pokt.NewClient()
 	ethClient, err := eth.NewClient()
@@ -466,7 +473,7 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 		numSigners:     len(pks),
 		ethClient:      ethClient,
 		poktClient:     poktClient,
-		vaultAddress:   strings.ToLower(app.Config.Pocket.VaultAddress),
+		vaultAddress:   strings.ToLower(vaultAddress),
 		wpoktAddress:   strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		wpoktContract:  eth.NewWrappedPocketContract(contract),
 	}
