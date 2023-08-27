@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/eth"
-	"github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/dan13ram/wpokt-validator/pokt"
 	log "github.com/sirupsen/logrus"
@@ -30,55 +28,6 @@ var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
 }
 
 func main() {
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
-	logLevel := strings.ToLower(os.Getenv("LOG_LEVEL"))
-	if logLevel == "debug" {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
-	}
-
-	var configPath string
-	var envPath string
-	flag.StringVar(&configPath, "config", "", "path to config file")
-	flag.StringVar(&envPath, "env", "", "path to env file")
-	flag.Parse()
-
-	var absConfigPath string = ""
-	var err error
-	if configPath != "" {
-		absConfigPath, err = filepath.Abs(configPath)
-		if err != nil {
-			log.Fatal("[MAIN] Error getting absolute path for config file: ", err)
-		}
-	}
-
-	var absEnvPath string = ""
-	if envPath != "" {
-		absEnvPath, err = filepath.Abs(envPath)
-		if err != nil {
-			log.Fatal("[MAIN] Error getting absolute path for env file: ", err)
-		}
-	}
-
-	app.InitConfig(absConfigPath, absEnvPath)
-	app.InitLogger()
-
-	eth.ValidateNetwork()
-	client, _ := client.NewClient()
-
-	// contract, _ := autogen.NewWrappedPocket(common.HexToAddress("0x69E6049D2D055e67AC9235e9DF80cDBA370bA37C"), client.GetClient())
-
-	receipt, _ := client.GetTransactionReceipt("0x36b7230cad91b693b23587b71c23ccf7952880004b7ed00717ef12934d42617e")
-
-	log := receipt.Logs[0]
-
-	fmt.Printf("%+v\n", log)
-}
-
-func test() {
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
