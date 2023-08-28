@@ -42,6 +42,8 @@ func NewTestBurnSigner(t *testing.T, mockContract *eth.MockWrappedPocketContract
 	}
 	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
 
+	app.Config.Pocket.TxFee = 10000
+
 	x := &BurnSignerRunner{
 		vaultAddress:   strings.ToLower(multisigPk.Address().String()),
 		wpoktAddress:   "wpoktaddress",
@@ -53,6 +55,7 @@ func NewTestBurnSigner(t *testing.T, mockContract *eth.MockWrappedPocketContract
 		poktHeight:     0,
 		ethBlockNumber: 0,
 		wpoktContract:  mockContract,
+		minimumAmount:  big.NewInt(10000),
 	}
 	return x
 }
@@ -303,7 +306,7 @@ func TestBurnSignerValidateInvalidMint(t *testing.T) {
 
 		mint := &models.InvalidMint{
 			SenderAddress: "abcd",
-			Amount:        "100",
+			Amount:        "20000",
 		}
 
 		app.Config.Ethereum.ChainId = "31337"
@@ -320,7 +323,7 @@ func TestBurnSignerValidateInvalidMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -365,7 +368,7 @@ func TestBurnSignerValidateInvalidMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "100000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -390,7 +393,7 @@ func TestBurnSignerValidateInvalidMint(t *testing.T) {
 
 		mint := &models.InvalidMint{
 			SenderAddress: "abcd",
-			Amount:        "100",
+			Amount:        "20000",
 			Memo:          `{ "address": "0x0000000000000000000000000000000000000000", "chain_id": "31337" }`,
 		}
 
@@ -408,7 +411,7 @@ func TestBurnSignerValidateInvalidMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: `{ "address": "0x0000000000000000000000000000000000000000", "chain_id": "31337" }`,
@@ -526,7 +529,7 @@ func TestBurnSignerValidateBurn(t *testing.T) {
 
 		burn := &models.Burn{
 			LogIndex: "0",
-			Amount:   "1",
+			Amount:   "10",
 		}
 
 		txReceipt := &types.Receipt{
@@ -535,6 +538,36 @@ func TestBurnSignerValidateBurn(t *testing.T) {
 
 		event := &autogen.WrappedPocketBurnAndBridge{
 			Amount: big.NewInt(10),
+		}
+
+		mockEthClient.EXPECT().GetTransactionReceipt("").Return(txReceipt, nil)
+		mockContract.EXPECT().ParseBurnAndBridge(mock.Anything).Return(event, nil)
+
+		valid, err := x.ValidateBurn(burn)
+
+		assert.False(t, valid)
+		assert.Nil(t, err)
+
+	})
+
+	t.Run("Amount mismatch", func(t *testing.T) {
+
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockEthClient := eth.NewMockEthereumClient(t)
+		mockPoktClient := pokt.NewMockPocketClient(t)
+		x := NewTestBurnSigner(t, mockContract, mockEthClient, mockPoktClient)
+
+		burn := &models.Burn{
+			LogIndex: "0",
+			Amount:   "100000",
+		}
+
+		txReceipt := &types.Receipt{
+			Logs: []*types.Log{{}},
+		}
+
+		event := &autogen.WrappedPocketBurnAndBridge{
+			Amount: big.NewInt(200000),
 		}
 
 		mockEthClient.EXPECT().GetTransactionReceipt("").Return(txReceipt, nil)
@@ -556,7 +589,7 @@ func TestBurnSignerValidateBurn(t *testing.T) {
 
 		burn := &models.Burn{
 			LogIndex:      "0",
-			Amount:        "10",
+			Amount:        "20000",
 			SenderAddress: "0xabcd",
 		}
 
@@ -565,7 +598,7 @@ func TestBurnSignerValidateBurn(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount: big.NewInt(10),
+			Amount: big.NewInt(20000),
 			From:   common.HexToAddress("0x1234"),
 		}
 
@@ -588,7 +621,7 @@ func TestBurnSignerValidateBurn(t *testing.T) {
 
 		burn := &models.Burn{
 			LogIndex:         "0",
-			Amount:           "10",
+			Amount:           "20000",
 			SenderAddress:    common.HexToAddress("0x1234").Hex(),
 			RecipientAddress: "abcd",
 		}
@@ -598,7 +631,7 @@ func TestBurnSignerValidateBurn(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount:      big.NewInt(10),
+			Amount:      big.NewInt(20000),
 			From:        common.HexToAddress("0x1234"),
 			PoktAddress: common.HexToAddress("0x1234"),
 		}
@@ -622,7 +655,7 @@ func TestBurnSignerValidateBurn(t *testing.T) {
 
 		burn := &models.Burn{
 			LogIndex:         "0",
-			Amount:           "10",
+			Amount:           "20000",
 			SenderAddress:    common.HexToAddress("0x1234").Hex(),
 			RecipientAddress: "1c",
 		}
@@ -632,7 +665,7 @@ func TestBurnSignerValidateBurn(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount:      big.NewInt(10),
+			Amount:      big.NewInt(20000),
 			From:        common.HexToAddress("0x1234"),
 			PoktAddress: common.HexToAddress("0x1c"),
 		}
@@ -851,7 +884,7 @@ func TestBurnSignerHandleInvalidMint(t *testing.T) {
 
 		invalidMint := &models.InvalidMint{
 			SenderAddress: "abcd",
-			Amount:        "100",
+			Amount:        "20000",
 			Memo:          "invalid",
 			Confirmations: "1",
 			Height:        "99",
@@ -870,7 +903,7 @@ func TestBurnSignerHandleInvalidMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: "invalid",
@@ -899,7 +932,7 @@ func TestBurnSignerHandleInvalidMint(t *testing.T) {
 
 		invalidMint := &models.InvalidMint{
 			SenderAddress: x.privateKey.PublicKey().Address().String(),
-			Amount:        "100",
+			Amount:        "20000",
 			Memo:          "invalid",
 			Confirmations: "1",
 			Height:        "99",
@@ -918,7 +951,7 @@ func TestBurnSignerHandleInvalidMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: x.privateKey.PublicKey().Address().String(),
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: "invalid",
@@ -969,7 +1002,7 @@ func TestBurnSignerHandleInvalidMint(t *testing.T) {
 
 		invalidMint := &models.InvalidMint{
 			SenderAddress: "abcd",
-			Amount:        "100",
+			Amount:        "20000",
 			Memo:          "invalid",
 			Confirmations: "1",
 			Height:        "99",
@@ -988,7 +1021,7 @@ func TestBurnSignerHandleInvalidMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: "invalid",
@@ -1193,7 +1226,7 @@ func TestBurnSignerHandleBurn(t *testing.T) {
 			BlockNumber:      "99",
 			Status:           models.StatusPending,
 			LogIndex:         "0",
-			Amount:           "10",
+			Amount:           "20000",
 			SenderAddress:    common.HexToAddress("0x1234").Hex(),
 			RecipientAddress: "1c",
 		}
@@ -1203,7 +1236,7 @@ func TestBurnSignerHandleBurn(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount:      big.NewInt(10),
+			Amount:      big.NewInt(20000),
 			From:        common.HexToAddress("0x1234"),
 			PoktAddress: common.HexToAddress("0x1c"),
 		}
@@ -1234,7 +1267,7 @@ func TestBurnSignerHandleBurn(t *testing.T) {
 			BlockNumber:      "99",
 			Status:           models.StatusPending,
 			LogIndex:         "0",
-			Amount:           "10",
+			Amount:           "20000",
 			SenderAddress:    common.HexToAddress("0x1234").Hex(),
 			RecipientAddress: strings.ToLower(strings.Split(common.HexToAddress("0x1c").Hex(), "0x")[1]),
 		}
@@ -1244,7 +1277,7 @@ func TestBurnSignerHandleBurn(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount:      big.NewInt(10),
+			Amount:      big.NewInt(20000),
 			From:        common.HexToAddress("0x1234"),
 			PoktAddress: common.HexToAddress("0x1c"),
 		}
@@ -1298,7 +1331,7 @@ func TestBurnSignerHandleBurn(t *testing.T) {
 			BlockNumber:      "99",
 			Status:           models.StatusPending,
 			LogIndex:         "0",
-			Amount:           "10",
+			Amount:           "20000",
 			SenderAddress:    common.HexToAddress("0x1234").Hex(),
 			RecipientAddress: strings.ToLower(strings.Split(common.HexToAddress("0x1c").Hex(), "0x")[1]),
 		}
@@ -1308,7 +1341,7 @@ func TestBurnSignerHandleBurn(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount:      big.NewInt(10),
+			Amount:      big.NewInt(20000),
 			From:        common.HexToAddress("0x1234"),
 			PoktAddress: common.HexToAddress("0x1c"),
 		}
@@ -1437,7 +1470,7 @@ func TestBurnSignerSyncInvalidMints(t *testing.T) {
 		invalidMint := &models.InvalidMint{
 			Id:            &primitive.NilObjectID,
 			SenderAddress: x.privateKey.PublicKey().Address().String(),
-			Amount:        "100",
+			Amount:        "20000",
 			Memo:          "invalid",
 			Confirmations: "1",
 			Height:        "99",
@@ -1456,7 +1489,7 @@ func TestBurnSignerSyncInvalidMints(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: x.privateKey.PublicKey().Address().String(),
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: "invalid",
@@ -1531,7 +1564,7 @@ func TestBurnSignerSyncInvalidMints(t *testing.T) {
 		invalidMint := &models.InvalidMint{
 			Id:            &primitive.NilObjectID,
 			SenderAddress: x.privateKey.PublicKey().Address().String(),
-			Amount:        "100",
+			Amount:        "20000",
 			Memo:          "invalid",
 			Confirmations: "1",
 			Height:        "99",
@@ -1550,7 +1583,7 @@ func TestBurnSignerSyncInvalidMints(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: x.privateKey.PublicKey().Address().String(),
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: "invalid",
@@ -1699,7 +1732,7 @@ func TestBurnSignerSyncBurns(t *testing.T) {
 			BlockNumber:      "99",
 			Status:           models.StatusPending,
 			LogIndex:         "0",
-			Amount:           "10",
+			Amount:           "20000",
 			SenderAddress:    common.HexToAddress("0x1234").Hex(),
 			RecipientAddress: strings.ToLower(strings.Split(common.HexToAddress("0x1c").Hex(), "0x")[1]),
 		}
@@ -1709,7 +1742,7 @@ func TestBurnSignerSyncBurns(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount:      big.NewInt(10),
+			Amount:      big.NewInt(20000),
 			From:        common.HexToAddress("0x1234"),
 			PoktAddress: common.HexToAddress("0x1c"),
 		}
@@ -1786,7 +1819,7 @@ func TestBurnSignerSyncBurns(t *testing.T) {
 			BlockNumber:      "99",
 			Status:           models.StatusPending,
 			LogIndex:         "0",
-			Amount:           "10",
+			Amount:           "20000",
 			SenderAddress:    common.HexToAddress("0x1234").Hex(),
 			RecipientAddress: strings.ToLower(strings.Split(common.HexToAddress("0x1c").Hex(), "0x")[1]),
 		}
@@ -1796,7 +1829,7 @@ func TestBurnSignerSyncBurns(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount:      big.NewInt(10),
+			Amount:      big.NewInt(20000),
 			From:        common.HexToAddress("0x1234"),
 			PoktAddress: common.HexToAddress("0x1c"),
 		}
@@ -1877,7 +1910,7 @@ func TestBurnSignerRun(t *testing.T) {
 		invalidMint := &models.InvalidMint{
 			Id:            &primitive.NilObjectID,
 			SenderAddress: x.privateKey.PublicKey().Address().String(),
-			Amount:        "100",
+			Amount:        "20000",
 			Memo:          "invalid",
 			Confirmations: "1",
 			Height:        "99",
@@ -1896,7 +1929,7 @@ func TestBurnSignerRun(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: x.privateKey.PublicKey().Address().String(),
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: "invalid",
@@ -1963,7 +1996,7 @@ func TestBurnSignerRun(t *testing.T) {
 			BlockNumber:      "99",
 			Status:           models.StatusPending,
 			LogIndex:         "0",
-			Amount:           "10",
+			Amount:           "20000",
 			SenderAddress:    common.HexToAddress("0x1234").Hex(),
 			RecipientAddress: strings.ToLower(strings.Split(common.HexToAddress("0x1c").Hex(), "0x")[1]),
 		}
@@ -1973,7 +2006,7 @@ func TestBurnSignerRun(t *testing.T) {
 		}
 
 		event := &autogen.WrappedPocketBurnAndBridge{
-			Amount:      big.NewInt(10),
+			Amount:      big.NewInt(20000),
 			From:        common.HexToAddress("0x1234"),
 			PoktAddress: common.HexToAddress("0x1c"),
 		}

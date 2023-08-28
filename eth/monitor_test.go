@@ -31,6 +31,7 @@ func NewTestBurnMonitor(t *testing.T, mockContract *eth.MockWrappedPocketContrac
 		currentBlockNumber: 100,
 		wpoktContract:      mockContract,
 		client:             mockClient,
+		minimumAmount:      big.NewInt(10000),
 	}
 	return x
 }
@@ -174,7 +175,9 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+			Amount: big.NewInt(20000),
+		})
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Once()
@@ -232,7 +235,9 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockDB := app.NewMockDatabase(t)
 		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
 		mockFilter.EXPECT().Event().Return(nil).Once()
-		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{}).Once()
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+			Amount: big.NewInt(20000),
+		}).Once()
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Times(2)
@@ -302,7 +307,9 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+			Amount: big.NewInt(20000),
+		})
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Once()
@@ -334,7 +341,9 @@ func TestBurnMonitorSyncTxs(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+			Amount: big.NewInt(20000),
+		})
 		mockFilter.EXPECT().Error().Return(nil)
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Once()
@@ -422,7 +431,9 @@ func TestBurnMonitorRun(t *testing.T) {
 	mockClient := eth.NewMockEthereumClient(t)
 	mockDB := app.NewMockDatabase(t)
 	mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-	mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{})
+	mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+		Amount: big.NewInt(20000),
+	})
 	mockFilter.EXPECT().Error().Return(nil)
 	mockFilter.EXPECT().Close().Return(nil)
 	mockFilter.EXPECT().Next().Return(true).Once()

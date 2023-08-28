@@ -41,6 +41,7 @@ type MintSignerRunner struct {
 	poktClient    pokt.PocketClient
 	ethClient     eth.EthereumClient
 	poktHeight    int64
+	minimumAmount *big.Int
 }
 
 func (x *MintSignerRunner) Run() {
@@ -160,6 +161,13 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 
 	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(mint.SenderAddress) {
 		log.Debug("[MINT SIGNER] Transaction signer is not sender address")
+		return false, nil
+	}
+
+	amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
+
+	if !ok || amount.Cmp(x.minimumAmount) != 1 {
+		log.Debug("[MINT SIGNER] Transaction amount too low")
 		return false, nil
 	}
 
@@ -401,6 +409,7 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 		domain:        domain,
 		ethClient:     ethClient,
 		poktClient:    pokt.NewClient(),
+		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateBlocks()

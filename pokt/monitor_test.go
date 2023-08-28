@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"sync"
 	"testing"
 
@@ -29,7 +30,9 @@ func NewTestMintMonitor(t *testing.T, mockClient *pokt.MockPocketClient) *MintMo
 		startHeight:   0,
 		currentHeight: 0,
 		client:        mockClient,
+		minimumAmount: big.NewInt(10000),
 	}
+	app.Config.Pocket.TxFee = 10000
 	return x
 }
 
@@ -461,6 +464,44 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		assert.True(t, success)
 	})
 
+	t.Run("invalid amount and insert failed", func(t *testing.T) {
+		mockClient := pokt.NewMockPocketClient(t)
+		mockDB := app.NewMockDatabase(t)
+		app.DB = mockDB
+		x := NewTestMintMonitor(t, mockClient)
+		x.currentHeight = 100
+		x.startHeight = 1
+
+		txs := []*pokt.TxResponse{
+			{
+				Tx: "abcd",
+				TxResult: pokt.TxResult{
+					Code:        0,
+					Recipient:   x.vaultAddress,
+					MessageType: "send",
+				},
+				StdTx: pokt.StdTx{
+					Memo: "invalid",
+					Msg: pokt.Msg{
+						Value: pokt.Value{
+							Amount: "10",
+						},
+					},
+				},
+			},
+		}
+
+		mockClient.EXPECT().GetAccountTxsByHeight(x.vaultAddress, x.startHeight).Return(txs, nil)
+		mockDB.EXPECT().InsertOne(models.CollectionInvalidMints, mock.Anything).Return(errors.New("error")).
+			Run(func(_ string, doc interface{}) {
+				assert.Equal(t, doc.(models.InvalidMint).Status, models.StatusFailed)
+			})
+
+		success := x.SyncTxs()
+
+		assert.False(t, success)
+	})
+
 	t.Run("invalid memo and insert failed", func(t *testing.T) {
 		mockClient := pokt.NewMockPocketClient(t)
 		mockDB := app.NewMockDatabase(t)
@@ -479,6 +520,11 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 				},
 				StdTx: pokt.StdTx{
 					Memo: "invalid",
+					Msg: pokt.Msg{
+						Value: pokt.Value{
+							Amount: "20000",
+						},
+					},
 				},
 			},
 		}
@@ -512,6 +558,11 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 				},
 				StdTx: pokt.StdTx{
 					Memo: "invalid",
+					Msg: pokt.Msg{
+						Value: pokt.Value{
+							Amount: "20000",
+						},
+					},
 				},
 			},
 		}
@@ -549,6 +600,11 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 				},
 				StdTx: pokt.StdTx{
 					Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337"}`, address),
+					Msg: pokt.Msg{
+						Value: pokt.Value{
+							Amount: "20000",
+						},
+					},
 				},
 			},
 		}
@@ -586,6 +642,11 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 				},
 				StdTx: pokt.StdTx{
 					Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337"}`, address),
+					Msg: pokt.Msg{
+						Value: pokt.Value{
+							Amount: "20000",
+						},
+					},
 				},
 			},
 		}
@@ -626,6 +687,11 @@ func TestMintMonitorRun(t *testing.T) {
 			},
 			StdTx: pokt.StdTx{
 				Memo: "invalid",
+				Msg: pokt.Msg{
+					Value: pokt.Value{
+						Amount: "20000",
+					},
+				},
 			},
 		},
 		{
@@ -637,6 +703,11 @@ func TestMintMonitorRun(t *testing.T) {
 			},
 			StdTx: pokt.StdTx{
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337"}`, address),
+				Msg: pokt.Msg{
+					Value: pokt.Value{
+						Amount: "20000",
+					},
+				},
 			},
 		},
 		{

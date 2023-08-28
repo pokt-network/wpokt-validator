@@ -37,6 +37,7 @@ type BurnSignerRunner struct {
 	vaultAddress   string
 	wpoktAddress   string
 	wpoktContract  eth.WrappedPocketContract
+	minimumAmount  *big.Int
 }
 
 func (x *BurnSignerRunner) Run() {
@@ -95,6 +96,13 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 
 	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(doc.SenderAddress) {
 		log.Debug("[BURN SIGNER] Transaction signer is not sender address")
+		return false, nil
+	}
+
+	amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
+
+	if !ok || amount.Cmp(x.minimumAmount) != 1 {
+		log.Debug("[BURN SIGNER] Transaction amount too low")
 		return false, nil
 	}
 
@@ -227,8 +235,12 @@ func (x *BurnSignerRunner) ValidateBurn(doc *models.Burn) (bool, error) {
 		return false, nil
 	}
 
-	amount := new(big.Int)
-	amount.SetString(doc.Amount, 10)
+	amount, ok := new(big.Int).SetString(doc.Amount, 10)
+	if !ok || amount.Cmp(x.minimumAmount) != 1 {
+		log.Debug("[BURN SIGNER] Burn amount too low")
+		return false, nil
+	}
+
 	if burnEvent.Amount.Cmp(amount) != 0 {
 		log.Error("[BURN SIGNER] Invalid burn amount")
 		return false, nil
@@ -476,6 +488,7 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 		vaultAddress:   strings.ToLower(vaultAddress),
 		wpoktAddress:   strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		wpoktContract:  eth.NewWrappedPocketContract(contract),
+		minimumAmount:  big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateBlocks()

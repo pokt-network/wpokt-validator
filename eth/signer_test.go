@@ -48,6 +48,7 @@ func NewTestMintSigner(t *testing.T, mockContract *eth.MockWrappedPocketContract
 		ethClient:     mockEthClient,
 		poktClient:    mockPoktClient,
 		poktHeight:    100,
+		minimumAmount: big.NewInt(10000),
 	}
 	return x
 }
@@ -411,7 +412,7 @@ func TestValidateMint(t *testing.T) {
 
 	})
 
-	t.Run("Invalid transaction msg amount", func(t *testing.T) {
+	t.Run("Invalid transaction msg amount too low", func(t *testing.T) {
 
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockEthClient := eth.NewMockEthereumClient(t)
@@ -435,6 +436,46 @@ func TestValidateMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
+						Amount:      "100",
+					},
+				},
+			},
+		}
+
+		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+
+		valid, err := x.ValidateMint(mint)
+
+		assert.False(t, valid)
+		assert.Nil(t, err)
+
+	})
+
+	t.Run("Invalid transaction msg amount mismatch", func(t *testing.T) {
+
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockEthClient := eth.NewMockEthereumClient(t)
+		mockPoktClient := pokt.NewMockPocketClient(t)
+		x := NewTestMintSigner(t, mockContract, mockEthClient, mockPoktClient)
+
+		mint := &models.Mint{
+			SenderAddress: "abcd",
+			Amount:        "20000",
+		}
+
+		tx := &pokt.TxResponse{
+			Tx: "abcd",
+			TxResult: pokt.TxResult{
+				Code:        0,
+				MessageType: "send",
+			},
+			StdTx: pokt.StdTx{
+				Msg: pokt.Msg{
+					Type: "pos/Send",
+					Value: pokt.Value{
+						ToAddress:   x.vaultAddress,
+						FromAddress: "abcd",
+						Amount:      "10500",
 					},
 				},
 			},
@@ -458,7 +499,7 @@ func TestValidateMint(t *testing.T) {
 
 		mint := &models.Mint{
 			SenderAddress: "abcd",
-			Amount:        "100",
+			Amount:        "20000",
 		}
 
 		app.Config.Ethereum.ChainId = "31337"
@@ -475,7 +516,7 @@ func TestValidateMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: `{ "address": "0x0000000000000000000000000000000000000000", "chain_id": "31337" }`,
@@ -502,7 +543,7 @@ func TestValidateMint(t *testing.T) {
 
 		mint := &models.Mint{
 			SenderAddress: "abcd",
-			Amount:        "100",
+			Amount:        "20000",
 		}
 
 		app.Config.Ethereum.ChainId = "31337"
@@ -519,7 +560,7 @@ func TestValidateMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -547,7 +588,7 @@ func TestValidateMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 		}
 
 		app.Config.Ethereum.ChainId = "31337"
@@ -564,7 +605,7 @@ func TestValidateMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -592,7 +633,7 @@ func TestValidateMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			RecipientChainId: "31337",
 		}
 
@@ -610,7 +651,7 @@ func TestValidateMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -678,7 +719,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "invalid",
 			RecipientChainId: "31337",
 		}
@@ -703,7 +744,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "invalid",
@@ -730,7 +771,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "99",
@@ -762,7 +803,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "99",
@@ -783,7 +824,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -832,7 +873,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "99",
@@ -853,7 +894,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -907,7 +948,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "99",
@@ -928,7 +969,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -960,7 +1001,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "99",
@@ -981,7 +1022,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -1040,7 +1081,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "99",
@@ -1061,7 +1102,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -1205,7 +1246,7 @@ func TestMintSignerSyncTxs(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "99",
@@ -1226,7 +1267,7 @@ func TestMintSignerSyncTxs(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -1302,7 +1343,7 @@ func TestMintSignerSyncTxs(t *testing.T) {
 		mint := &models.Mint{
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
-			Amount:           "100",
+			Amount:           "20000",
 			Nonce:            "1",
 			RecipientChainId: "31337",
 			Height:           "99",
@@ -1323,7 +1364,7 @@ func TestMintSignerSyncTxs(t *testing.T) {
 					Value: pokt.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
-						Amount:      "100",
+						Amount:      "20000",
 					},
 				},
 				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
@@ -1402,7 +1443,7 @@ func TestMintSignerRun(t *testing.T) {
 	mint := &models.Mint{
 		SenderAddress:    "abcd",
 		RecipientAddress: address,
-		Amount:           "100",
+		Amount:           "20000",
 		Nonce:            "1",
 		RecipientChainId: "31337",
 		Height:           "99",
@@ -1423,7 +1464,7 @@ func TestMintSignerRun(t *testing.T) {
 				Value: pokt.Value{
 					ToAddress:   x.vaultAddress,
 					FromAddress: "abcd",
-					Amount:      "100",
+					Amount:      "20000",
 				},
 			},
 			Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),

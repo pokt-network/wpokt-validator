@@ -1,6 +1,7 @@
 package pokt
 
 import (
+	"math/big"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +26,7 @@ type MintMonitorRunner struct {
 	vaultAddress  string
 	startHeight   int64
 	currentHeight int64
+	minimumAmount *big.Int
 }
 
 func (x *MintMonitorRunner) Run() {
@@ -132,7 +134,8 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 	log.Info("[MINT MONITOR] Found ", len(txs), " txs to sync")
 	var success bool = true
 	for _, tx := range txs {
-		if tx.Tx == "" || tx.TxResult.Code != 0 || strings.ToLower(tx.TxResult.Recipient) != x.vaultAddress || tx.TxResult.MessageType != "send" {
+		amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
+		if tx.Tx == "" || tx.TxResult.Code != 0 || strings.ToLower(tx.TxResult.Recipient) != x.vaultAddress || tx.TxResult.MessageType != "send" || !ok || amount.Cmp(x.minimumAmount) != 1 {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", tx.Hash, " with code: ", tx.TxResult.Code)
 			success = x.HandleFailedMint(tx) && success
 			continue
@@ -201,6 +204,7 @@ func NewMintMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 		startHeight:   0,
 		currentHeight: 0,
 		client:        pokt.NewClient(),
+		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateCurrentHeight()

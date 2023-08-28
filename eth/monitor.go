@@ -27,6 +27,7 @@ type BurnMonitorRunner struct {
 	currentBlockNumber int64
 	wpoktContract      eth.WrappedPocketContract
 	client             eth.EthereumClient
+	minimumAmount      *big.Int
 }
 
 func (x *BurnMonitorRunner) Run() {
@@ -97,6 +98,11 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 
 		if event == nil || event.Raw.Removed {
 			success = false
+			continue
+		}
+
+		if event.Amount.Cmp(x.minimumAmount) != 1 {
+			success = true
 			continue
 		}
 
@@ -181,6 +187,7 @@ func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 		currentBlockNumber: 0,
 		wpoktContract:      eth.NewWrappedPocketContract(contract),
 		client:             client,
+		minimumAmount:      big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateCurrentBlockNumber()
