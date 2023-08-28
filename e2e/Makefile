@@ -1,5 +1,5 @@
 network:
-	docker-compose up --force-recreate
+	docker compose up --force-recreate
 
 clean:
 	sudo rm -rf /tmp/data
