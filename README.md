@@ -73,10 +73,10 @@ If both a config file and an env file are provided, the config file will be load
 
 ### Using Docker Compose
 
-You can also run the wPOKT Validator using `docker-compose`. Execute the following command in the project directory:
+You can also run the wPOKT Validator using `docker compose`. Execute the following command in the project directory:
 
 ```bash
-docker-compose --env-file .env up --build
+docker compose --env-file .env up --build
 ```
 
 ## Valid Memo
@@ -107,37 +107,41 @@ Ensure you have set the required environment variables in the `.env` file or dir
 To assess the individual components of the wPOKT Validator, follow these steps:
 
 1. **Execute Unit Tests:**
-   - Open your terminal and run the unit tests using the command:
-     ```shell
-     go test -v ./...
-     ```
+
+    - Open your terminal and run the unit tests using the command:
+        ```shell
+        go test -v ./...
+        ```
 
 2. **Check Coverage:**
-   - To check the test coverage of the codebase, use the following command:
-     ```shell
-     ./coverage.sh
-     ```
+    - To check the test coverage of the codebase, use the following command:
+        ```shell
+        ./coverage.sh
+        ```
 
 ## End-to-End Tests
 
 To test the core functionalities of the wPOKT Validator in a controlled environment, follow these steps:
 
 1. **Navigate to E2E Directory:**
-   - Open your terminal and move to the `./e2e` directory in the project.
+
+    - Open your terminal and move to the `./e2e` directory in the project.
 
 2. **Start Local Network:**
-   - Within the `./e2e` directory, execute the following commands to set up the local network:
-     ```shell
-     make clean
-     make network
-     ```
-   - Please allow up to 5 minutes for the local network to be fully operational.
+
+    - Within the `./e2e` directory, execute the following commands to set up the local network:
+        ```shell
+        make clean
+        make network
+        ```
+    - Please allow up to 5 minutes for the local network to be fully operational.
 
 3. **Run Tests:**
-   - Once the local network is ready, initiate the end-to-end tests using the command:
-     ```shell
-     make test
-     ```
+    - Once the local network is ready, initiate the end-to-end tests using the command:
+        ```shell
+        make test
+        ```
+    - You need node v18 to run the tests
 
 ## License
 

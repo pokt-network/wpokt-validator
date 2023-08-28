@@ -125,13 +125,13 @@ func TestUpdateStatusAndConfirmationsForInvalidMint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Pocket.Confirmations = tc.requiredConfirmations
 
-			result, err := UpdateStatusAndConfirmationsForInvalidMint(tc.doc, tc.currentHeight)
+			result, err := UpdateStatusAndConfirmationsForInvalidMint(&tc.doc, tc.currentHeight)
 
 			if tc.expectedErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedDoc, result)
+				assert.Equal(t, tc.expectedDoc, *result)
 			}
 
 		})
@@ -249,13 +249,13 @@ func TestUpdateStatusAndConfirmationsForBurn(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			app.Config.Ethereum.Confirmations = tc.requiredConfirmations
 
-			result, err := UpdateStatusAndConfirmationsForBurn(tc.doc, tc.blockNumber)
+			result, err := UpdateStatusAndConfirmationsForBurn(&tc.doc, tc.blockNumber)
 
 			if tc.expectedErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedDoc, result)
+				assert.Equal(t, tc.expectedDoc, *result)
 			}
 
 		})
@@ -427,7 +427,8 @@ func TestSignBurn(t *testing.T) {
 			}
 			multisigPubKey := crypto.PublicKeyMultiSignature{PublicKeys: pubKeys}
 
-			result, err := SignBurn(tc.doc, tc.privateKey, multisigPubKey, tc.numSigners)
+			inputDoc := tc.doc
+			result, err := SignBurn(&inputDoc, tc.privateKey, multisigPubKey, tc.numSigners)
 
 			if tc.expectedErr {
 				assert.Error(t, err)
@@ -477,7 +478,7 @@ func TestSignBurn(t *testing.T) {
 				}
 
 				result.ReturnTx = ""
-				assert.Equal(t, tc.expectedDoc, result)
+				assert.Equal(t, tc.expectedDoc, *result)
 
 				for i := 0; i < len(tc.expectedDoc.Signers); i++ {
 					pubKey, _ := crypto.NewPublicKey(tc.expectedDoc.Signers[i])
@@ -661,7 +662,8 @@ func TestSignInvalidMint(t *testing.T) {
 			}
 			multisigPubKey := crypto.PublicKeyMultiSignature{PublicKeys: pubKeys}
 
-			result, err := SignInvalidMint(tc.doc, tc.privateKey, multisigPubKey, tc.numSigners)
+			inputDoc := tc.doc
+			result, err := SignInvalidMint(&inputDoc, tc.privateKey, multisigPubKey, tc.numSigners)
 
 			if tc.expectedErr {
 				assert.Error(t, err)
@@ -711,7 +713,7 @@ func TestSignInvalidMint(t *testing.T) {
 				}
 
 				result.ReturnTx = ""
-				assert.Equal(t, tc.expectedDoc, result)
+				assert.Equal(t, tc.expectedDoc, *result)
 
 				for i := 0; i < len(tc.expectedDoc.Signers); i++ {
 					pubKey, _ := crypto.NewPublicKey(tc.expectedDoc.Signers[i])

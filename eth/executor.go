@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -26,7 +27,7 @@ const (
 type MintExecutorRunner struct {
 	startBlockNumber   int64
 	currentBlockNumber int64
-	wpoktContract      *autogen.WrappedPocket
+	wpoktContract      eth.WrappedPocketContract
 	mintControllerAbi  *abi.ABI
 	client             eth.EthereumClient
 	vaultAddress       string
@@ -56,6 +57,11 @@ func (x *MintExecutorRunner) UpdateCurrentBlockNumber() {
 }
 
 func (x *MintExecutorRunner) HandleMintEvent(event *autogen.WrappedPocketMinted) bool {
+	if event == nil {
+		log.Error("[MINT EXECUTOR] Invalid mint event")
+		return false
+	}
+
 	log.Debug("[MINT EXECUTOR] Handling mint event: ", event.Raw.TxHash, " ", event.Raw.Index)
 
 	filter := bson.M{
@@ -96,6 +102,10 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 		Context: context.Background(),
 	}, []common.Address{}, []*big.Int{}, []*big.Int{})
 
+	if filter != nil {
+		defer filter.Close()
+	}
+
 	if err != nil {
 		log.Errorln("[MINT EXECUTOR] Error while syncing mint events: ", err)
 		return false
@@ -103,7 +113,36 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 
 	var success bool = true
 	for filter.Next() {
-		success = success && x.HandleMintEvent(filter.Event)
+
+		event := filter.Event()
+
+		if event == nil || event.Raw.Removed {
+			success = false
+			continue
+		}
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionMints, strings.ToLower(event.Recipient.Hex()))
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[MINT EXECUTOR] Error locking mint: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[MINT EXECUTOR] Locked mint: ", event.Raw.TxHash)
+
+		success = x.HandleMintEvent(event) && success
+
+		if err = app.DB.Unlock(lockId); err != nil {
+			log.Error("[MINT EXECUTOR] Error unlocking mint: ", err)
+			success = false
+		} else {
+			log.Debug("[MINT EXECUTOR] Unlocked mint: ", event.Raw.TxHash)
+		}
+	}
+
+	if err = filter.Error(); err != nil {
+		log.Errorln("[MINT EXECUTOR] Error while syncing mint events: ", err)
+		return false
 	}
 
 	return success
@@ -143,7 +182,24 @@ func (x *MintExecutorRunner) SyncTxs() bool {
 	return success
 }
 
-func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
+func (x *MintExecutorRunner) InitStartBlockNumber(lastHealth models.ServiceHealth) {
+	startBlockNumber := int64(app.Config.Ethereum.StartBlockNumber)
+
+	if lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64); err == nil {
+		startBlockNumber = lastBlockNumber
+	}
+
+	if startBlockNumber > 0 {
+		x.startBlockNumber = startBlockNumber
+	} else {
+		log.Warn("Found invalid start block number, updating to current block number")
+		x.startBlockNumber = x.currentBlockNumber
+	}
+
+	log.Info("[MINT EXECUTOR] Start block number: ", x.startBlockNumber)
+}
+
+func NewMintExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if app.Config.MintExecutor.Enabled == false {
 		log.Debug("[MINT EXECUTOR] Disabled")
 		return app.NewEmptyService(wg)
@@ -174,7 +230,7 @@ func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Servic
 	x := &MintExecutorRunner{
 		startBlockNumber:   0,
 		currentBlockNumber: 0,
-		wpoktContract:      contract,
+		wpoktContract:      eth.NewWrappedPocketContract(contract),
 		mintControllerAbi:  mintControllerAbi,
 		client:             client,
 		wpoktAddress:       strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
@@ -183,20 +239,7 @@ func NewExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Servic
 
 	x.UpdateCurrentBlockNumber()
 
-	startBlockNumber := int64(app.Config.Ethereum.StartBlockNumber)
-
-	if lastBlockNumber, err := strconv.ParseInt(lastHealth.EthBlockNumber, 10, 64); err == nil {
-		startBlockNumber = lastBlockNumber
-	}
-
-	if startBlockNumber > 0 {
-		x.startBlockNumber = startBlockNumber
-	} else {
-		log.Warn("[MINT EXECUTOR] Found invalid start block number, updating to current block number")
-		x.startBlockNumber = x.currentBlockNumber
-	}
-
-	log.Info("[MINT EXECUTOR] Start block number: ", x.startBlockNumber)
+	x.InitStartBlockNumber(lastHealth)
 
 	log.Info("[MINT EXECUTOR] Initialized mint executor")
 

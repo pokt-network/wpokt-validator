@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math/big"
 	"sort"
 	"strconv"
@@ -30,17 +31,17 @@ const (
 )
 
 type MintSignerRunner struct {
-	address                string
-	privateKey             *ecdsa.PrivateKey
-	vaultAddress           string
-	wpoktAddress           string
-	wpoktContract          *autogen.WrappedPocket
-	mintControllerContract *autogen.MintController
-	numSigners             int
-	domain                 util.DomainData
-	poktClient             pokt.PocketClient
-	ethClient              eth.EthereumClient
-	poktHeight             int64
+	address       string
+	privateKey    *ecdsa.PrivateKey
+	vaultAddress  string
+	wpoktAddress  string
+	wpoktContract eth.WrappedPocketContract
+	numSigners    int
+	domain        util.DomainData
+	poktClient    pokt.PocketClient
+	ethClient     eth.EthereumClient
+	poktHeight    int64
+	minimumAmount *big.Int
 }
 
 func (x *MintSignerRunner) Run() {
@@ -135,7 +136,7 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 	return nonce, nil
 }
 
-func (x *MintSignerRunner) ValidateMint(mint *models.Mint, data *autogen.MintControllerMintData) (bool, error) {
+func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 	log.Debug("[MINT SIGNER] Validating mint: ", mint.TransactionHash)
 
 	tx, err := x.poktClient.GetTx(mint.TransactionHash)
@@ -160,6 +161,13 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint, data *autogen.MintCon
 
 	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(mint.SenderAddress) {
 		log.Debug("[MINT SIGNER] Transaction signer is not sender address")
+		return false, nil
+	}
+
+	amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
+
+	if !ok || amount.Cmp(x.minimumAmount) != 1 {
+		log.Debug("[MINT SIGNER] Transaction amount too low")
 		return false, nil
 	}
 
@@ -189,6 +197,11 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint, data *autogen.MintCon
 }
 
 func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
+	if mint == nil {
+		log.Error("[MINT EXECUTOR] Invalid mint")
+		return false
+	}
+
 	log.Debug("[MINT SIGNER] Handling mint: ", mint.TransactionHash)
 
 	address := common.HexToAddress(mint.RecipientAddress)
@@ -225,7 +238,7 @@ func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
 
 	var update bson.M
 
-	valid, err := x.ValidateMint(mint, data)
+	valid, err := x.ValidateMint(mint)
 	if err != nil {
 		log.Error("[MINT SIGNER] Error validating mint: ", err)
 		return false
@@ -316,14 +329,32 @@ func (x *MintSignerRunner) SyncTxs() bool {
 
 	var success bool = true
 	for _, mint := range results {
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionMints, strings.ToLower(mint.RecipientAddress))
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[MINT SIGNER] Error locking mint: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[MINT SIGNER] Locked mint: ", mint.TransactionHash)
+
 		success = x.HandleMint(&mint) && success
+
+		if err = app.DB.Unlock(lockId); err != nil {
+			log.Error("[MINT SIGNER] Error unlocking mint: ", err)
+			success = false
+		} else {
+			log.Debug("[MINT SIGNER] Unlocked mint: ", mint.TransactionHash)
+		}
+
 	}
 
 	log.Debug("[MINT SIGNER] Finished syncing pending txs")
 	return success
 }
 
-func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
+func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if app.Config.MintSigner.Enabled == false {
 		log.Debug("[MINT SIGNER] Disabled")
 		return app.NewEmptyService(wg)
@@ -369,16 +400,16 @@ func NewSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service 
 	log.Debug("[MINT SIGNER] Fetched mint controller domain data")
 
 	x := &MintSignerRunner{
-		privateKey:             privateKey,
-		address:                strings.ToLower(address),
-		wpoktAddress:           strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		vaultAddress:           strings.ToLower(app.Config.Pocket.VaultAddress),
-		wpoktContract:          contract,
-		mintControllerContract: mintControllerContract,
-		numSigners:             len(app.Config.Ethereum.ValidatorAddresses),
-		domain:                 domain,
-		ethClient:              ethClient,
-		poktClient:             pokt.NewClient(),
+		privateKey:    privateKey,
+		address:       strings.ToLower(address),
+		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		vaultAddress:  strings.ToLower(app.Config.Pocket.VaultAddress),
+		wpoktContract: eth.NewWrappedPocketContract(contract),
+		numSigners:    len(app.Config.Ethereum.ValidatorAddresses),
+		domain:        domain,
+		ethClient:     ethClient,
+		poktClient:    pokt.NewClient(),
+		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateBlocks()

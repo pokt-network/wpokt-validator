@@ -49,6 +49,9 @@ func validateConfig() {
 	if Config.MongoDB.Database == "" {
 		log.Fatal("[CONFIG] MongoDB.Database is required")
 	}
+	if Config.MongoDB.TimeoutMillis == 0 {
+		log.Fatal("[CONFIG] MongoDB.TimeoutMillis is required")
+	}
 
 	// ethereum
 	if Config.Ethereum.RPCURL == "" {
@@ -56,6 +59,9 @@ func validateConfig() {
 	}
 	if Config.Ethereum.ChainId == "" {
 		log.Fatal("[CONFIG] Ethereum.ChainId is required")
+	}
+	if Config.Ethereum.RPCTimeoutMillis == 0 {
+		log.Fatal("[CONFIG] Ethereum.RPCTimeoutMillis is required")
 	}
 	if Config.Ethereum.PrivateKey == "" {
 		log.Fatal("[CONFIG] Ethereum.PrivateKey is required")
@@ -76,6 +82,9 @@ func validateConfig() {
 	}
 	if Config.Pocket.ChainId == "" {
 		log.Fatal("[CONFIG] Pocket.ChainId is required")
+	}
+	if Config.Pocket.RPCTimeoutMillis == 0 {
+		log.Fatal("[CONFIG] Pocket.RPCTimeoutMillis is required")
 	}
 	if Config.Pocket.PrivateKey == "" {
 		log.Fatal("[CONFIG] Pocket.PrivateKey is required")

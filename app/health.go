@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -123,17 +124,20 @@ func NewHealthCheck() *HealthCheckRunner {
 	poktAddress := pk.PublicKey().Address().String()
 
 	var pks []poktCrypto.PublicKey
-	var signerIndex int
+	signerIndex := -1
 	for _, pk := range Config.Pocket.MultisigPublicKeys {
 		p, err := poktCrypto.NewPublicKey(pk)
 		if err != nil {
-			log.Error("[HEALTH] Error parsing multisig public key: ", err)
-			continue
+			log.Fatal("[HEALTH] Error parsing multisig public key: ", err)
 		}
 		pks = append(pks, p)
 		if p.Address().String() == poktAddress {
 			signerIndex = len(pks)
 		}
+	}
+
+	if signerIndex == -1 {
+		log.Fatal("[HEALTH] Multisig public keys do not contain signer")
 	}
 
 	validatorId := "wpokt-validator-" + fmt.Sprintf("%02d", signerIndex)
@@ -145,18 +149,18 @@ func NewHealthCheck() *HealthCheckRunner {
 
 	multisigPkAddress := poktCrypto.PublicKeyMultiSignature{PublicKeys: pks}.Address().String()
 	log.Debug("[HEALTH] Multisig address: ", multisigPkAddress)
-	if multisigPkAddress != Config.Pocket.VaultAddress {
+	if strings.ToLower(multisigPkAddress) != strings.ToLower(Config.Pocket.VaultAddress) {
 		log.Fatal("[HEALTH] Multisig address does not match vault address")
 	}
 
 	x := &HealthCheckRunner{
-		poktVaultAddress: multisigPkAddress,
+		poktVaultAddress: strings.ToLower(multisigPkAddress),
 		poktSigners:      Config.Pocket.MultisigPublicKeys,
 		poktPublicKey:    pk.PublicKey().RawString(),
-		poktAddress:      poktAddress,
+		poktAddress:      strings.ToLower(poktAddress),
 		ethValidators:    Config.Ethereum.ValidatorAddresses,
-		ethAddress:       ethAddress,
-		wpoktAddress:     Config.Ethereum.WrappedPocketAddress,
+		ethAddress:       strings.ToLower(ethAddress),
+		wpoktAddress:     strings.ToLower(Config.Ethereum.WrappedPocketAddress),
 		hostname:         hostname,
 		validatorId:      validatorId,
 	}

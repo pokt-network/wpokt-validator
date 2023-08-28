@@ -36,7 +36,8 @@ type BurnSignerRunner struct {
 	ethBlockNumber int64
 	vaultAddress   string
 	wpoktAddress   string
-	wpoktContract  *autogen.WrappedPocket
+	wpoktContract  eth.WrappedPocketContract
+	minimumAmount  *big.Int
 }
 
 func (x *BurnSignerRunner) Run() {
@@ -70,7 +71,7 @@ func (x *BurnSignerRunner) UpdateBlocks() {
 	log.Info("[BURN SIGNER] Updated blocks")
 }
 
-func (x *BurnSignerRunner) ValidateInvalidMint(doc models.InvalidMint) (bool, error) {
+func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, error) {
 	log.Debug("[BURN SIGNER] Validating invalid mint: ", doc.TransactionHash)
 
 	tx, err := x.poktClient.GetTx(doc.TransactionHash)
@@ -98,8 +99,20 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc models.InvalidMint) (bool, er
 		return false, nil
 	}
 
+	amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
+
+	if !ok || amount.Cmp(x.minimumAmount) != 1 {
+		log.Debug("[BURN SIGNER] Transaction amount too low")
+		return false, nil
+	}
+
 	if tx.StdTx.Msg.Value.Amount != doc.Amount {
 		log.Debug("[BURN SIGNER] Transaction amount does not match invalid mint amount")
+		return false, nil
+	}
+
+	if tx.StdTx.Memo != doc.Memo {
+		log.Debug("[BURN SIGNER] Memo mismatch")
 		return false, nil
 	}
 
@@ -113,7 +126,11 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc models.InvalidMint) (bool, er
 	return true, nil
 }
 
-func (x *BurnSignerRunner) HandleInvalidMint(doc models.InvalidMint) bool {
+func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
+	if doc == nil {
+		log.Error("[BURN SIGNER] Invalid mint is nil")
+		return false
+	}
 	log.Debug("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
 
 	doc, err := util.UpdateStatusAndConfirmationsForInvalidMint(doc, x.poktHeight)
@@ -183,7 +200,7 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc models.InvalidMint) bool {
 	return true
 }
 
-func (x *BurnSignerRunner) ValidateBurn(doc models.Burn) (bool, error) {
+func (x *BurnSignerRunner) ValidateBurn(doc *models.Burn) (bool, error) {
 	log.Debug("[BURN SIGNER] Validating burn: ", doc.TransactionHash)
 
 	txReceipt, err := x.ethClient.GetTransactionReceipt(doc.TransactionHash)
@@ -218,8 +235,12 @@ func (x *BurnSignerRunner) ValidateBurn(doc models.Burn) (bool, error) {
 		return false, nil
 	}
 
-	amount := new(big.Int)
-	amount.SetString(doc.Amount, 10)
+	amount, ok := new(big.Int).SetString(doc.Amount, 10)
+	if !ok || amount.Cmp(x.minimumAmount) != 1 {
+		log.Debug("[BURN SIGNER] Burn amount too low")
+		return false, nil
+	}
+
 	if burnEvent.Amount.Cmp(amount) != 0 {
 		log.Error("[BURN SIGNER] Invalid burn amount")
 		return false, nil
@@ -238,7 +259,11 @@ func (x *BurnSignerRunner) ValidateBurn(doc models.Burn) (bool, error) {
 	return true, nil
 }
 
-func (x *BurnSignerRunner) HandleBurn(doc models.Burn) bool {
+func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
+	if doc == nil {
+		log.Error("[BURN SIGNER] Burn is nil")
+		return false
+	}
 	log.Debug("[BURN SIGNER] Handling burn: ", doc.TransactionHash)
 
 	doc, err := util.UpdateStatusAndConfirmationsForBurn(doc, x.ethBlockNumber)
@@ -307,8 +332,9 @@ func (x *BurnSignerRunner) HandleBurn(doc models.Burn) bool {
 	return true
 }
 
-func (x *BurnSignerRunner) SyncTxs() bool {
-	log.Info("[BURN SIGNER] Syncing txs")
+func (x *BurnSignerRunner) SyncInvalidMints() bool {
+	log.Debug("[BURN SIGNER] Syncing invalid mints")
+
 	signersFilter := bson.M{"$nin": []string{strings.ToLower(x.privateKey.PublicKey().RawString())}}
 	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
 	filter := bson.M{
@@ -327,31 +353,89 @@ func (x *BurnSignerRunner) SyncTxs() bool {
 
 	var success bool = true
 	for _, doc := range invalidMints {
-		success = x.HandleInvalidMint(doc) && success
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[BURN SIGNER] Error locking invalid mint: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[BURN SIGNER] Locked invalid mint: ", doc.TransactionHash)
+
+		success = x.HandleInvalidMint(&doc) && success
+
+		if err = app.DB.Unlock(lockId); err != nil {
+			log.Error("[BURN SIGNER] Error unlocking invalid mint: ", err)
+			success = false
+		} else {
+			log.Debug("[BURN SIGNER] Unlocked invalid mint: ", doc.TransactionHash)
+		}
+
 	}
 
-	filter = bson.M{
+	log.Info("[BURN SIGNER] Synced invalid mints")
+	return success
+}
+
+func (x *BurnSignerRunner) SyncBurns() bool {
+	log.Debug("[BURN SIGNER] Syncing burns")
+
+	signersFilter := bson.M{"$nin": []string{strings.ToLower(x.privateKey.PublicKey().RawString())}}
+	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
+	filter := bson.M{
 		"wpokt_address": x.wpoktAddress,
 		"status":        statusFilter,
 		"signers":       signersFilter,
 	}
 
 	burns := []models.Burn{}
-	err = app.DB.FindMany(models.CollectionBurns, filter, &burns)
+	err := app.DB.FindMany(models.CollectionBurns, filter, &burns)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error fetching burns: ", err)
 		return false
 	}
 	log.Info("[BURN SIGNER] Found burns: ", len(burns))
-	for _, doc := range burns {
-		success = x.HandleBurn(doc) && success
-	}
-	log.Info("[BURN SIGNER] Synced txs")
 
+	var success bool = true
+
+	for _, doc := range burns {
+
+		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
+		lockId, err := app.DB.XLock(resourceId)
+		if err != nil {
+			log.Error("[BURN SIGNER] Error locking burn: ", err)
+			success = false
+			continue
+		}
+		log.Debug("[BURN SIGNER] Locked burn: ", doc.TransactionHash)
+
+		success = x.HandleBurn(&doc) && success
+
+		if err = app.DB.Unlock(lockId); err != nil {
+			log.Error("[BURN SIGNER] Error unlocking burn: ", err)
+			success = false
+		} else {
+			log.Debug("[BURN SIGNER] Unlocked burn: ", doc.TransactionHash)
+		}
+
+	}
+
+	log.Info("[BURN SIGNER] Synced burns")
 	return success
 }
 
-func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
+func (x *BurnSignerRunner) SyncTxs() bool {
+	log.Debug("[BURN SIGNER] Syncing")
+
+	success := x.SyncInvalidMints()
+	success = x.SyncBurns() && success
+
+	log.Info("[BURN SIGNER] Synced txs")
+	return success
+}
+
+func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 	if app.Config.BurnSigner.Enabled == false {
 		log.Debug("[BURN SIGNER] Disabled")
 		return app.NewEmptyService(wg)
@@ -370,14 +454,17 @@ func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			log.Error("[BURN SIGNER] Error parsing multisig public key: ", err)
-			continue
+			log.Fatal("[BURN SIGNER] Error parsing multisig public key: ", err)
 		}
 		pks = append(pks, p)
 	}
 
 	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	log.Debug("[BURN SIGNER] Multisig address: ", multisigPk.Address().String())
+	vaultAddress := multisigPk.Address().String()
+	log.Debug("[BURN SIGNER] Vault address: ", vaultAddress)
+	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
+		log.Fatal("[BURN SIGNER] Multisig address does not match vault address")
+	}
 
 	poktClient := pokt.NewClient()
 	ethClient, err := eth.NewClient()
@@ -398,9 +485,10 @@ func NewSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 		numSigners:     len(pks),
 		ethClient:      ethClient,
 		poktClient:     poktClient,
-		vaultAddress:   strings.ToLower(app.Config.Pocket.VaultAddress),
+		vaultAddress:   strings.ToLower(vaultAddress),
 		wpoktAddress:   strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		wpoktContract:  contract,
+		wpoktContract:  eth.NewWrappedPocketContract(contract),
+		minimumAmount:  big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateBlocks()

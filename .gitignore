@@ -29,3 +29,6 @@ config.local.yml
 
 # google cloud
 credentials.json
+
+# mockery
+.mockery.yaml

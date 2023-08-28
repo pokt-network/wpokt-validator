@@ -5,6 +5,11 @@
 
 # Generate coverage report
 go test -cover -coverprofile=coverage.out ./...
+
+# Remove mock files from coverage report
+sed -i '/_mock.go/d' coverage.out
+
+# Generate HTML coverage report
 go tool cover -html=coverage.out -o coverage.html
 
 # Open coverage report in browser

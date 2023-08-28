@@ -260,13 +260,7 @@ func readConfigFromENV(envFile string) {
 
 	// logging
 	if os.Getenv("LOG_LEVEL") != "" {
-		logLevel := os.Getenv("LOG_LEVEL")
-		if logLevel == "" {
-			log.Warn("[ENV] Setting LogLevel to debug")
-			Config.Logger.Level = "debug"
-		} else {
-			Config.Logger.Level = logLevel
-		}
+		Config.Logger.Level = os.Getenv("LOG_LEVEL")
 	}
 
 	// google secret manager

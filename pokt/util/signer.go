@@ -156,7 +156,7 @@ func signMultisigTx(
 	return txEncoder(tx, -1)
 }
 
-func UpdateStatusAndConfirmationsForInvalidMint(doc models.InvalidMint, currentHeight int64) (models.InvalidMint, error) {
+func UpdateStatusAndConfirmationsForInvalidMint(doc *models.InvalidMint, currentHeight int64) (*models.InvalidMint, error) {
 	status := doc.Status
 	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
 	if err != nil || confirmations < 0 {
@@ -186,11 +186,11 @@ func UpdateStatusAndConfirmationsForInvalidMint(doc models.InvalidMint, currentH
 }
 
 func SignInvalidMint(
-	doc models.InvalidMint,
+	doc *models.InvalidMint,
 	privateKey crypto.PrivateKey,
 	multisigPubKey crypto.PublicKeyMultiSig,
 	numSigners int,
-) (models.InvalidMint, error) {
+) (*models.InvalidMint, error) {
 	returnTx := doc.ReturnTx
 	signers := doc.Signers
 
@@ -245,7 +245,7 @@ func SignInvalidMint(
 	return doc, nil
 }
 
-func UpdateStatusAndConfirmationsForBurn(doc models.Burn, blockNumber int64) (models.Burn, error) {
+func UpdateStatusAndConfirmationsForBurn(doc *models.Burn, blockNumber int64) (*models.Burn, error) {
 	status := doc.Status
 	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
 	if err != nil || confirmations < 0 {
@@ -275,11 +275,11 @@ func UpdateStatusAndConfirmationsForBurn(doc models.Burn, blockNumber int64) (mo
 }
 
 func SignBurn(
-	doc models.Burn,
+	doc *models.Burn,
 	privateKey crypto.PrivateKey,
 	multisigPubKey crypto.PublicKeyMultiSig,
 	numSigners int,
-) (models.Burn, error) {
+) (*models.Burn, error) {
 
 	signers := doc.Signers
 	returnTx := doc.ReturnTx

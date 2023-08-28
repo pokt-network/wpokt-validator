@@ -1,6 +1,7 @@
 package pokt
 
 import (
+	"math/big"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,26 +20,27 @@ const (
 	MintMonitorName = "MINT MONITOR"
 )
 
-type MintMonitorService struct {
+type MintMonitorRunner struct {
 	client        pokt.PocketClient
 	wpoktAddress  string
 	vaultAddress  string
 	startHeight   int64
 	currentHeight int64
+	minimumAmount *big.Int
 }
 
-func (x *MintMonitorService) Run() {
+func (x *MintMonitorRunner) Run() {
 	x.UpdateCurrentHeight()
 	x.SyncTxs()
 }
 
-func (x *MintMonitorService) Status() models.RunnerStatus {
+func (x *MintMonitorRunner) Status() models.RunnerStatus {
 	return models.RunnerStatus{
 		PoktHeight: strconv.FormatInt(x.startHeight, 10),
 	}
 }
 
-func (x *MintMonitorService) UpdateCurrentHeight() {
+func (x *MintMonitorRunner) UpdateCurrentHeight() {
 	res, err := x.client.GetHeight()
 	if err != nil {
 		log.Error("[MINT MONITOR] Error getting current height: ", err)
@@ -48,7 +50,12 @@ func (x *MintMonitorService) UpdateCurrentHeight() {
 	log.Info("[MINT MONITOR] Current height: ", x.currentHeight)
 }
 
-func (x *MintMonitorService) HandleFailedMint(tx *pokt.TxResponse) bool {
+func (x *MintMonitorRunner) HandleFailedMint(tx *pokt.TxResponse) bool {
+	if tx == nil {
+		log.Debug("[MINT MONITOR] Invalid tx response")
+		return false
+	}
+
 	doc := util.CreateFailedMint(tx, x.vaultAddress)
 
 	log.Debug("[MINT MONITOR] Storing failed mint tx")
@@ -66,7 +73,12 @@ func (x *MintMonitorService) HandleFailedMint(tx *pokt.TxResponse) bool {
 	return true
 }
 
-func (x *MintMonitorService) HandleInvalidMint(tx *pokt.TxResponse) bool {
+func (x *MintMonitorRunner) HandleInvalidMint(tx *pokt.TxResponse) bool {
+	if tx == nil {
+		log.Debug("[MINT MONITOR] Invalid tx response")
+		return false
+	}
+
 	doc := util.CreateInvalidMint(tx, x.vaultAddress)
 
 	log.Debug("[MINT MONITOR] Storing invalid mint tx")
@@ -84,7 +96,12 @@ func (x *MintMonitorService) HandleInvalidMint(tx *pokt.TxResponse) bool {
 	return true
 }
 
-func (x *MintMonitorService) HandleValidMint(tx *pokt.TxResponse, memo models.MintMemo) bool {
+func (x *MintMonitorRunner) HandleValidMint(tx *pokt.TxResponse, memo models.MintMemo) bool {
+	if tx == nil {
+		log.Debug("[MINT MONITOR] Invalid tx response")
+		return false
+	}
+
 	doc := util.CreateMint(tx, memo, x.wpoktAddress, x.vaultAddress)
 
 	log.Debug("[MINT MONITOR] Storing mint tx")
@@ -102,7 +119,7 @@ func (x *MintMonitorService) HandleValidMint(tx *pokt.TxResponse, memo models.Mi
 	return true
 }
 
-func (x *MintMonitorService) SyncTxs() bool {
+func (x *MintMonitorRunner) SyncTxs() bool {
 
 	if x.currentHeight <= x.startHeight {
 		log.Info("[MINT MONITOR] No new blocks to sync")
@@ -117,7 +134,8 @@ func (x *MintMonitorService) SyncTxs() bool {
 	log.Info("[MINT MONITOR] Found ", len(txs), " txs to sync")
 	var success bool = true
 	for _, tx := range txs {
-		if tx.Tx == "" || tx.TxResult.Code != 0 || strings.ToLower(tx.TxResult.Recipient) != x.vaultAddress || tx.TxResult.MessageType != "send" {
+		amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
+		if tx.Tx == "" || tx.TxResult.Code != 0 || strings.ToLower(tx.TxResult.Recipient) != x.vaultAddress || tx.TxResult.MessageType != "send" || !ok || amount.Cmp(x.minimumAmount) != 1 {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", tx.Hash, " with code: ", tx.TxResult.Code)
 			success = x.HandleFailedMint(tx) && success
 			continue
@@ -140,7 +158,24 @@ func (x *MintMonitorService) SyncTxs() bool {
 	return success
 }
 
-func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
+func (x *MintMonitorRunner) InitStartHeight(lastHealth models.ServiceHealth) {
+	startHeight := (app.Config.Pocket.StartHeight)
+
+	if (lastHealth.PoktHeight) != "" {
+		if lastHeight, err := strconv.ParseInt(lastHealth.PoktHeight, 10, 64); err == nil {
+			startHeight = lastHeight
+		}
+	}
+	if startHeight > 0 {
+		x.startHeight = startHeight
+	} else {
+		log.Info("[MINT MONITOR] Found invalid start height, using current height")
+		x.startHeight = x.currentHeight
+	}
+	log.Info("[MINT MONITOR] Start height: ", x.startHeight)
+}
+
+func NewMintMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if !app.Config.MintMonitor.Enabled {
 		log.Debug("[MINT MONITOR] Disabled")
 		return app.NewEmptyService(wg)
@@ -151,41 +186,30 @@ func NewMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service
 	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
 		p, err := crypto.NewPublicKey(pk)
 		if err != nil {
-			log.Error("[MINT MONITOR] Error parsing public key of vault multisig: ", err)
-			continue
+			log.Fatal("[MINT MONITOR] Error parsing multisig public key: ", err)
 		}
 		pks = append(pks, p)
 	}
 
 	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
 	vaultAddress := vaultPk.Address().String()
-	log.Debug("[MINT EXECUTOR] Vault address: ", vaultAddress)
+	log.Debug("[MINT MONITOR] Vault address: ", vaultAddress)
+	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
+		log.Fatal("[MINT MONITOR] Multisig address does not match vault address")
+	}
 
-	x := &MintMonitorService{
+	x := &MintMonitorRunner{
 		vaultAddress:  strings.ToLower(vaultAddress),
 		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		startHeight:   0,
 		currentHeight: 0,
 		client:        pokt.NewClient(),
-	}
-
-	startHeight := (app.Config.Pocket.StartHeight)
-
-	if (lastHealth.PoktHeight) != "" {
-		if lastHeight, err := strconv.ParseInt(lastHealth.PoktHeight, 10, 64); err == nil {
-			startHeight = lastHeight
-		}
+		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateCurrentHeight()
 
-	if startHeight > 0 {
-		x.startHeight = startHeight
-	} else {
-		log.Info("[MINT MONITOR] Found invalid start height, using current height")
-		x.startHeight = x.currentHeight
-	}
-	log.Info("[MINT MONITOR] Start height: ", x.startHeight)
+	x.InitStartHeight(lastHealth)
 
 	log.Info("[MINT MONITOR] Initialized")
 

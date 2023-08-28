@@ -47,6 +47,10 @@ func ValidateMemo(txMemo string) (models.MintMemo, bool) {
 	if strings.ToLower(address) != strings.ToLower(memo.Address) {
 		return memo, false
 	}
+
+	if address == common.HexToAddress("").Hex() {
+		return memo, false
+	}
 	memo.Address = address
 
 	memoChainId, err := strconv.Atoi(memo.ChainId)
