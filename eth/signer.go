@@ -356,7 +356,7 @@ func (x *MintSignerRunner) SyncTxs() bool {
 }
 
 func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
-	if app.Config.MintSigner.Enabled == false {
+	if !app.Config.MintSigner.Enabled {
 		log.Debug("[MINT SIGNER] Disabled")
 		return app.NewEmptyService(wg)
 	}

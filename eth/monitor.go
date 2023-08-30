@@ -168,7 +168,7 @@ func (x *BurnMonitorRunner) InitStartBlockNumber(lastHealth models.ServiceHealth
 }
 
 func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
-	if app.Config.BurnMonitor.Enabled == false {
+	if !app.Config.BurnMonitor.Enabled {
 		log.Debug("[BURM MONITOR] Disabled")
 		return app.NewEmptyService(wg)
 	}

@@ -438,7 +438,7 @@ func (x *BurnSignerRunner) SyncTxs() bool {
 }
 
 func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
-	if app.Config.BurnSigner.Enabled == false {
+	if !app.Config.BurnSigner.Enabled {
 		log.Debug("[BURN SIGNER] Disabled")
 		return app.NewEmptyService(wg)
 	}
