@@ -7,7 +7,6 @@ import (
 
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/models"
-	"github.com/dchest/uniuri"
 	pokt "github.com/pokt-network/pocket-core/app"
 	"github.com/pokt-network/pocket-core/crypto"
 	sdk "github.com/pokt-network/pocket-core/types"
@@ -17,12 +16,8 @@ import (
 	"github.com/tendermint/tendermint/libs/rand"
 )
 
-const legacyCodec bool = false
-
 var txEncoder sdk.TxEncoder = auth.DefaultTxEncoder(pokt.Codec())
 var txDecoder sdk.TxDecoder = auth.DefaultTxDecoder(pokt.Codec())
-
-var passphrase string = uniuri.NewLen(32)
 
 func buildMultiSigTxAndSign(
 	toAddr string,
