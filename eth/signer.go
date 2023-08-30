@@ -154,6 +154,11 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, nil
 	}
 
+	if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
+		log.Debug("[MINT SIGNER] Transaction recipient is zero address")
+		return false, nil
+	}
+
 	if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
 		log.Debug("[MINT SIGNER] Transaction recipient is not vault address")
 		return false, nil

@@ -89,6 +89,11 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 		return false, nil
 	}
 
+	if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
+		log.Debug("[BURN SIGNER] Transaction recipient is zero address")
+		return false, nil
+	}
+
 	if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
 		log.Debug("[BURN SIGNER] Transaction recipient is not vault address")
 		return false, nil
