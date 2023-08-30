@@ -43,11 +43,13 @@ type MintSignerRunner struct {
 	ethClient              eth.EthereumClient
 	poktHeight             int64
 	minimumAmount          *big.Int
+	maximumAmount          *big.Int
 }
 
 func (x *MintSignerRunner) Run() {
 	x.UpdateBlocks()
 	x.UpdateValidatorCount()
+	x.UpdateMaxMintLimit()
 	x.SyncTxs()
 }
 
@@ -175,6 +177,11 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 
 	if !ok || amount.Cmp(x.minimumAmount) != 1 {
 		log.Debug("[MINT SIGNER] Transaction amount too low")
+		return false, nil
+	}
+
+	if !ok || amount.Cmp(x.maximumAmount) == 1 {
+		log.Debug("[MINT SIGNER] Transaction amount too high")
 		return false, nil
 	}
 
@@ -392,6 +399,21 @@ func (x *MintSignerRunner) UpdateDomainData() {
 	x.domain = domain
 }
 
+func (x *MintSignerRunner) UpdateMaxMintLimit() {
+	log.Debug("[MINT SIGNER] Fetching mint controller max mint limit")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	mintLimit, err := x.mintControllerContract.MaxMintLimit(opts)
+
+	if err != nil {
+		log.Error("[MINT SIGNER] Error fetching mint controller max mint limit: ", err)
+		return
+	}
+	log.Debug("[MINT SIGNER] Fetched mint controller max mint limit")
+	x.maximumAmount = mintLimit
+}
+
 func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if !app.Config.MintSigner.Enabled {
 		log.Debug("[MINT SIGNER] Disabled")
@@ -440,6 +462,10 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 
 	x.UpdateBlocks()
 
+	if x.poktHeight == int64(0) {
+		log.Fatal("[MINT SIGNER] Invalid block height")
+	}
+
 	x.UpdateValidatorCount()
 
 	if x.numSigners != int64(len(app.Config.Ethereum.ValidatorAddresses)) {
@@ -456,6 +482,12 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 
 	if !strings.EqualFold(x.domain.VerifyingContract.Hex(), app.Config.Ethereum.MintControllerAddress) {
 		log.Fatal("[MINT SIGNER] Invalid mint controller address in domain data")
+	}
+
+	x.UpdateMaxMintLimit()
+
+	if x.maximumAmount == nil || x.maximumAmount.Cmp(x.minimumAmount) != 1 {
+		log.Fatal("[MINT SIGNER] Invalid max mint limit")
 	}
 
 	log.Info("[MINT SIGNER] Initialized mint signer")

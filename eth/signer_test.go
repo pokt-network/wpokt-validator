@@ -51,6 +51,7 @@ func NewTestMintSigner(t *testing.T, mockWrappedPocketContract *eth.MockWrappedP
 		poktClient:             mockPoktClient,
 		poktHeight:             100,
 		minimumAmount:          big.NewInt(10000),
+		maximumAmount:          big.NewInt(1000000),
 	}
 	return x
 }
@@ -129,6 +130,84 @@ func TestMintSignerUpdateValidatorCount(t *testing.T) {
 		x.UpdateValidatorCount()
 
 		assert.Equal(t, x.numSigners, int64(3))
+	})
+
+}
+
+func TestMintSignerUpdateDomainData(t *testing.T) {
+
+	t.Run("No Error", func(t *testing.T) {
+		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := eth.NewMockMintControllerContract(t)
+		mockEthClient := eth.NewMockEthereumClient(t)
+		mockPoktClient := pokt.NewMockPocketClient(t)
+		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
+
+		domain := eth.DomainData{
+			Name:              "New Domain",
+			Version:           "1",
+			ChainId:           big.NewInt(1),
+			VerifyingContract: common.HexToAddress(""),
+		}
+
+		mockMintControllerContract.EXPECT().Eip712Domain(mock.Anything).Return(domain, nil)
+
+		x.UpdateDomainData()
+
+		assert.Equal(t, x.domain.Name, "New Domain")
+	})
+
+	t.Run("With Error", func(t *testing.T) {
+		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := eth.NewMockMintControllerContract(t)
+		mockEthClient := eth.NewMockEthereumClient(t)
+		mockPoktClient := pokt.NewMockPocketClient(t)
+		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
+
+		domain := eth.DomainData{
+			Name:              "New Domain",
+			Version:           "1",
+			ChainId:           big.NewInt(1),
+			VerifyingContract: common.HexToAddress(""),
+		}
+
+		mockMintControllerContract.EXPECT().Eip712Domain(mock.Anything).Return(domain, errors.New("error"))
+
+		x.UpdateDomainData()
+
+		assert.Equal(t, x.domain.Name, "Test")
+	})
+
+}
+
+func TestMintSignerUpdateMaxMintLimit(t *testing.T) {
+
+	t.Run("No Error", func(t *testing.T) {
+		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := eth.NewMockMintControllerContract(t)
+		mockEthClient := eth.NewMockEthereumClient(t)
+		mockPoktClient := pokt.NewMockPocketClient(t)
+		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
+
+		mockMintControllerContract.EXPECT().MaxMintLimit(mock.Anything).Return(big.NewInt(500000), nil)
+
+		x.UpdateMaxMintLimit()
+
+		assert.Equal(t, x.maximumAmount, big.NewInt(500000))
+	})
+
+	t.Run("With Error", func(t *testing.T) {
+		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := eth.NewMockMintControllerContract(t)
+		mockEthClient := eth.NewMockEthereumClient(t)
+		mockPoktClient := pokt.NewMockPocketClient(t)
+		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
+
+		mockMintControllerContract.EXPECT().MaxMintLimit(mock.Anything).Return(big.NewInt(500000), errors.New("error"))
+
+		x.UpdateMaxMintLimit()
+
+		assert.Equal(t, x.maximumAmount, big.NewInt(1000000))
 	})
 
 }
@@ -521,6 +600,45 @@ func TestValidateMint(t *testing.T) {
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "100",
+					},
+				},
+			},
+		}
+
+		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+
+		valid, err := x.ValidateMint(mint)
+
+		assert.False(t, valid)
+		assert.Nil(t, err)
+
+	})
+	t.Run("Invalid transaction msg amount too high", func(t *testing.T) {
+
+		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := eth.NewMockMintControllerContract(t)
+		mockEthClient := eth.NewMockEthereumClient(t)
+		mockPoktClient := pokt.NewMockPocketClient(t)
+		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
+
+		mint := &models.Mint{
+			SenderAddress: "abcd",
+			Amount:        "2000000",
+		}
+
+		tx := &pokt.TxResponse{
+			Tx: "abcd",
+			TxResult: pokt.TxResult{
+				Code:        0,
+				MessageType: "send",
+			},
+			StdTx: pokt.StdTx{
+				Msg: pokt.Msg{
+					Type: "pos/Send",
+					Value: pokt.Value{
+						ToAddress:   x.vaultAddress,
+						FromAddress: "abcd",
+						Amount:      "2000000",
 					},
 				},
 			},
@@ -1621,6 +1739,8 @@ func TestMintSignerRun(t *testing.T) {
 	}, nil)
 
 	mockMintControllerContract.EXPECT().ValidatorCount(mock.Anything).Return(big.NewInt(3), nil)
+
+	mockMintControllerContract.EXPECT().MaxMintLimit(mock.Anything).Return(big.NewInt(1000000), nil)
 
 	x.Run()
 
