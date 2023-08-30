@@ -14,7 +14,7 @@ COPY main.go ./
 COPY defaults.yml ./
 
 # build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /validator
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/validator
 
 # set environment variables
 # mongodb
@@ -80,5 +80,17 @@ ENV HEALTH_CHECK_INTERVAL_SECS ${HEALTH_CHECK_INTERVAL_SECS}
 # logging
 ENV LOG_LEVEL ${LOG_LEVEL}
 
+# create app user
+RUN adduser --group --system app
+
+RUN chown -R app:app /bin/validator
+
+RUN chmod +x /bin/validator
+
+RUN chown -R app:app /app
+
+# switch to app user
+USER app
+
 # run
-CMD ["/validator", "--config", "/app/defaults.yml"]
+CMD ["/bin/validator", "--config", "/app/defaults.yml"]
