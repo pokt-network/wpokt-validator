@@ -256,15 +256,15 @@ func InitDB() {
 
 	err := db.Connect()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[DB] Failed to connect to database: ", err)
 	}
 	err = db.SetupIndexes()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[DB] Failed to setup indexes: ", err)
 	}
 	err = db.SetupLocker()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[DB] Failed to setup locker: ", err)
 	}
 	log.Info("[DB] Database initialized")
 
