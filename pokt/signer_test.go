@@ -191,7 +191,7 @@ func TestBurnSignerValidateInvalidMint(t *testing.T) {
 		mockPoktClient := pokt.NewMockPocketClient(t)
 		x := NewTestBurnSigner(t, mockContract, mockEthClient, mockPoktClient)
 
-		ZERO_ADDRESS := "0x0000000000000000000000000000000000000000"
+		ZERO_ADDRESS := "0000000000000000000000000000000000000000"
 
 		mint := &models.InvalidMint{}
 
@@ -206,6 +206,39 @@ func TestBurnSignerValidateInvalidMint(t *testing.T) {
 					Type: "pos/Send",
 					Value: pokt.Value{
 						ToAddress: ZERO_ADDRESS,
+					},
+				},
+			},
+		}
+
+		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+
+		valid, err := x.ValidateInvalidMint(mint)
+
+		assert.False(t, valid)
+		assert.Nil(t, err)
+
+	})
+	t.Run("Incorrect transaction msg to address", func(t *testing.T) {
+
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockEthClient := eth.NewMockEthereumClient(t)
+		mockPoktClient := pokt.NewMockPocketClient(t)
+		x := NewTestBurnSigner(t, mockContract, mockEthClient, mockPoktClient)
+
+		mint := &models.InvalidMint{}
+
+		tx := &pokt.TxResponse{
+			Tx: "abcd",
+			TxResult: pokt.TxResult{
+				Code:        0,
+				MessageType: "send",
+			},
+			StdTx: pokt.StdTx{
+				Msg: pokt.Msg{
+					Type: "pos/Send",
+					Value: pokt.Value{
+						ToAddress: "abcd",
 					},
 				},
 			},

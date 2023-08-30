@@ -89,12 +89,17 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 		return false, nil
 	}
 
-	if strings.ToLower(tx.StdTx.Msg.Value.ToAddress) != strings.ToLower(x.vaultAddress) {
+	if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
+		log.Debug("[BURN SIGNER] Transaction recipient is zero address")
+		return false, nil
+	}
+
+	if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
 		log.Debug("[BURN SIGNER] Transaction recipient is not vault address")
 		return false, nil
 	}
 
-	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(doc.SenderAddress) {
+	if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, doc.SenderAddress) {
 		log.Debug("[BURN SIGNER] Transaction signer is not sender address")
 		return false, nil
 	}
@@ -245,12 +250,12 @@ func (x *BurnSignerRunner) ValidateBurn(doc *models.Burn) (bool, error) {
 		log.Error("[BURN SIGNER] Invalid burn amount")
 		return false, nil
 	}
-	if strings.ToLower(burnEvent.From.Hex()) != strings.ToLower(doc.SenderAddress) {
+	if !strings.EqualFold(burnEvent.From.Hex(), doc.SenderAddress) {
 		log.Error("[BURN SIGNER] Invalid burn sender")
 		return false, nil
 	}
 	receiver := common.HexToAddress(fmt.Sprintf("0x%s", doc.RecipientAddress))
-	if strings.ToLower(burnEvent.PoktAddress.Hex()) != strings.ToLower(receiver.Hex()) {
+	if !strings.EqualFold(burnEvent.PoktAddress.Hex(), receiver.Hex()) {
 		log.Error("[BURN SIGNER] Invalid burn recipient")
 		return false, nil
 	}
@@ -352,7 +357,8 @@ func (x *BurnSignerRunner) SyncInvalidMints() bool {
 	log.Info("[BURN SIGNER] Found invalid mints: ", len(invalidMints))
 
 	var success bool = true
-	for _, doc := range invalidMints {
+	for i := range invalidMints {
+		doc := invalidMints[i]
 
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
 		lockId, err := app.DB.XLock(resourceId)
@@ -399,7 +405,8 @@ func (x *BurnSignerRunner) SyncBurns() bool {
 
 	var success bool = true
 
-	for _, doc := range burns {
+	for i := range burns {
+		doc := burns[i]
 
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
 		lockId, err := app.DB.XLock(resourceId)
@@ -436,7 +443,7 @@ func (x *BurnSignerRunner) SyncTxs() bool {
 }
 
 func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
-	if app.Config.BurnSigner.Enabled == false {
+	if !app.Config.BurnSigner.Enabled {
 		log.Debug("[BURN SIGNER] Disabled")
 		return app.NewEmptyService(wg)
 	}

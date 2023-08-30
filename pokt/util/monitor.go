@@ -44,7 +44,7 @@ func ValidateMemo(txMemo string) (models.MintMemo, bool) {
 	}
 
 	address := common.HexToAddress(memo.Address).Hex()
-	if strings.ToLower(address) != strings.ToLower(memo.Address) {
+	if !strings.EqualFold(address, memo.Address) {
 		return memo, false
 	}
 

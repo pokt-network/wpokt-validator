@@ -1,6 +1,6 @@
 module github.com/dan13ram/wpokt-validator
 
-go 1.18
+go 1.21
 
 replace github.com/tendermint/tendermint => github.com/pokt-network/tendermint v0.32.11-0.20220824215059-3214a152d8d4
 
@@ -8,7 +8,6 @@ replace github.com/tendermint/tm-db => github.com/pokt-network/tm-db v0.5.2-0.20
 
 require (
 	cloud.google.com/go/secretmanager v1.11.1
-	github.com/dchest/uniuri v1.2.0
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/joho/godotenv v1.5.1
 	github.com/pokt-network/pocket-core v0.0.0-20230517195228-60cf936bf536

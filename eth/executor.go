@@ -113,11 +113,19 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 
 	var success bool = true
 	for filter.Next() {
+		if err = filter.Error(); err != nil {
+			success = false
+			break
+		}
 
 		event := filter.Event()
 
-		if event == nil || event.Raw.Removed {
+		if event == nil {
 			success = false
+			continue
+		}
+
+		if event.Raw.Removed {
 			continue
 		}
 
@@ -200,7 +208,7 @@ func (x *MintExecutorRunner) InitStartBlockNumber(lastHealth models.ServiceHealt
 }
 
 func NewMintExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
-	if app.Config.MintExecutor.Enabled == false {
+	if !app.Config.MintExecutor.Enabled {
 		log.Debug("[MINT EXECUTOR] Disabled")
 		return app.NewEmptyService(wg)
 	}

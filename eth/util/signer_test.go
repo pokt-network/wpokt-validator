@@ -8,6 +8,7 @@ import (
 
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -143,7 +144,7 @@ func TestUpdateStatusAndConfirmationsForMint(t *testing.T) {
 func TestSignMint(t *testing.T) {
 	ZERO_ADDRESS := "0x0000000000000000000000000000000000000000"
 
-	testDomain := DomainData{
+	testDomain := eth.DomainData{
 		Name:              "Test",
 		Version:           "1",
 		ChainId:           big.NewInt(1),
@@ -167,7 +168,7 @@ func TestSignMint(t *testing.T) {
 		expectedMint models.Mint
 		expectedErr  bool
 		data         autogen.MintControllerMintData
-		domain       DomainData
+		domain       eth.DomainData
 		privateKey   *ecdsa.PrivateKey
 	}{
 		{
@@ -257,7 +258,7 @@ func TestSignMint(t *testing.T) {
 			},
 			expectedErr: true,
 			data:        testData,
-			domain: DomainData{
+			domain: eth.DomainData{
 				ChainId: big.NewInt(1),
 			},
 			privateKey: testPrivateKey,

@@ -31,21 +31,25 @@ const (
 )
 
 type MintSignerRunner struct {
-	address       string
-	privateKey    *ecdsa.PrivateKey
-	vaultAddress  string
-	wpoktAddress  string
-	wpoktContract eth.WrappedPocketContract
-	numSigners    int
-	domain        util.DomainData
-	poktClient    pokt.PocketClient
-	ethClient     eth.EthereumClient
-	poktHeight    int64
-	minimumAmount *big.Int
+	address                string
+	privateKey             *ecdsa.PrivateKey
+	vaultAddress           string
+	wpoktAddress           string
+	wpoktContract          eth.WrappedPocketContract
+	mintControllerContract eth.MintControllerContract
+	numSigners             int64
+	domain                 eth.DomainData
+	poktClient             pokt.PocketClient
+	ethClient              eth.EthereumClient
+	poktHeight             int64
+	minimumAmount          *big.Int
+	maximumAmount          *big.Int
 }
 
 func (x *MintSignerRunner) Run() {
 	x.UpdateBlocks()
+	x.UpdateValidatorCount()
+	x.UpdateMaxMintLimit()
 	x.SyncTxs()
 }
 
@@ -105,13 +109,13 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 		}
 
 		if len(pendingMints) > 0 {
-			var nonces []int64
+			var nonces []*big.Int
 
 			for _, pendingMint := range pendingMints {
 				if pendingMint.Data != nil {
-					nonce, err := strconv.ParseInt(pendingMint.Data.Nonce, 10, 64)
-					if err != nil {
-						log.Error("[MINT SIGNER] Error converting nonce to int: ", err)
+					nonce, ok := new(big.Int).SetString(pendingMint.Data.Nonce, 10)
+					if !ok {
+						log.Error("[MINT SIGNER] Error converting nonce to big.Int")
 						continue
 					}
 					nonces = append(nonces, nonce)
@@ -120,11 +124,11 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 
 			if len(nonces) > 0 {
 				sort.Slice(nonces, func(i, j int) bool {
-					return nonces[i] < nonces[j]
+					return nonces[i].Cmp(nonces[j]) == -1
 				})
 
-				pendingNonce := big.NewInt(nonces[len(nonces)-1])
-				if currentNonce.Cmp(pendingNonce) < 0 {
+				pendingNonce := nonces[len(nonces)-1]
+				if currentNonce.Cmp(pendingNonce) == -1 {
 					log.Debug("[MINT SIGNER] Pending nonce: ", pendingNonce)
 					currentNonce = pendingNonce
 				}
@@ -154,12 +158,17 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, nil
 	}
 
-	if strings.ToLower(tx.StdTx.Msg.Value.ToAddress) != strings.ToLower(x.vaultAddress) {
+	if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
+		log.Debug("[MINT SIGNER] Transaction recipient is zero address")
+		return false, nil
+	}
+
+	if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
 		log.Debug("[MINT SIGNER] Transaction recipient is not vault address")
 		return false, nil
 	}
 
-	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(mint.SenderAddress) {
+	if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, mint.SenderAddress) {
 		log.Debug("[MINT SIGNER] Transaction signer is not sender address")
 		return false, nil
 	}
@@ -168,6 +177,11 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 
 	if !ok || amount.Cmp(x.minimumAmount) != 1 {
 		log.Debug("[MINT SIGNER] Transaction amount too low")
+		return false, nil
+	}
+
+	if !ok || amount.Cmp(x.maximumAmount) == 1 {
+		log.Debug("[MINT SIGNER] Transaction amount too high")
 		return false, nil
 	}
 
@@ -182,7 +196,7 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, nil
 	}
 
-	if strings.ToLower(memo.Address) != strings.ToLower(mint.RecipientAddress) {
+	if !strings.EqualFold(memo.Address, mint.RecipientAddress) {
 		log.Debug("[MINT SIGNER] Memo address does not match recipient address")
 		return false, nil
 	}
@@ -257,7 +271,7 @@ func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
 		if mint.Status == models.StatusConfirmed {
 			log.Debug("[MINT SIGNER] Mint confirmed, signing")
 
-			mint, err := util.SignMint(mint, data, x.domain, x.privateKey, x.numSigners)
+			mint, err := util.SignMint(mint, data, x.domain, x.privateKey, int(x.numSigners))
 			if err != nil {
 				log.Error("[MINT SIGNER] Error signing mint: ", err)
 				return false
@@ -319,16 +333,17 @@ func (x *MintSignerRunner) SyncTxs() bool {
 		},
 	}
 
-	var results []models.Mint
+	var mints []models.Mint
 
-	err := app.DB.FindMany(models.CollectionMints, filter, &results)
+	err := app.DB.FindMany(models.CollectionMints, filter, &mints)
 	if err != nil {
 		log.Error("[MINT SIGNER] Error fetching pending mints: ", err)
 		return false
 	}
 
 	var success bool = true
-	for _, mint := range results {
+	for i := range mints {
+		mint := mints[i]
 
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionMints, strings.ToLower(mint.RecipientAddress))
 		lockId, err := app.DB.XLock(resourceId)
@@ -354,8 +369,53 @@ func (x *MintSignerRunner) SyncTxs() bool {
 	return success
 }
 
+func (x *MintSignerRunner) UpdateValidatorCount() {
+	log.Debug("[MINT SIGNER] Fetching mint controller validator count")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	count, err := x.mintControllerContract.ValidatorCount(opts)
+
+	if err != nil {
+		log.Error("[MINT SIGNER] Error fetching mint controller validator count: ", err)
+		return
+	}
+	log.Debug("[MINT SIGNER] Fetched mint controller validator count")
+	x.numSigners = count.Int64()
+}
+
+func (x *MintSignerRunner) UpdateDomainData() {
+	log.Debug("[MINT SIGNER] Fetching mint controller domain data")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	domain, err := x.mintControllerContract.Eip712Domain(opts)
+
+	if err != nil {
+		log.Error("[MINT SIGNER] Error fetching mint controller domain data: ", err)
+		return
+	}
+	log.Debug("[MINT SIGNER] Fetched mint controller domain data")
+	x.domain = domain
+}
+
+func (x *MintSignerRunner) UpdateMaxMintLimit() {
+	log.Debug("[MINT SIGNER] Fetching mint controller max mint limit")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	mintLimit, err := x.mintControllerContract.MaxMintLimit(opts)
+
+	if err != nil {
+		log.Error("[MINT SIGNER] Error fetching mint controller max mint limit: ", err)
+		return
+	}
+	log.Debug("[MINT SIGNER] Fetched mint controller max mint limit")
+	x.maximumAmount = mintLimit
+}
+
 func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
-	if app.Config.MintSigner.Enabled == false {
+	if !app.Config.MintSigner.Enabled {
 		log.Debug("[MINT SIGNER] Disabled")
 		return app.NewEmptyService(wg)
 	}
@@ -388,31 +448,47 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 	}
 	log.Debug("[MINT SIGNER] Connected to mint controller contract")
 
-	log.Debug("[MINT SIGNER] Fetching mint controller domain data")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
-	defer cancel()
-	opts := &bind.CallOpts{Context: ctx, Pending: false}
-	domain, err := mintControllerContract.Eip712Domain(opts)
-
-	if err != nil {
-		log.Fatal("[MINT SIGNER] Error fetching mint controller domain data: ", err)
-	}
-	log.Debug("[MINT SIGNER] Fetched mint controller domain data")
-
 	x := &MintSignerRunner{
-		privateKey:    privateKey,
-		address:       strings.ToLower(address),
-		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		vaultAddress:  strings.ToLower(app.Config.Pocket.VaultAddress),
-		wpoktContract: eth.NewWrappedPocketContract(contract),
-		numSigners:    len(app.Config.Ethereum.ValidatorAddresses),
-		domain:        domain,
-		ethClient:     ethClient,
-		poktClient:    pokt.NewClient(),
-		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
+		privateKey:             privateKey,
+		address:                strings.ToLower(address),
+		wpoktAddress:           strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		vaultAddress:           strings.ToLower(app.Config.Pocket.VaultAddress),
+		wpoktContract:          eth.NewWrappedPocketContract(contract),
+		mintControllerContract: eth.NewMintControllerContract(mintControllerContract),
+		ethClient:              ethClient,
+		poktClient:             pokt.NewClient(),
+		minimumAmount:          big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateBlocks()
+
+	if x.poktHeight == int64(0) {
+		log.Fatal("[MINT SIGNER] Invalid block height")
+	}
+
+	x.UpdateValidatorCount()
+
+	if x.numSigners != int64(len(app.Config.Ethereum.ValidatorAddresses)) {
+		log.Fatal("[MINT SIGNER] Invalid validator count")
+	}
+
+	x.UpdateDomainData()
+
+	chainId, ok := new(big.Int).SetString(app.Config.Ethereum.ChainId, 10)
+
+	if !ok || x.domain.ChainId.Cmp(chainId) != 0 {
+		log.Fatal("[MINT SIGNER] Invalid chain ID")
+	}
+
+	if !strings.EqualFold(x.domain.VerifyingContract.Hex(), app.Config.Ethereum.MintControllerAddress) {
+		log.Fatal("[MINT SIGNER] Invalid mint controller address in domain data")
+	}
+
+	x.UpdateMaxMintLimit()
+
+	if x.maximumAmount == nil || x.maximumAmount.Cmp(x.minimumAmount) != 1 {
+		log.Fatal("[MINT SIGNER] Invalid max mint limit")
+	}
 
 	log.Info("[MINT SIGNER] Initialized mint signer")
 

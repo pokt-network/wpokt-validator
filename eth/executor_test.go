@@ -16,6 +16,7 @@ import (
 	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson"
@@ -300,6 +301,34 @@ func TestMintExecutorSyncBlocks(t *testing.T) {
 		assert.False(t, x.SyncBlocks(1, 100))
 	})
 
+	t.Run("Some events were removed", func(t *testing.T) {
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockClient := eth.NewMockEthereumClient(t)
+		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{}).Once()
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{
+			Raw: types.Log{Removed: true},
+		}).Once()
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketMinted{}).Once()
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Times(3)
+		mockFilter.EXPECT().Next().Return(false).Once()
+		app.DB = mockDB
+
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
+			Return(mockFilter, nil).Once()
+
+		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+		mockDB.EXPECT().Unlock("lockId").Return(nil)
+
+		mockDB.EXPECT().UpdateOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil).Times(2)
+
+		assert.True(t, x.SyncBlocks(1, 100))
+	})
+
 	t.Run("Error in Handling First Event", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
@@ -328,8 +357,26 @@ func TestMintExecutorSyncBlocks(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
-		mockFilter.EXPECT().Event().Return(nil)
 		mockFilter.EXPECT().Error().Return(errors.New("iteration error"))
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		app.DB = mockDB
+
+		x := NewTestMintExecutor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterMinted(mock.Anything, []common.Address{}, []*big.Int{}, []*big.Int{}).
+			Return(mockFilter, nil).Once()
+
+		assert.False(t, x.SyncBlocks(1, 100))
+	})
+
+	t.Run("Error After Filtering Iteration", func(t *testing.T) {
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockClient := eth.NewMockEthereumClient(t)
+		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketMintedIterator(t)
+		mockFilter.EXPECT().Event().Return(nil).Once()
+		mockFilter.EXPECT().Error().Return(nil).Once()
+		mockFilter.EXPECT().Error().Return(errors.New("iteration error")).Once()
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Once()
 		mockFilter.EXPECT().Next().Return(false).Once()

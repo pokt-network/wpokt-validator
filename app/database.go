@@ -70,21 +70,29 @@ func (d *MongoDatabase) SetupLocker() error {
 	defer cancel()
 
 	locker = lock.NewClient(d.db.Collection("locks"))
-	locker.CreateIndexes(ctx)
+	err := locker.CreateIndexes(ctx)
+	if err != nil {
+		return err
+	}
+
 	d.locker = locker
 
 	log.Info("[DB] Locker setup")
 	return nil
 }
 
-func randomString(n int) string {
+func randomString(n int) (string, error) {
 	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	var bytes = make([]byte, n)
-	rand.Read(bytes)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+
 	for i, b := range bytes {
 		bytes[i] = alphanum[b%byte(len(alphanum))]
 	}
-	return string(bytes)
+	return string(bytes), nil
 }
 
 // XLock locks a resource for exclusive access
@@ -92,8 +100,11 @@ func (d *MongoDatabase) XLock(resourceId string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 
-	lockId := randomString(32)
-	err := d.locker.XLock(ctx, resourceId, lockId, lock.LockDetails{
+	lockId, err := randomString(32)
+	if err != nil {
+		return "", err
+	}
+	err = d.locker.XLock(ctx, resourceId, lockId, lock.LockDetails{
 		TTL: 60, // locks expire in 60 seconds
 	})
 	return lockId, err
@@ -104,8 +115,11 @@ func (d *MongoDatabase) SLock(resourceId string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
 	defer cancel()
 
-	lockId := randomString(32)
-	err := d.locker.SLock(ctx, resourceId, lockId, lock.LockDetails{
+	lockId, err := randomString(32)
+	if err != nil {
+		return "", err
+	}
+	err = d.locker.SLock(ctx, resourceId, lockId, lock.LockDetails{
 		TTL: 60, // locks expire in 60 seconds
 	}, -1)
 	return lockId, err
@@ -242,13 +256,16 @@ func InitDB() {
 
 	err := db.Connect()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[DB] Failed to connect to database: ", err)
 	}
 	err = db.SetupIndexes()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[DB] Failed to setup indexes: ", err)
 	}
 	err = db.SetupLocker()
+	if err != nil {
+		log.Fatal("[DB] Failed to setup locker: ", err)
+	}
 	log.Info("[DB] Database initialized")
 
 	DB = db

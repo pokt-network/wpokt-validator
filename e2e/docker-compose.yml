@@ -3,8 +3,8 @@ services:
     image: dan13ram/wpokt-validator:latest
     restart: always
     volumes:
-      - ./config/validator/config.validator1.yml:/root/config.yml
-    command: sh -c "sleep 30 && /validator --config /root/config.yml"
+      - ./config/validator/config.validator1.yml:/home/app/config.yml
+    command: sh -c "sleep 30 && /bin/validator --config /home/app/config.yml"
     environment:
       LOG_LEVEL: debug
 
@@ -12,8 +12,8 @@ services:
     image: dan13ram/wpokt-validator:latest
     restart: always
     volumes:
-      - ./config/validator/config.validator2.yml:/root/config.yml
-    command: sh -c "sleep 30 && /validator --config /root/config.yml"
+      - ./config/validator/config.validator2.yml:/home/app/config.yml
+    command: sh -c "sleep 30 && /bin/validator --config /home/app/config.yml"
     environment:
       LOG_LEVEL: debug
 
@@ -21,8 +21,8 @@ services:
     image: dan13ram/wpokt-validator:latest
     restart: always
     volumes:
-      - ./config/validator/config.validator3.yml:/root/config.yml
-    command: sh -c "sleep 30 && /validator --config /root/config.yml"
+      - ./config/validator/config.validator3.yml:/home/app/config.yml
+    command: sh -c "sleep 30 && /bin/validator --config /home/app/config.yml"
     environment:
       LOG_LEVEL: debug
 

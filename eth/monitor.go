@@ -94,15 +94,19 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 
 	var success bool = true
 	for filter.Next() {
+		if err := filter.Error(); err != nil {
+			success = false
+			break
+		}
+
 		event := filter.Event()
 
-		if event == nil || event.Raw.Removed {
+		if event == nil {
 			success = false
 			continue
 		}
 
-		if event.Amount.Cmp(x.minimumAmount) != 1 {
-			success = true
+		if event.Raw.Removed || event.Amount.Cmp(x.minimumAmount) != 1 {
 			continue
 		}
 
@@ -164,7 +168,7 @@ func (x *BurnMonitorRunner) InitStartBlockNumber(lastHealth models.ServiceHealth
 }
 
 func NewBurnMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
-	if app.Config.BurnMonitor.Enabled == false {
+	if !app.Config.BurnMonitor.Enabled {
 		log.Debug("[BURM MONITOR] Disabled")
 		return app.NewEmptyService(wg)
 	}

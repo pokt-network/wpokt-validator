@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
@@ -56,18 +56,8 @@ var typesStandard = apitypes.Types{
 	},
 }
 
-type DomainData struct {
-	Fields            [1]byte
-	Name              string
-	Version           string
-	ChainId           *big.Int
-	VerifyingContract common.Address
-	Salt              [32]byte
-	Extensions        []*big.Int
-}
-
 func signTypedData(
-	domainData DomainData,
+	domainData eth.DomainData,
 	mint *autogen.MintControllerMintData,
 	key *ecdsa.PrivateKey,
 ) ([]byte, error) {
@@ -173,7 +163,7 @@ func sortSignersAndSignatures(signers, signatures []string) ([]string, []string)
 func SignMint(
 	mint *models.Mint,
 	data *autogen.MintControllerMintData,
-	domain DomainData,
+	domain eth.DomainData,
 	privateKey *ecdsa.PrivateKey,
 	numSigners int,
 ) (*models.Mint, error) {

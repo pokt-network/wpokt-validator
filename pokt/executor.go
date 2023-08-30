@@ -222,7 +222,8 @@ func (x *BurnExecutorRunner) SyncInvalidMints() bool {
 	log.Info("[BURN EXECUTOR] Found invalid mints: ", len(invalidMints))
 
 	var success bool = true
-	for _, doc := range invalidMints {
+	for i := range invalidMints {
+		doc := invalidMints[i]
 
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
 		lockId, err := app.DB.XLock(resourceId)
@@ -272,7 +273,8 @@ func (x *BurnExecutorRunner) SyncBurns() bool {
 
 	var success bool = true
 
-	for _, doc := range burns {
+	for i := range burns {
+		doc := burns[i]
 
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
 		lockId, err := app.DB.XLock(resourceId)
@@ -328,7 +330,7 @@ func NewBurnExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Servic
 	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
 	vaultAddress := vaultPk.Address().String()
 	log.Debug("[BURN EXECUTOR] Vault address: ", vaultAddress)
-	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
+	if !strings.EqualFold(vaultAddress, app.Config.Pocket.VaultAddress) {
 		log.Fatal("[BURN EXECUTOR] Multisig address does not match vault address")
 	}
 
