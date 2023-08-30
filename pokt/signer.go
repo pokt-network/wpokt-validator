@@ -352,7 +352,8 @@ func (x *BurnSignerRunner) SyncInvalidMints() bool {
 	log.Info("[BURN SIGNER] Found invalid mints: ", len(invalidMints))
 
 	var success bool = true
-	for _, doc := range invalidMints {
+	for i := range invalidMints {
+		doc := invalidMints[i]
 
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionInvalidMints, doc.Id.Hex())
 		lockId, err := app.DB.XLock(resourceId)
@@ -399,7 +400,8 @@ func (x *BurnSignerRunner) SyncBurns() bool {
 
 	var success bool = true
 
-	for _, doc := range burns {
+	for i := range burns {
+		doc := burns[i]
 
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionBurns, doc.Id.Hex())
 		lockId, err := app.DB.XLock(resourceId)

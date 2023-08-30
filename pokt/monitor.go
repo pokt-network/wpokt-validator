@@ -133,7 +133,9 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 	}
 	log.Info("[MINT MONITOR] Found ", len(txs), " txs to sync")
 	var success bool = true
-	for _, tx := range txs {
+	for i := range txs {
+		tx := txs[i]
+
 		amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
 		if tx.Tx == "" || tx.TxResult.Code != 0 || strings.ToLower(tx.TxResult.Recipient) != x.vaultAddress || tx.TxResult.MessageType != "send" || !ok || amount.Cmp(x.minimumAmount) != 1 {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", tx.Hash, " with code: ", tx.TxResult.Code)

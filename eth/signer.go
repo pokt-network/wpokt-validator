@@ -319,16 +319,17 @@ func (x *MintSignerRunner) SyncTxs() bool {
 		},
 	}
 
-	var results []models.Mint
+	var mints []models.Mint
 
-	err := app.DB.FindMany(models.CollectionMints, filter, &results)
+	err := app.DB.FindMany(models.CollectionMints, filter, &mints)
 	if err != nil {
 		log.Error("[MINT SIGNER] Error fetching pending mints: ", err)
 		return false
 	}
 
 	var success bool = true
-	for _, mint := range results {
+	for i := range mints {
+		mint := mints[i]
 
 		resourceId := fmt.Sprintf("%s/%s", models.CollectionMints, strings.ToLower(mint.RecipientAddress))
 		lockId, err := app.DB.XLock(resourceId)

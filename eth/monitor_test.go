@@ -14,6 +14,7 @@ import (
 	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -227,6 +228,35 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 			Return(mockFilter, nil).Once()
 
 		assert.False(t, x.SyncBlocks(1, 100))
+	})
+
+	t.Run("Some events were removed", func(t *testing.T) {
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockClient := eth.NewMockEthereumClient(t)
+		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+			Amount: big.NewInt(20000),
+		}).Once()
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+			Raw: types.Log{Removed: true},
+		}).Once()
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+			Amount: big.NewInt(20000),
+		}).Once()
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Times(3)
+		mockFilter.EXPECT().Next().Return(false).Once()
+		app.DB = mockDB
+
+		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+			Return(mockFilter, nil).Once()
+
+		mockDB.EXPECT().InsertOne(models.CollectionBurns, mock.Anything).Return(nil).Times(2)
+
+		assert.True(t, x.SyncBlocks(1, 100))
 	})
 
 	t.Run("Error in Handling First Event", func(t *testing.T) {

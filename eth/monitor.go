@@ -96,8 +96,12 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 	for filter.Next() {
 		event := filter.Event()
 
-		if event == nil || event.Raw.Removed {
+		if event == nil {
 			success = false
+			continue
+		}
+
+		if event.Raw.Removed {
 			continue
 		}
 

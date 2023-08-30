@@ -116,8 +116,12 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 
 		event := filter.Event()
 
-		if event == nil || event.Raw.Removed {
+		if event == nil {
 			success = false
+			continue
+		}
+
+		if event.Raw.Removed {
 			continue
 		}
 
