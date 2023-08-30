@@ -12,7 +12,6 @@ import (
 
 	"github.com/dan13ram/wpokt-validator/app"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
-	"github.com/dan13ram/wpokt-validator/eth/util"
 	"github.com/dan13ram/wpokt-validator/models"
 	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/ethereum/go-ethereum/common"
@@ -40,7 +39,7 @@ func NewTestMintSigner(t *testing.T, mockWrappedPocketContract *eth.MockWrappedP
 		vaultAddress: "vaultAddress",
 		wpoktAddress: "wpoktAddress",
 		numSigners:   3,
-		domain: util.DomainData{
+		domain: eth.DomainData{
 			Name:              "Test",
 			Version:           "1",
 			ChainId:           big.NewInt(1),
@@ -1035,7 +1034,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
-		x.domain = util.DomainData{
+		x.domain = eth.DomainData{
 			ChainId: big.NewInt(1),
 		}
 

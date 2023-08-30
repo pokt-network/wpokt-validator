@@ -23,6 +23,58 @@ func (_m *MockMintControllerContract) EXPECT() *MockMintControllerContract_Expec
 	return &MockMintControllerContract_Expecter{mock: &_m.Mock}
 }
 
+// Eip712Domain provides a mock function with given fields: opts
+func (_m *MockMintControllerContract) Eip712Domain(opts *bind.CallOpts) (DomainData, error) {
+	ret := _m.Called(opts)
+
+	var r0 DomainData
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*bind.CallOpts) (DomainData, error)); ok {
+		return rf(opts)
+	}
+	if rf, ok := ret.Get(0).(func(*bind.CallOpts) DomainData); ok {
+		r0 = rf(opts)
+	} else {
+		r0 = ret.Get(0).(DomainData)
+	}
+
+	if rf, ok := ret.Get(1).(func(*bind.CallOpts) error); ok {
+		r1 = rf(opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockMintControllerContract_Eip712Domain_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Eip712Domain'
+type MockMintControllerContract_Eip712Domain_Call struct {
+	*mock.Call
+}
+
+// Eip712Domain is a helper method to define mock.On call
+//   - opts *bind.CallOpts
+func (_e *MockMintControllerContract_Expecter) Eip712Domain(opts interface{}) *MockMintControllerContract_Eip712Domain_Call {
+	return &MockMintControllerContract_Eip712Domain_Call{Call: _e.mock.On("Eip712Domain", opts)}
+}
+
+func (_c *MockMintControllerContract_Eip712Domain_Call) Run(run func(opts *bind.CallOpts)) *MockMintControllerContract_Eip712Domain_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*bind.CallOpts))
+	})
+	return _c
+}
+
+func (_c *MockMintControllerContract_Eip712Domain_Call) Return(_a0 DomainData, _a1 error) *MockMintControllerContract_Eip712Domain_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockMintControllerContract_Eip712Domain_Call) RunAndReturn(run func(*bind.CallOpts) (DomainData, error)) *MockMintControllerContract_Eip712Domain_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ValidatorCount provides a mock function with given fields: opts
 func (_m *MockMintControllerContract) ValidatorCount(opts *bind.CallOpts) (*big.Int, error) {
 	ret := _m.Called(opts)

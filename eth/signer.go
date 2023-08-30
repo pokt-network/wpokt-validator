@@ -38,7 +38,7 @@ type MintSignerRunner struct {
 	wpoktContract          eth.WrappedPocketContract
 	mintControllerContract eth.MintControllerContract
 	numSigners             int64
-	domain                 util.DomainData
+	domain                 eth.DomainData
 	poktClient             pokt.PocketClient
 	ethClient              eth.EthereumClient
 	poktHeight             int64
@@ -377,6 +377,21 @@ func (x *MintSignerRunner) UpdateValidatorCount() {
 	x.numSigners = count.Int64()
 }
 
+func (x *MintSignerRunner) UpdateDomainData() {
+	log.Debug("[MINT SIGNER] Fetching mint controller domain data")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	domain, err := x.mintControllerContract.Eip712Domain(opts)
+
+	if err != nil {
+		log.Error("[MINT SIGNER] Error fetching mint controller domain data: ", err)
+		return
+	}
+	log.Debug("[MINT SIGNER] Fetched mint controller domain data")
+	x.domain = domain
+}
+
 func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if !app.Config.MintSigner.Enabled {
 		log.Debug("[MINT SIGNER] Disabled")
@@ -411,17 +426,6 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 	}
 	log.Debug("[MINT SIGNER] Connected to mint controller contract")
 
-	log.Debug("[MINT SIGNER] Fetching mint controller domain data")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
-	defer cancel()
-	opts := &bind.CallOpts{Context: ctx, Pending: false}
-	domain, err := mintControllerContract.Eip712Domain(opts)
-
-	if err != nil {
-		log.Fatal("[MINT SIGNER] Error fetching mint controller domain data: ", err)
-	}
-	log.Debug("[MINT SIGNER] Fetched mint controller domain data")
-
 	x := &MintSignerRunner{
 		privateKey:             privateKey,
 		address:                strings.ToLower(address),
@@ -429,7 +433,6 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 		vaultAddress:           strings.ToLower(app.Config.Pocket.VaultAddress),
 		wpoktContract:          eth.NewWrappedPocketContract(contract),
 		mintControllerContract: eth.NewMintControllerContract(mintControllerContract),
-		domain:                 domain,
 		ethClient:              ethClient,
 		poktClient:             pokt.NewClient(),
 		minimumAmount:          big.NewInt(app.Config.Pocket.TxFee),
@@ -441,6 +444,18 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 
 	if x.numSigners != int64(len(app.Config.Ethereum.ValidatorAddresses)) {
 		log.Fatal("[MINT SIGNER] Invalid validator count")
+	}
+
+	x.UpdateDomainData()
+
+	chainId, ok := new(big.Int).SetString(app.Config.Ethereum.ChainId, 10)
+
+	if !ok || x.domain.ChainId.Cmp(chainId) != 0 {
+		log.Fatal("[MINT SIGNER] Invalid chain ID")
+	}
+
+	if !strings.EqualFold(x.domain.VerifyingContract.Hex(), app.Config.Ethereum.MintControllerAddress) {
+		log.Fatal("[MINT SIGNER] Invalid mint controller address in domain data")
 	}
 
 	log.Info("[MINT SIGNER] Initialized mint signer")
