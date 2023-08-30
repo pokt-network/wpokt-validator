@@ -105,13 +105,13 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 		}
 
 		if len(pendingMints) > 0 {
-			var nonces []int64
+			var nonces []*big.Int
 
 			for _, pendingMint := range pendingMints {
 				if pendingMint.Data != nil {
-					nonce, err := strconv.ParseInt(pendingMint.Data.Nonce, 10, 64)
-					if err != nil {
-						log.Error("[MINT SIGNER] Error converting nonce to int: ", err)
+					nonce, ok := new(big.Int).SetString(pendingMint.Data.Nonce, 10)
+					if !ok {
+						log.Error("[MINT SIGNER] Error converting nonce to big.Int")
 						continue
 					}
 					nonces = append(nonces, nonce)
@@ -120,11 +120,11 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 
 			if len(nonces) > 0 {
 				sort.Slice(nonces, func(i, j int) bool {
-					return nonces[i] < nonces[j]
+					return nonces[i].Cmp(nonces[j]) == -1
 				})
 
-				pendingNonce := big.NewInt(nonces[len(nonces)-1])
-				if currentNonce.Cmp(pendingNonce) < 0 {
+				pendingNonce := nonces[len(nonces)-1]
+				if currentNonce.Cmp(pendingNonce) == -1 {
 					log.Debug("[MINT SIGNER] Pending nonce: ", pendingNonce)
 					currentNonce = pendingNonce
 				}
