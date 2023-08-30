@@ -154,12 +154,12 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, nil
 	}
 
-	if strings.ToLower(tx.StdTx.Msg.Value.ToAddress) != strings.ToLower(x.vaultAddress) {
+	if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
 		log.Debug("[MINT SIGNER] Transaction recipient is not vault address")
 		return false, nil
 	}
 
-	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(mint.SenderAddress) {
+	if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, mint.SenderAddress) {
 		log.Debug("[MINT SIGNER] Transaction signer is not sender address")
 		return false, nil
 	}
@@ -182,7 +182,7 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, nil
 	}
 
-	if strings.ToLower(memo.Address) != strings.ToLower(mint.RecipientAddress) {
+	if !strings.EqualFold(memo.Address, mint.RecipientAddress) {
 		log.Debug("[MINT SIGNER] Memo address does not match recipient address")
 		return false, nil
 	}

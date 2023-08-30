@@ -137,7 +137,7 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 		tx := txs[i]
 
 		amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
-		if tx.Tx == "" || tx.TxResult.Code != 0 || strings.ToLower(tx.TxResult.Recipient) != x.vaultAddress || tx.TxResult.MessageType != "send" || !ok || amount.Cmp(x.minimumAmount) != 1 {
+		if tx.Tx == "" || tx.TxResult.Code != 0 || !strings.EqualFold(tx.TxResult.Recipient, x.vaultAddress) || tx.TxResult.MessageType != "send" || !ok || amount.Cmp(x.minimumAmount) != 1 {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", tx.Hash, " with code: ", tx.TxResult.Code)
 			success = x.HandleFailedMint(tx) && success
 			continue
@@ -196,7 +196,7 @@ func NewMintMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
 	vaultAddress := vaultPk.Address().String()
 	log.Debug("[MINT MONITOR] Vault address: ", vaultAddress)
-	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
+	if !strings.EqualFold(vaultAddress, app.Config.Pocket.VaultAddress) {
 		log.Fatal("[MINT MONITOR] Multisig address does not match vault address")
 	}
 

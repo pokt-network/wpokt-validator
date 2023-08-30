@@ -89,12 +89,12 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 		return false, nil
 	}
 
-	if strings.ToLower(tx.StdTx.Msg.Value.ToAddress) != strings.ToLower(x.vaultAddress) {
+	if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
 		log.Debug("[BURN SIGNER] Transaction recipient is not vault address")
 		return false, nil
 	}
 
-	if strings.ToLower(tx.StdTx.Msg.Value.FromAddress) != strings.ToLower(doc.SenderAddress) {
+	if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, doc.SenderAddress) {
 		log.Debug("[BURN SIGNER] Transaction signer is not sender address")
 		return false, nil
 	}
@@ -245,12 +245,12 @@ func (x *BurnSignerRunner) ValidateBurn(doc *models.Burn) (bool, error) {
 		log.Error("[BURN SIGNER] Invalid burn amount")
 		return false, nil
 	}
-	if strings.ToLower(burnEvent.From.Hex()) != strings.ToLower(doc.SenderAddress) {
+	if !strings.EqualFold(burnEvent.From.Hex(), doc.SenderAddress) {
 		log.Error("[BURN SIGNER] Invalid burn sender")
 		return false, nil
 	}
 	receiver := common.HexToAddress(fmt.Sprintf("0x%s", doc.RecipientAddress))
-	if strings.ToLower(burnEvent.PoktAddress.Hex()) != strings.ToLower(receiver.Hex()) {
+	if !strings.EqualFold(burnEvent.PoktAddress.Hex(), receiver.Hex()) {
 		log.Error("[BURN SIGNER] Invalid burn recipient")
 		return false, nil
 	}

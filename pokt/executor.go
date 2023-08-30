@@ -330,7 +330,7 @@ func NewBurnExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Servic
 	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
 	vaultAddress := vaultPk.Address().String()
 	log.Debug("[BURN EXECUTOR] Vault address: ", vaultAddress)
-	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
+	if !strings.EqualFold(vaultAddress, app.Config.Pocket.VaultAddress) {
 		log.Fatal("[BURN EXECUTOR] Multisig address does not match vault address")
 	}
 
