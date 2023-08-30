@@ -113,6 +113,10 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 
 	var success bool = true
 	for filter.Next() {
+		if err = filter.Error(); err != nil {
+			success = false
+			break
+		}
 
 		event := filter.Event()
 

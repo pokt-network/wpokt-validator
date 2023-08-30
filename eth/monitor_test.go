@@ -198,6 +198,32 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		assert.True(t, success)
 	})
 
+	t.Run("Amount less than minimumAmount", func(t *testing.T) {
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockClient := eth.NewMockEthereumClient(t)
+		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(&autogen.WrappedPocketBurnAndBridge{
+			Amount: big.NewInt(20),
+		})
+		mockFilter.EXPECT().Error().Return(nil)
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		mockFilter.EXPECT().Next().Return(false).Once()
+		app.DB = mockDB
+
+		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+			Return(mockFilter, nil).
+			Run(func(opts *bind.FilterOpts, amount []*big.Int, to []common.Address, from []common.Address) {
+				assert.Equal(t, opts.Start, uint64(1))
+				assert.Equal(t, *opts.End, uint64(100))
+			}).Once()
+
+		success := x.SyncBlocks(1, 100)
+		assert.True(t, success)
+	})
+
 	t.Run("Error in Filtering", func(t *testing.T) {
 		mockContract := eth.NewMockWrappedPocketContract(t)
 		mockClient := eth.NewMockEthereumClient(t)
@@ -287,8 +313,26 @@ func TestBurnMonitorSyncBlocks(t *testing.T) {
 		mockClient := eth.NewMockEthereumClient(t)
 		mockDB := app.NewMockDatabase(t)
 		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
-		mockFilter.EXPECT().Event().Return(nil)
 		mockFilter.EXPECT().Error().Return(errors.New("iteration error"))
+		mockFilter.EXPECT().Close().Return(nil)
+		mockFilter.EXPECT().Next().Return(true).Once()
+		app.DB = mockDB
+
+		x := NewTestBurnMonitor(t, mockContract, mockClient)
+		mockContract.EXPECT().FilterBurnAndBridge(mock.Anything, []*big.Int{}, []common.Address{}, []common.Address{}).
+			Return(mockFilter, nil).Once()
+
+		assert.False(t, x.SyncBlocks(1, 100))
+	})
+
+	t.Run("Error After Filtering Iteration", func(t *testing.T) {
+		mockContract := eth.NewMockWrappedPocketContract(t)
+		mockClient := eth.NewMockEthereumClient(t)
+		mockDB := app.NewMockDatabase(t)
+		mockFilter := eth.NewMockWrappedPocketBurnAndBridgeIterator(t)
+		mockFilter.EXPECT().Event().Return(nil)
+		mockFilter.EXPECT().Error().Return(nil).Once()
+		mockFilter.EXPECT().Error().Return(errors.New("iteration error")).Once()
 		mockFilter.EXPECT().Close().Return(nil)
 		mockFilter.EXPECT().Next().Return(true).Once()
 		mockFilter.EXPECT().Next().Return(false).Once()

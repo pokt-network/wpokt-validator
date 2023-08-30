@@ -94,6 +94,11 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 
 	var success bool = true
 	for filter.Next() {
+		if err := filter.Error(); err != nil {
+			success = false
+			break
+		}
+
 		event := filter.Event()
 
 		if event == nil {
@@ -101,12 +106,7 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 			continue
 		}
 
-		if event.Raw.Removed {
-			continue
-		}
-
-		if event.Amount.Cmp(x.minimumAmount) != 1 {
-			success = true
+		if event.Raw.Removed || event.Amount.Cmp(x.minimumAmount) != 1 {
 			continue
 		}
 
