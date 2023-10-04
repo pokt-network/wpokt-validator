@@ -79,8 +79,12 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 		return false, errors.New("Error fetching transaction: " + err.Error())
 	}
 
-	if tx.Tx == "" || tx.TxResult.Code != 0 {
-		log.Debug("[BURN SIGNER] Transaction not found or failed")
+	if tx == nil || tx.Tx == "" {
+		return false, errors.New("Transaction not found")
+	}
+
+	if tx.TxResult.Code != 0 {
+		log.Debug("[BURN SIGNER] Transaction failed")
 		return false, nil
 	}
 
