@@ -80,6 +80,10 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
 			return false
 		}
+		if tx == nil || tx.Tx == "" {
+			log.Error("[BURN EXECUTOR] Invalid mint return tx not found: ", doc.ReturnTxHash)
+			return false
+		}
 
 		filter = bson.M{
 			"_id":    doc.Id,
@@ -160,6 +164,11 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 		tx, err := x.client.GetTx(doc.ReturnTxHash)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
+			return false
+		}
+
+		if tx == nil || tx.Tx == "" {
+			log.Error("[BURN EXECUTOR] Burn return tx not found: ", doc.ReturnTxHash)
 			return false
 		}
 
