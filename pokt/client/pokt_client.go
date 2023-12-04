@@ -231,7 +231,7 @@ func (c *pocketClient) getAccountTxsPerPage(address string, page uint32) (*Accou
 		Page:     int(page),
 		PerPage:  50,
 		Received: true,
-		Prove:    true,
+		Prove:    false,
 		Sort:     "asc",
 	}
 	j, err := json.Marshal(params)
