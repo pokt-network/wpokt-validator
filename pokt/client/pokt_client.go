@@ -130,6 +130,7 @@ func init() {
 
 func queryRPC(path string, jsonArgs []byte) (string, error) {
 	cliURL := app.Config.Pocket.RPCURL + path
+	log.Debugln("[POKT] Querying RPC", cliURL)
 
 	req, err := http.NewRequest("POST", cliURL, bytes.NewBuffer(jsonArgs))
 	if err != nil {
