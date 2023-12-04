@@ -161,8 +161,15 @@ func queryRPC(path string, jsonArgs []byte) (string, error) {
 		var prettyJSON bytes.Buffer
 		err = json.Indent(&prettyJSON, bz, "", "    ")
 		if err == nil {
-			return prettyJSON.String(), nil
+			res := prettyJSON.String()
+			var obj RPCError
+			innerErr := json.Unmarshal([]byte(res), &obj)
+			if innerErr == nil && obj.Error.Code != 0 {
+				return "", fmt.Errorf("the rpc response returned an error: %+v", obj.Error)
+			}
+			return res, nil
 		}
+
 		return string(bz), nil
 	}
 	return "", fmt.Errorf("the http status code was not okay: %d, with a response of %+v", resp.StatusCode, resp)
