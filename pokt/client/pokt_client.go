@@ -229,7 +229,7 @@ func (c *pocketClient) getAccountTxsPerPage(address string, page uint32) (*Accou
 	params := rpc.PaginateAddrParams{
 		Address:  address,
 		Page:     int(page),
-		PerPage:  1000,
+		PerPage:  50,
 		Received: true,
 		Prove:    true,
 		Sort:     "asc",
