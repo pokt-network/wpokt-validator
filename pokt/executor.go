@@ -61,6 +61,11 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 			return false
 		}
 
+		if res == nil || res.TransactionHash == "" {
+			log.Error("[BURN EXECUTOR] Invalid mint return tx hash not found")
+			return false
+		}
+
 		filter = bson.M{
 			"_id":    doc.Id,
 			"status": models.StatusSigned,
@@ -144,6 +149,11 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 		res, err := x.client.SubmitRawTx(p)
 		if err != nil {
 			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
+			return false
+		}
+
+		if res == nil || res.TransactionHash == "" {
+			log.Error("[BURN EXECUTOR] Burn return tx hash not found")
 			return false
 		}
 
