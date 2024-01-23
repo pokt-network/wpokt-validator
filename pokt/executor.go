@@ -61,7 +61,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 			return false
 		}
 
-		if res == nil || res.TransactionHash == "" {
+		if res == nil || strings.TrimSpace(res.TransactionHash) == "" {
 			log.Error("[BURN EXECUTOR] Invalid mint return tx hash not found")
 			return false
 		}
@@ -152,7 +152,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 			return false
 		}
 
-		if res == nil || res.TransactionHash == "" {
+		if res == nil || strings.TrimSpace(res.TransactionHash) == "" {
 			log.Error("[BURN EXECUTOR] Burn return tx hash not found")
 			return false
 		}
