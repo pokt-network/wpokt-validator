@@ -164,6 +164,10 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 				"updated_at": time.Now(),
 			},
 		}
+		if doc.Confirmations == "0" {
+			log.Debug("[BURN SIGNER] Invalid mint has no confirmations, skipping")
+			return false
+		}
 	} else {
 
 		if doc.Status == models.StatusConfirmed {
@@ -295,6 +299,10 @@ func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
 				"status":     models.StatusFailed,
 				"updated_at": time.Now(),
 			},
+		}
+		if doc.Confirmations == "0" {
+			log.Debug("[BURN SIGNER] Burn has no confirmations, skipping")
+			return false
 		}
 	} else {
 
