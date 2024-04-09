@@ -1,6 +1,21 @@
-# wPOKT Validator
+# wPOKT Validator <!-- omit in toc -->
 
 The wPOKT Validator is a validator node that facilitates the bridging of POKT tokens from the POKT network to wPOKT on the Ethereum Mainnet.
+
+- [How It Works](#how-it-works)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Configuration](#configuration)
+  - [Using Docker Compose](#using-docker-compose)
+- [Valid Memo](#valid-memo)
+- [Docker Image](#docker-image)
+- [Unit Tests](#unit-tests)
+- [End-to-End Tests](#end-to-end-tests)
+- [Flows](#flows)
+  - [Architecture](#architecture)
+  - [Burn Flow](#burn-flow)
+  - [Mint Flow](#mint-flow)
+- [License](#license)
 
 ## How It Works
 
@@ -142,6 +157,24 @@ To test the core functionalities of the wPOKT Validator in a controlled environm
      make test
      ```
    - You need node v18 to run the tests
+
+## Flows
+
+The following diagrams illustrate the architecture and flows of the wPOKT Validator.
+
+They are surfaced here from [wpokt-validator/tree/main/diagrams](https://github.com/pokt-network/wpokt-validator/tree/main/diagrams).
+
+### Architecture
+
+![Architecture](./diagrams/Architecture.jpg)
+
+### Burn Flow
+
+![Burn Flows](./diagrams/Burn%20Flow.jpg)
+
+### Mint Flow
+
+![Mint Flows](./diagrams/Mint%20Flow.jpg)
 
 ## License
 
