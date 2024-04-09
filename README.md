@@ -47,27 +47,27 @@ The wPOKT Validator can be configured in the following ways:
 
 1. Using a Config File:
 
-    - A sample configuration file `config.sample.yml` is provided.
-    - You can specify the config file using the `--config` flag:
+   - A sample configuration file `config.sample.yml` is provided.
+   - You can specify the config file using the `--config` flag:
 
-    ```bash
-    go run . --config config.yml
-    ```
+   ```bash
+   go run . --config config.yml
+   ```
 
 2. Using an Env File:
 
-    - A sample environment file `sample.env` is provided.
-    - You can specify the env file using the `--env` flag:
+   - A sample environment file `sample.env` is provided.
+   - You can specify the env file using the `--env` flag:
 
-    ```bash
-    go run . --env .env
-    ```
+   ```bash
+   go run . --env .env
+   ```
 
 3. Using Environment Variables:
-    - Instead of using a config or env file, you can directly set the required environment variables in your terminal:
-    ```bash
-    ETH_PRIVATE_KEY="your_eth_private_key" ETH_RPC_URL="your_eth_rpc_url" ... go run .
-    ```
+   - Instead of using a config or env file, you can directly set the required environment variables in your terminal:
+   ```bash
+   ETH_PRIVATE_KEY="your_eth_private_key" ETH_RPC_URL="your_eth_rpc_url" ... go run .
+   ```
 
 If both a config file and an env file are provided, the config file will be loaded first, followed by the env file. Non-empty values from the env file or provided through environment variables will take precedence over the corresponding values from the config file.
 
@@ -87,8 +87,8 @@ The validator node requires transactions on the POKT network to include a valid 
 { "address": "0xC9F2D9adfa6C24ce0D5a999F2BA3c6b06E36F75E", "chain_id": "5" }
 ```
 
--   `address`: The recipient address on the Ethereum network.
--   `chain_id`: The chain ID of the Ethereum network (represented as a string).
+- `address`: The recipient address on the Ethereum network.
+- `chain_id`: The chain ID of the Ethereum network (represented as a string).
 
 Transactions with memos not conforming to this format will not be processed by the validator.
 
@@ -108,16 +108,16 @@ To assess the individual components of the wPOKT Validator, follow these steps:
 
 1. **Execute Unit Tests:**
 
-    - Open your terminal and run the unit tests using the command:
-        ```shell
-        go test -v ./...
-        ```
+   - Open your terminal and run the unit tests using the command:
+     ```shell
+     go test -v ./...
+     ```
 
 2. **Check Coverage:**
-    - To check the test coverage of the codebase, use the following command:
-        ```shell
-        ./coverage.sh
-        ```
+   - To check the test coverage of the codebase, use the following command:
+     ```shell
+     ./coverage.sh
+     ```
 
 ## End-to-End Tests
 
@@ -125,23 +125,23 @@ To test the core functionalities of the wPOKT Validator in a controlled environm
 
 1. **Navigate to E2E Directory:**
 
-    - Open your terminal and move to the `./e2e` directory in the project.
+   - Open your terminal and move to the `./e2e` directory in the project.
 
 2. **Start Local Network:**
 
-    - Within the `./e2e` directory, execute the following commands to set up the local network:
-        ```shell
-        make clean
-        make network
-        ```
-    - Please allow up to 5 minutes for the local network to be fully operational.
+   - Within the `./e2e` directory, execute the following commands to set up the local network:
+     ```shell
+     make clean
+     make network
+     ```
+   - Please allow up to 5 minutes for the local network to be fully operational.
 
 3. **Run Tests:**
-    - Once the local network is ready, initiate the end-to-end tests using the command:
-        ```shell
-        make test
-        ```
-    - You need node v18 to run the tests
+   - Once the local network is ready, initiate the end-to-end tests using the command:
+     ```shell
+     make test
+     ```
+   - You need node v18 to run the tests
 
 ## License
 
