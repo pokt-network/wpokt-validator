@@ -158,7 +158,8 @@ func queryRPC(path string, jsonArgs []byte) (string, error) {
 		bz = []byte(res)
 	}
 
-	if resp.StatusCode == http.StatusOK {
+	// Check if the status code is 2XX
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
 		var prettyJSON bytes.Buffer
 		err = json.Indent(&prettyJSON, bz, "", "    ")
 		if err == nil {
