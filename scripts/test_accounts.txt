@@ -1,0 +1,45 @@
+one:
+
+mnemonic:  infant apart enroll relief kangaroo patch awesome wagon trap feature armor approve
+num words:  12
+
+cosmos private key:  28824781dba4b4e6048f0c5209f7e8701445b9a79c5f7607fb913adc1310354d
+cosmos public key:  026892de2ec7fdf3125bc1bfd2ff2590d2c9ba756f98a05e9e843ac4d2a1acd4d9
+commos address:  3f23b2b1de52d246657a4ec3ca69c7b04b3c739d
+cosmos bech32 address:  pokt18u3m9vw72tfyvet6fmpu56w8kp9ncuuaawqvwp
+
+eth private key:  4eca29c88eda60d15dfd265ece44d0c2545fe126d3829e305ebb34980c987abb
+eth public key:  77af5d7f2ad4f60487b9da0f371b842e7de8e7f18662b0ca6f503d9668d1341dc820e8a11f6051469921b988b703a708cd63ed86e74b0777f25cba2b325206e9
+eth address:  0x0E90A32Df6f6143F1A91c25d9552dCbc789C34Eb
+
+---
+
+two:
+
+mnemonic:  shy smile praise educate custom fashion gun enjoy zero powder garden second
+num words:  12
+
+cosmos private key:  64e54489392df2857ceec777f04c93880b68721851f7a0d1d385590c874a44a4
+cosmos public key:  02faaaf0f385bb17381f36dcd86ab2486e8ff8d93440436496665ac007953076c2
+commos address:  ac1f74cec42b7b675415b0690f7beb148c1493b6
+cosmos bech32 address:  pokt14s0hfnky9dakw4q4kp5s77ltzjxpfyakzkkm99
+
+eth private key:  ed6bf5e0333b753ef92451356906c70f88d622e23b7f3e61e0ece4f266d1e25c
+eth public key:  1b88458c81e96d50470a5fd697eb3240907adab0086deb5aee98be41c7c317664b1afd6bc41ef7d9d19d7ab3bd4ea03bd1b477f9954b3273945bb7f72b0326be
+eth address:  0x958d1F55E14Cba24a077b9634F16f83565fc9411
+
+---
+
+three:
+
+mnemonic:  wink giant track dwarf visa feed visual drip play grant royal noise
+num words:  12
+
+cosmos private key:  0ba6cab195bdf331e2a9f2e4c07cd84af9da06cc86a095710608a681314a04ed
+cosmos public key:  02cae233806460db75a941a269490ca5165a620b43241edb8bc72e169f4143a6df
+commos address:  be6ca65c313dd48eb17c5454826e7f69c9136f05
+cosmos bech32 address:  pokt1hek2vhp38h2gavtu232gymnld8y3xmc9ysx0cj
+
+eth private key:  11153ddaf9ac46af8d00b484b49b2f2e0e632d2583dc1db0aaf44454758b7129
+eth public key:  45b1bc2c24b94e9dee2b2e3eed773a91122876fd48dce6cd7767b15701836e49695862729560bef6f06129330aaf3c7153f38b3647d2278b05f4a12388173b58
+eth address:  0x4c672Edd2ec8eac8f0F1709f33de9A2E786e6912

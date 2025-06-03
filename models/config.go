@@ -57,8 +57,15 @@ type PocketConfig struct {
 	RPCTimeoutMillis   int64    `yaml:"rpc_timeout_ms" json:"rpc_time_out_ms"`
 	ChainId            string   `yaml:"chain_id" json:"chain_id"`
 	TxFee              int64    `yaml:"tx_fee" json:"tx_fee"`
+	ChainName          string   `yaml:"chain_name" json:"chain_name"`
+	Bech32Prefix       string   `yaml:"bech32_prefix" json:"bech32_prefix"`
+	CoinDenom          string   `yaml:"coin_denom" json:"coin_denom"`
 	VaultAddress       string   `yaml:"vault_address" json:"vault_address"`
 	MultisigPublicKeys []string `yaml:"multisig_public_keys" json:"multisig_public_keys"`
+	MultisigThreshold  uint64   `yaml:"multisig_threshold" json:"multisig_threshold"`
+	GRPCEnabled        bool     `yaml:"grpc_enabled" json:"grpc_enabled"`
+	GRPCHost           string   `yaml:"grpc_host" json:"grpc_host"`
+	GRPCPort           uint64   `yaml:"grpc_port" json:"grpc_port"`
 }
 
 type ServiceConfig struct {

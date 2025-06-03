@@ -9,8 +9,8 @@ import (
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/models"
 	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
-	"github.com/pokt-network/pocket-core/app/cmd/rpc"
-	"github.com/pokt-network/pocket-core/crypto"
+	// "github.com/pokt-network/pocket-core/app/cmd/rpc"
+	// "github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -48,36 +48,36 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 	if doc.Status == models.StatusSigned {
 		log.Debug("[BURN EXECUTOR] Submitting invalid mint")
 
-		var err error
+		// var err error
 
-		p := rpc.SendRawTxParams{
-			Addr:        x.vaultAddress,
-			RawHexBytes: doc.ReturnTx,
-		}
-
-		res, err := x.client.SubmitRawTx(p)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
-			return false
-		}
-
-		if res == nil || strings.TrimSpace(res.TransactionHash) == "" {
-			log.Error("[BURN EXECUTOR] Invalid mint return tx hash not found")
-			return false
-		}
-
-		filter = bson.M{
-			"_id":    doc.Id,
-			"status": models.StatusSigned,
-		}
-
-		update = bson.M{
-			"$set": bson.M{
-				"status":         models.StatusSubmitted,
-				"return_tx_hash": res.TransactionHash,
-				"updated_at":     time.Now(),
-			},
-		}
+		// p := rpc.SendRawTxParams{
+		// 	Addr:        x.vaultAddress,
+		// 	RawHexBytes: doc.ReturnTx,
+		// }
+		//
+		// res, err := x.client.SubmitRawTx(p)
+		// if err != nil {
+		// 	log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
+		// 	return false
+		// }
+		//
+		// if res == nil || strings.TrimSpace(res.TransactionHash) == "" {
+		// 	log.Error("[BURN EXECUTOR] Invalid mint return tx hash not found")
+		// 	return false
+		// }
+		//
+		// filter = bson.M{
+		// 	"_id":    doc.Id,
+		// 	"status": models.StatusSigned,
+		// }
+		//
+		// update = bson.M{
+		// 	"$set": bson.M{
+		// 		"status":         models.StatusSubmitted,
+		// 		"return_tx_hash": res.TransactionHash,
+		// 		"updated_at":     time.Now(),
+		// 	},
+		// }
 	} else if doc.Status == models.StatusSubmitted {
 		log.Debug("[BURN EXECUTOR] Checking invalid mint")
 		tx, err := x.client.GetTx(doc.ReturnTxHash)
@@ -141,34 +141,34 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 	if doc.Status == models.StatusSigned {
 		log.Debug("[BURN EXECUTOR] Submitting burn")
 
-		p := rpc.SendRawTxParams{
-			Addr:        x.vaultAddress,
-			RawHexBytes: doc.ReturnTx,
-		}
-
-		res, err := x.client.SubmitRawTx(p)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
-			return false
-		}
-
-		if res == nil || strings.TrimSpace(res.TransactionHash) == "" {
-			log.Error("[BURN EXECUTOR] Burn return tx hash not found")
-			return false
-		}
-
-		filter = bson.M{
-			"_id":    doc.Id,
-			"status": models.StatusSigned,
-		}
-
-		update = bson.M{
-			"$set": bson.M{
-				"status":         models.StatusSubmitted,
-				"return_tx_hash": res.TransactionHash,
-				"updated_at":     time.Now(),
-			},
-		}
+		// p := rpc.SendRawTxParams{
+		// 	Addr:        x.vaultAddress,
+		// 	RawHexBytes: doc.ReturnTx,
+		// }
+		//
+		// res, err := x.client.SubmitRawTx(p)
+		// if err != nil {
+		// 	log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
+		// 	return false
+		// }
+		//
+		// if res == nil || strings.TrimSpace(res.TransactionHash) == "" {
+		// 	log.Error("[BURN EXECUTOR] Burn return tx hash not found")
+		// 	return false
+		// }
+		//
+		// filter = bson.M{
+		// 	"_id":    doc.Id,
+		// 	"status": models.StatusSigned,
+		// }
+		//
+		// update = bson.M{
+		// 	"$set": bson.M{
+		// 		"status":         models.StatusSubmitted,
+		// 		"return_tx_hash": res.TransactionHash,
+		// 		"updated_at":     time.Now(),
+		// 	},
+		// }
 	} else if doc.Status == models.StatusSubmitted {
 		log.Debug("[BURN EXECUTOR] Checking burn")
 		tx, err := x.client.GetTx(doc.ReturnTxHash)
@@ -337,24 +337,24 @@ func NewBurnExecutor(wg *sync.WaitGroup, health models.ServiceHealth) app.Servic
 
 	log.Debug("[BURN EXECUTOR] Initializing")
 
-	var pks []crypto.PublicKey
-	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
-		p, err := crypto.NewPublicKey(pk)
-		if err != nil {
-			log.Fatal("[BURN EXECUTOR] Error parsing multisig public key: ", err)
-		}
-		pks = append(pks, p)
-	}
-
-	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	vaultAddress := vaultPk.Address().String()
-	log.Debug("[BURN EXECUTOR] Vault address: ", vaultAddress)
-	if !strings.EqualFold(vaultAddress, app.Config.Pocket.VaultAddress) {
-		log.Fatal("[BURN EXECUTOR] Multisig address does not match vault address")
-	}
+	// var pks []crypto.PublicKey
+	// for _, pk := range app.Config.Pocket.MultisigPublicKeys {
+	// 	p, err := crypto.NewPublicKey(pk)
+	// 	if err != nil {
+	// 		log.Fatal("[BURN EXECUTOR] Error parsing multisig public key: ", err)
+	// 	}
+	// 	pks = append(pks, p)
+	// }
+	//
+	// vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
+	// vaultAddress := vaultPk.Address().String()
+	// log.Debug("[BURN EXECUTOR] Vault address: ", vaultAddress)
+	// if !strings.EqualFold(vaultAddress, app.Config.Pocket.VaultAddress) {
+	// 	log.Fatal("[BURN EXECUTOR] Multisig address does not match vault address")
+	// }
 
 	x := &BurnExecutorRunner{
-		vaultAddress: strings.ToLower(vaultAddress),
+		// vaultAddress: strings.ToLower(vaultAddress),
 		wpoktAddress: strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		client:       pokt.NewClient(),
 	}

@@ -11,7 +11,7 @@ import (
 	"github.com/dan13ram/wpokt-validator/models"
 	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/dan13ram/wpokt-validator/pokt/util"
-	"github.com/pokt-network/pocket-core/crypto"
+	// "github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -184,24 +184,24 @@ func NewMintMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 	}
 
 	log.Debug("[MINT MONITOR] Initializing")
-	var pks []crypto.PublicKey
-	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
-		p, err := crypto.NewPublicKey(pk)
-		if err != nil {
-			log.Fatal("[MINT MONITOR] Error parsing multisig public key: ", err)
-		}
-		pks = append(pks, p)
-	}
-
-	vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	vaultAddress := vaultPk.Address().String()
-	log.Debug("[MINT MONITOR] Vault address: ", vaultAddress)
-	if !strings.EqualFold(vaultAddress, app.Config.Pocket.VaultAddress) {
-		log.Fatal("[MINT MONITOR] Multisig address does not match vault address")
-	}
+	// var pks []crypto.PublicKey
+	// for _, pk := range app.Config.Pocket.MultisigPublicKeys {
+	// 	p, err := crypto.NewPublicKey(pk)
+	// 	if err != nil {
+	// 		log.Fatal("[MINT MONITOR] Error parsing multisig public key: ", err)
+	// 	}
+	// 	pks = append(pks, p)
+	// }
+	//
+	// vaultPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
+	// vaultAddress := vaultPk.Address().String()
+	// log.Debug("[MINT MONITOR] Vault address: ", vaultAddress)
+	// if !strings.EqualFold(vaultAddress, app.Config.Pocket.VaultAddress) {
+	// 	log.Fatal("[MINT MONITOR] Multisig address does not match vault address")
+	// }
 
 	x := &MintMonitorRunner{
-		vaultAddress:  strings.ToLower(vaultAddress),
+		// vaultAddress:  strings.ToLower(vaultAddress),
 		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		startHeight:   0,
 		currentHeight: 0,
