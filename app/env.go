@@ -89,9 +89,10 @@ func readConfigFromENV(envFile string) {
 	if os.Getenv("POKT_CHAIN_ID") != "" {
 		Config.Pocket.ChainId = os.Getenv("POKT_CHAIN_ID")
 	}
-	if os.Getenv("POKT_PRIVATE_KEY") != "" {
-		Config.Pocket.PrivateKey = os.Getenv("POKT_PRIVATE_KEY")
-	}
+	// TODO: fix env support for latest config
+	// if os.Getenv("POKT_PRIVATE_KEY") != "" {
+	// 	Config.Pocket.PrivateKey = os.Getenv("POKT_PRIVATE_KEY")
+	// }
 	if os.Getenv("POKT_START_HEIGHT") != "" {
 		startHeight, err := strconv.ParseInt(os.Getenv("POKT_START_HEIGHT"), 10, 64)
 		if err != nil {
@@ -124,9 +125,9 @@ func readConfigFromENV(envFile string) {
 			Config.Pocket.TxFee = txFee
 		}
 	}
-	if os.Getenv("POKT_VAULT_ADDRESS") != "" {
-		Config.Pocket.VaultAddress = os.Getenv("POKT_VAULT_ADDRESS")
-	}
+	// if os.Getenv("POKT_VAULT_ADDRESS") != "" {
+	// 	Config.Pocket.VaultAddress = os.Getenv("POKT_VAULT_ADDRESS")
+	// }
 	if os.Getenv("POKT_MULTISIG_PUBLIC_KEYS") != "" {
 		multisigPublicKeys := os.Getenv("POKT_MULTISIG_PUBLIC_KEYS")
 		Config.Pocket.MultisigPublicKeys = strings.Split(multisigPublicKeys, ",")

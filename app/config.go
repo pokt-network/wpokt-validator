@@ -1,13 +1,20 @@
 package app
 
 import (
+	"encoding/hex"
 	"os"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/dan13ram/wpokt-validator/common"
 	"github.com/dan13ram/wpokt-validator/models"
 	"gopkg.in/yaml.v2"
+
+	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
+
+	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 )
 
 var (
@@ -39,6 +46,27 @@ func readConfigFromConfigFile(configFile string) bool {
 	}
 	log.Debugf("[CONFIG] Config loaded from %s", configFile)
 	return true
+}
+
+func validateAndCreateSigner(mnemonic string) (common.Signer, error) {
+	log.Debug("Initializing signer")
+
+	return common.NewMnemonicSigner(mnemonic)
+
+	// // Mnemonic for both Ethereum and Cosmos networks
+	// if config.Mnemonic == "" && config.GcpKmsKeyName == "" {
+	// 	return nil, fmt.Errorf("Mnemonic or GcpKmsKeyName is required")
+	// }
+	// if config.Mnemonic != "" {
+	// 	if !bip39.IsMnemonicValid(config.Mnemonic) {
+	// 		return nil, fmt.Errorf("Mnemonic is invalid")
+	// 	}
+	//
+	// 	return common.NewMnemonicSigner(config.Mnemonic)
+	// }
+	//
+	// return common.NewGcpKmsSigner(config.GcpKmsKeyName)
+
 }
 
 func validateConfig() {
@@ -81,26 +109,90 @@ func validateConfig() {
 	}
 
 	// pocket
-	if Config.Pocket.RPCURL == "" {
-		log.Fatal("[CONFIG] Pocket.RPCURL is required")
+	if Config.Pocket.Mnemonic == "" {
+		log.Fatal("[CONFIG] Pocket.Mnemonic is required")
 	}
-	if Config.Pocket.ChainId == "" {
-		log.Fatal("[CONFIG] Pocket.ChainId is required")
+
+	signer, err := validateAndCreateSigner(Config.Pocket.Mnemonic)
+	if err != nil {
+		log.Fatal("[CONFIG] Error creating signer: %s", err.Error())
 	}
-	if Config.Pocket.RPCTimeoutMillis == 0 {
-		log.Fatal("[CONFIG] Pocket.RPCTimeoutMillis is required")
-	}
-	if Config.Pocket.PrivateKey == "" {
-		log.Fatal("[CONFIG] Pocket.PrivateKey is required")
-	}
-	if Config.Pocket.TxFee == 0 {
-		log.Fatal("[CONFIG] Pocket.TxFee is required")
-	}
-	if Config.Pocket.VaultAddress == "" {
-		log.Fatal("[CONFIG] Pocket.VaultAddress is required")
-	}
-	if Config.Pocket.MultisigPublicKeys == nil || len(Config.Pocket.MultisigPublicKeys) == 0 {
-		log.Fatal("[CONFIG] Pocket.MultisigPublicKeys is required")
+
+	cosmosPubKeyHex := hex.EncodeToString(signer.CosmosPublicKey().Bytes())
+	{
+		// cosmos
+		if Config.Pocket.StartHeight == 0 {
+			log.Warn("Pocket.StartBlockHeight is 0")
+		}
+		if Config.Pocket.Confirmations == 0 {
+			log.Warn("Pocket.Confirmations is 0")
+		}
+		if Config.Pocket.GRPCEnabled {
+			if Config.Pocket.GRPCHost == "" {
+				log.Fatal("Pocket.GRPCHost is required when GRPCEnabled is true")
+			}
+			if Config.Pocket.GRPCPort == 0 {
+				log.Fatal("Pocket.GRPCPort is required when GRPCEnabled is true")
+			}
+		} else {
+			if Config.Pocket.RPCURL == "" {
+				log.Fatal("Pocket.RPCURL is required when GRPCEnabled is false")
+			}
+		}
+		if Config.Pocket.RPCTimeoutMillis == 0 {
+			log.Fatal("Pocket.TimeoutMS is required")
+		}
+		if Config.Pocket.ChainId == "" {
+			log.Fatal("Pocket.ChainId is required")
+		}
+		if Config.Pocket.ChainName == "" {
+			log.Fatal("Pocket.ChainName is required")
+		}
+		if Config.Pocket.TxFee == 0 {
+			log.Warn("Pocket.TxFee is 0")
+		}
+		if Config.Pocket.Bech32Prefix == "" {
+			log.Fatal("Pocket.Bech32Prefix is required")
+		}
+		if Config.Pocket.CoinDenom == "" {
+			log.Fatal("Pocket.CoinDenom is required")
+		}
+		if !common.IsValidBech32Address(Config.Pocket.Bech32Prefix, Config.Pocket.MultisigAddress) {
+			log.Fatal("Pocket.MultisigAddress is invalid")
+		}
+		if Config.Pocket.MultisigPublicKeys == nil || len(Config.Pocket.MultisigPublicKeys) <= 1 {
+			log.Fatal("Pocket.MultisigPublicKeys is required and must have at least 2 public keys")
+		}
+		foundPublicKey := false
+		seen := make(map[string]bool)
+		var pKeys []crypto.PubKey
+		for j, publicKey := range Config.Pocket.MultisigPublicKeys {
+			publicKey = strings.ToLower(publicKey)
+			if !common.IsValidCosmosPublicKey(publicKey) {
+				log.Fatal("Pocket.MultisigPublicKeys[%d] is invalid", j)
+			}
+			if strings.EqualFold(publicKey, cosmosPubKeyHex) {
+				foundPublicKey = true
+			}
+			pKey, _ := common.CosmosPublicKeyFromHex(publicKey) // cannot fail because public key is valid
+			pKeys = append(pKeys, pKey)
+			if seen[publicKey] {
+				log.Fatal("Pocket.MultisigPublicKeys[%d] is duplicated", j)
+			}
+			seen[publicKey] = true
+		}
+		if !foundPublicKey {
+			log.Fatal("Pocket.MultisigPublicKeys must contain the public key of this oracle")
+		}
+		if Config.Pocket.MultisigThreshold == 0 || Config.Pocket.MultisigThreshold > uint64(len(Config.Pocket.MultisigPublicKeys)) {
+			log.Fatal("Pocket.MultisigThreshold is invalid")
+		}
+		multisigPk := multisig.NewLegacyAminoPubKey(int(Config.Pocket.MultisigThreshold), pKeys)
+		multisigBech32, _ := bech32.ConvertAndEncode(Config.Pocket.Bech32Prefix, multisigPk.Address().Bytes()) // no reason it should fail
+		if !strings.EqualFold(Config.Pocket.MultisigAddress, multisigBech32) {
+			log.Fatal("Pocket.MultisigAddress is not valid for the given public keys and threshold")
+		}
+
 	}
 
 	// services

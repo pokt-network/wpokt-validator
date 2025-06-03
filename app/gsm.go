@@ -63,16 +63,17 @@ func readKeysFromGSM() {
 
 	}
 
-	if Config.Pocket.PrivateKey == "" && Config.GoogleSecretManager.PoktSecretName == "" {
-		log.Fatalf("[GSM] Pocket secret name is empty")
-	}
-
-	if Config.GoogleSecretManager.PoktSecretName != "" {
-		log.Debug("[GSM] Reading pocket private key")
-		Config.Pocket.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.PoktSecretName)
-		if err != nil {
-			log.Fatalf("[GSM] Failed to access pocket private key: %v", err)
-		}
-		log.Info("[GSM] Successfully read pocket private key")
-	}
+	// TODO: add support for Pocket private key in GSM
+	// if Config.Pocket.PrivateKey == "" && Config.GoogleSecretManager.PoktSecretName == "" {
+	// 	log.Fatalf("[GSM] Pocket secret name is empty")
+	// }
+	//
+	// if Config.GoogleSecretManager.PoktSecretName != "" {
+	// 	log.Debug("[GSM] Reading pocket private key")
+	// 	Config.Pocket.PrivateKey, err = accessSecretVersion(client, Config.GoogleSecretManager.PoktSecretName)
+	// 	if err != nil {
+	// 		log.Fatalf("[GSM] Failed to access pocket private key: %v", err)
+	// 	}
+	// 	log.Info("[GSM] Successfully read pocket private key")
+	// }
 }
