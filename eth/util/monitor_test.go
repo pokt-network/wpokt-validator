@@ -15,8 +15,8 @@ import (
 )
 
 func TestCreateBurn(t *testing.T) {
-	app.Config.Ethereum.ChainId = "1"
-	app.Config.Pocket.ChainId = "0001"
+	app.Config.Ethereum.ChainID = "1"
+	app.Config.Pocket.ChainID = "0001"
 	TX_HASH := "0x0000000000000000000000000000000000000000000000001234567890abcdef"
 	SENDER_ADDRESS := "0x0000000000000000000000000000000000abcDeF"
 	RECIPIENT_ADDRESS := "0000000000000000000000000000001234567890"
@@ -49,9 +49,9 @@ func TestCreateBurn(t *testing.T) {
 				LogIndex:         "0",
 				WPOKTAddress:     ZERO_ADDRESS,
 				SenderAddress:    strings.ToLower(SENDER_ADDRESS),
-				SenderChainId:    app.Config.Ethereum.ChainId,
+				SenderChainID:    app.Config.Ethereum.ChainID,
 				RecipientAddress: strings.ToLower(RECIPIENT_ADDRESS),
-				RecipientChainId: app.Config.Pocket.ChainId,
+				RecipientChainID: app.Config.Pocket.ChainID,
 				Amount:           "100",
 				CreatedAt:        time.Time{}, // We'll use assert.WithinDuration to check if within an acceptable range
 				UpdatedAt:        time.Time{}, // We'll use assert.WithinDuration to check if within an acceptable range

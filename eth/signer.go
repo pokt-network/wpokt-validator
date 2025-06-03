@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/dan13ram/wpokt-validator/app"
+	cosmos "github.com/dan13ram/wpokt-validator/cosmos/client"
+	// cosmosUtil "github.com/dan13ram/wpokt-validator/cosmos/util"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/eth/util"
 	"github.com/dan13ram/wpokt-validator/models"
-	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
-	poktUtil "github.com/dan13ram/wpokt-validator/pokt/util"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -39,7 +39,7 @@ type MintSignerRunner struct {
 	mintControllerContract eth.MintControllerContract
 	numSigners             int64
 	domain                 eth.DomainData
-	poktClient             pokt.PocketClient
+	poktClient             cosmos.CosmosClient
 	ethClient              eth.EthereumClient
 	poktHeight             int64
 	minimumAmount          *big.Int
@@ -61,12 +61,12 @@ func (x *MintSignerRunner) Status() models.RunnerStatus {
 
 func (x *MintSignerRunner) UpdateBlocks() {
 	log.Debug("[MINT SIGNER] Updating blocks")
-	poktHeight, err := x.poktClient.GetHeight()
+	poktHeight, err := x.poktClient.GetLatestBlockHeight()
 	if err != nil {
 		log.Error("[MINT SIGNER] Error fetching pokt block height: ", err)
 		return
 	}
-	x.poktHeight = poktHeight.Height
+	x.poktHeight = poktHeight
 }
 
 func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
@@ -148,69 +148,74 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, errors.New("Error fetching transaction: " + err.Error())
 	}
 
-	if tx == nil || tx.Tx == "" {
+	if tx == nil {
 		log.Debug("[MINT SIGNER] Transaction not found")
 		return false, errors.New("Transaction not found")
 	}
 
-	if tx.TxResult.Code != 0 {
-		log.Debug("[MINT SIGNER] Transaction failed")
-		return false, nil
-	}
-
-	if tx.TxResult.MessageType != "send" || tx.StdTx.Msg.Type != "pos/Send" {
-		log.Debug("[MINT SIGNER] Transaction message type is not send")
-		return false, nil
-	}
-
-	if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
-		log.Debug("[MINT SIGNER] Transaction recipient is zero address")
-		return false, nil
-	}
-
-	if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
-		log.Debug("[MINT SIGNER] Transaction recipient is not vault address")
-		return false, nil
-	}
-
-	if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, mint.SenderAddress) {
-		log.Debug("[MINT SIGNER] Transaction signer is not sender address")
-		return false, nil
-	}
-
-	amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
-
-	if !ok || amount.Cmp(x.minimumAmount) != 1 {
-		log.Debug("[MINT SIGNER] Transaction amount too low")
-		return false, nil
-	}
-
-	if !ok || amount.Cmp(x.maximumAmount) == 1 {
-		log.Debug("[MINT SIGNER] Transaction amount too high")
-		return false, nil
-	}
-
-	if tx.StdTx.Msg.Value.Amount != mint.Amount {
-		log.Debug("[MINT SIGNER] Transaction amount does not match mint amount")
-		return false, nil
-	}
-
-	memo, valid := poktUtil.ValidateMemo(tx.StdTx.Memo)
-	if !valid {
-		log.Debug("[MINT SIGNER] Memo failed validation")
-		return false, nil
-	}
-
-	if !strings.EqualFold(memo.Address, mint.RecipientAddress) {
-		log.Debug("[MINT SIGNER] Memo address does not match recipient address")
-		return false, nil
-	}
-
-	if memo.ChainId != mint.RecipientChainId {
-		log.Debug("[MINT SIGNER] Memo chain id does not match recipient chain id")
-		return false, nil
-	}
-
+	// if tx == nil || tx.Tx == "" {
+	// 	log.Debug("[MINT SIGNER] Transaction not found")
+	// 	return false, errors.New("Transaction not found")
+	// }
+	//
+	// if tx.TxResult.Code != 0 {
+	// 	log.Debug("[MINT SIGNER] Transaction failed")
+	// 	return false, nil
+	// }
+	//
+	// if tx.TxResult.MessageType != "send" || tx.StdTx.Msg.Type != "pos/Send" {
+	// 	log.Debug("[MINT SIGNER] Transaction message type is not send")
+	// 	return false, nil
+	// }
+	//
+	// if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
+	// 	log.Debug("[MINT SIGNER] Transaction recipient is zero address")
+	// 	return false, nil
+	// }
+	//
+	// if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
+	// 	log.Debug("[MINT SIGNER] Transaction recipient is not vault address")
+	// 	return false, nil
+	// }
+	//
+	// if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, mint.SenderAddress) {
+	// 	log.Debug("[MINT SIGNER] Transaction signer is not sender address")
+	// 	return false, nil
+	// }
+	//
+	// amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
+	//
+	// if !ok || amount.Cmp(x.minimumAmount) != 1 {
+	// 	log.Debug("[MINT SIGNER] Transaction amount too low")
+	// 	return false, nil
+	// }
+	//
+	// if !ok || amount.Cmp(x.maximumAmount) == 1 {
+	// 	log.Debug("[MINT SIGNER] Transaction amount too high")
+	// 	return false, nil
+	// }
+	//
+	// if tx.StdTx.Msg.Value.Amount != mint.Amount {
+	// 	log.Debug("[MINT SIGNER] Transaction amount does not match mint amount")
+	// 	return false, nil
+	// }
+	//
+	// memo, valid := cosmosUtil.ValidateMemo(tx.StdTx.Memo)
+	// if !valid {
+	// 	log.Debug("[MINT SIGNER] Memo failed validation")
+	// 	return false, nil
+	// }
+	//
+	// if !strings.EqualFold(memo.Address, mint.RecipientAddress) {
+	// 	log.Debug("[MINT SIGNER] Memo address does not match recipient address")
+	// 	return false, nil
+	// }
+	//
+	// if memo.ChainID != mint.RecipientChainID {
+	// 	log.Debug("[MINT SIGNER] Memo chain id does not match recipient chain id")
+	// 	return false, nil
+	// }
+	//
 	log.Debug("[MINT SIGNER] Mint validated")
 	return true, nil
 }
@@ -419,6 +424,8 @@ func (x *MintSignerRunner) UpdateMaxMintLimit() {
 	x.maximumAmount = mintLimit
 }
 
+var cosmosNewClient = cosmos.NewClient
+
 func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if !app.Config.MintSigner.Enabled {
 		log.Debug("[MINT SIGNER] Disabled")
@@ -453,6 +460,11 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 	}
 	log.Debug("[MINT SIGNER] Connected to mint controller contract")
 
+	cosmosClient, err := cosmosNewClient(app.Config.Pocket)
+	if err != nil {
+		log.Fatalf("Error creating pokt client: %s", err)
+	}
+
 	x := &MintSignerRunner{
 		privateKey:             privateKey,
 		address:                strings.ToLower(address),
@@ -461,7 +473,7 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 		wpoktContract:          eth.NewWrappedPocketContract(contract),
 		mintControllerContract: eth.NewMintControllerContract(mintControllerContract),
 		ethClient:              ethClient,
-		poktClient:             pokt.NewClient(),
+		poktClient:             cosmosClient,
 		minimumAmount:          big.NewInt(app.Config.Pocket.TxFee),
 	}
 
@@ -479,7 +491,7 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 
 	x.UpdateDomainData()
 
-	chainId, ok := new(big.Int).SetString(app.Config.Ethereum.ChainId, 10)
+	chainId, ok := new(big.Int).SetString(app.Config.Ethereum.ChainID, 10)
 
 	if !ok || x.domain.ChainId.Cmp(chainId) != 0 {
 		log.Fatal("[MINT SIGNER] Invalid chain ID")

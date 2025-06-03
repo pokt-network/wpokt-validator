@@ -7,23 +7,25 @@ import (
 	"time"
 
 	"github.com/dan13ram/wpokt-validator/app"
+	// cosmos "github.com/dan13ram/wpokt-validator/cosmos/client"
 	"github.com/dan13ram/wpokt-validator/models"
-	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/ethereum/go-ethereum/common"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func CreateMint(tx *pokt.TxResponse, memo models.MintMemo, wpoktAddress string, vaultAddress string) models.Mint {
+func CreateMint(tx *sdk.TxResponse, memo models.MintMemo, wpoktAddress string, vaultAddress string) models.Mint {
 	return models.Mint{
-		Height:              strconv.FormatInt(tx.Height, 10),
-		Confirmations:       "0",
-		TransactionHash:     strings.ToLower(tx.Hash),
-		SenderAddress:       strings.ToLower(tx.StdTx.Msg.Value.FromAddress),
-		SenderChainId:       app.Config.Pocket.ChainId,
-		RecipientAddress:    strings.ToLower(memo.Address),
-		RecipientChainId:    memo.ChainId,
-		WPOKTAddress:        strings.ToLower(wpoktAddress),
-		VaultAddress:        strings.ToLower(vaultAddress),
-		Amount:              tx.StdTx.Msg.Value.Amount,
+		Height:        strconv.FormatInt(tx.Height, 10),
+		Confirmations: "0",
+		// TransactionHash:     strings.ToLower(tx.Hash),
+		// SenderAddress:       strings.ToLower(tx.StdTx.Msg.Value.FromAddress),
+		SenderChainID:    app.Config.Pocket.ChainID,
+		RecipientAddress: strings.ToLower(memo.Address),
+		RecipientChainID: memo.ChainID,
+		WPOKTAddress:     strings.ToLower(wpoktAddress),
+		VaultAddress:     strings.ToLower(vaultAddress),
+		// Amount:              tx.StdTx.Msg.Value.Amount,
 		Memo:                &memo,
 		CreatedAt:           time.Now(),
 		UpdatedAt:           time.Now(),
@@ -53,57 +55,57 @@ func ValidateMemo(txMemo string) (models.MintMemo, bool) {
 	}
 	memo.Address = address
 
-	memoChainId, err := strconv.Atoi(memo.ChainId)
+	memoChainID, err := strconv.Atoi(memo.ChainID)
 	if err != nil {
 		return memo, false
 	}
 
-	appChainId, err := strconv.Atoi(app.Config.Ethereum.ChainId)
+	appChainID, err := strconv.Atoi(app.Config.Ethereum.ChainID)
 	if err != nil {
 		return memo, false
 	}
 
-	if memoChainId != appChainId {
+	if memoChainID != appChainID {
 		return memo, false
 	}
-	memo.ChainId = app.Config.Ethereum.ChainId
+	memo.ChainID = app.Config.Ethereum.ChainID
 	return memo, true
 }
 
-func CreateInvalidMint(tx *pokt.TxResponse, vaultAddress string) models.InvalidMint {
+func CreateInvalidMint(tx *sdk.TxResponse, vaultAddress string) models.InvalidMint {
 	return models.InvalidMint{
-		Height:          strconv.FormatInt(tx.Height, 10),
-		Confirmations:   "0",
-		TransactionHash: strings.ToLower(tx.Hash),
-		SenderAddress:   strings.ToLower(tx.StdTx.Msg.Value.FromAddress),
-		SenderChainId:   app.Config.Pocket.ChainId,
-		Memo:            tx.StdTx.Memo,
-		Amount:          tx.StdTx.Msg.Value.Amount,
-		VaultAddress:    strings.ToLower(vaultAddress),
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-		Status:          models.StatusPending,
-		Signers:         []string{},
-		ReturnTx:        "",
-		ReturnTxHash:    "",
+		Height:        strconv.FormatInt(tx.Height, 10),
+		Confirmations: "0",
+		// TransactionHash: strings.ToLower(tx.Hash),
+		// SenderAddress:   strings.ToLower(tx.StdTx.Msg.Value.FromAddress),
+		SenderChainID: app.Config.Pocket.ChainID,
+		// Memo:            tx.StdTx.Memo,
+		// Amount:          tx.StdTx.Msg.Value.Amount,
+		VaultAddress: strings.ToLower(vaultAddress),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		Status:       models.StatusPending,
+		Signers:      []string{},
+		ReturnTx:     "",
+		ReturnTxHash: "",
 	}
 }
 
-func CreateFailedMint(tx *pokt.TxResponse, vaultAddress string) models.InvalidMint {
+func CreateFailedMint(tx *sdk.TxResponse, vaultAddress string) models.InvalidMint {
 	return models.InvalidMint{
-		Height:          strconv.FormatInt(tx.Height, 10),
-		Confirmations:   "0",
-		TransactionHash: strings.ToLower(tx.Hash),
-		SenderAddress:   strings.ToLower(tx.StdTx.Msg.Value.FromAddress),
-		SenderChainId:   app.Config.Pocket.ChainId,
-		Memo:            tx.StdTx.Memo,
-		Amount:          tx.StdTx.Msg.Value.Amount,
-		VaultAddress:    strings.ToLower(vaultAddress),
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-		Status:          models.StatusFailed,
-		Signers:         []string{},
-		ReturnTx:        "",
-		ReturnTxHash:    "",
+		Height:        strconv.FormatInt(tx.Height, 10),
+		Confirmations: "0",
+		// TransactionHash: strings.ToLower(tx.Hash),
+		// SenderAddress:   strings.ToLower(tx.StdTx.Msg.Value.FromAddress),
+		SenderChainID: app.Config.Pocket.ChainID,
+		// Memo:            tx.StdTx.Memo,
+		// Amount:          tx.StdTx.Msg.Value.Amount,
+		VaultAddress: strings.ToLower(vaultAddress),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		Status:       models.StatusFailed,
+		Signers:      []string{},
+		ReturnTx:     "",
+		ReturnTxHash: "",
 	}
 }

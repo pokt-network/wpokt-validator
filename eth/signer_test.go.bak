@@ -706,7 +706,7 @@ func TestValidateMint(t *testing.T) {
 			Amount:        "20000",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
 		tx := &pokt.TxResponse{
 			Tx: "abcd",
@@ -751,7 +751,7 @@ func TestValidateMint(t *testing.T) {
 			Amount:        "20000",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
 		tx := &pokt.TxResponse{
 			Tx: "abcd",
@@ -797,7 +797,7 @@ func TestValidateMint(t *testing.T) {
 			Amount:           "20000",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
 		tx := &pokt.TxResponse{
 			Tx: "abcd",

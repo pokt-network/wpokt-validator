@@ -9,13 +9,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
+	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/common"
+	cosmos "github.com/dan13ram/wpokt-validator/cosmos/client"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
-	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/dan13ram/wpokt-validator/pokt/util"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	// "github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
@@ -31,7 +33,7 @@ type BurnSignerRunner struct {
 	// multisigPubKey crypto.PublicKeyMultiSig
 	numSigners     int
 	ethClient      eth.EthereumClient
-	poktClient     pokt.PocketClient
+	poktClient     cosmos.CosmosClient
 	poktHeight     int64
 	ethBlockNumber int64
 	vaultAddress   string
@@ -54,12 +56,12 @@ func (x *BurnSignerRunner) Status() models.RunnerStatus {
 func (x *BurnSignerRunner) UpdateBlocks() {
 	log.Debug("[BURN SIGNER] Updating blocks")
 
-	poktHeight, err := x.poktClient.GetHeight()
+	poktHeight, err := x.poktClient.GetLatestBlockHeight()
 	if err != nil {
 		log.Error("[BURN SIGNER] Error fetching pokt block height: ", err)
 		return
 	}
-	x.poktHeight = poktHeight.Height
+	x.poktHeight = poktHeight
 
 	ethBlockNumber, err := x.ethClient.GetBlockNumber()
 	if err != nil {
@@ -74,63 +76,63 @@ func (x *BurnSignerRunner) UpdateBlocks() {
 func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, error) {
 	log.Debug("[BURN SIGNER] Validating invalid mint: ", doc.TransactionHash)
 
-	tx, err := x.poktClient.GetTx(doc.TransactionHash)
-	if err != nil {
-		return false, errors.New("Error fetching transaction: " + err.Error())
-	}
+	// tx, err := x.poktClient.GetTx(doc.TransactionHash)
+	// if err != nil {
+	// 	return false, errors.New("Error fetching transaction: " + err.Error())
+	// }
 
-	if tx == nil || tx.Tx == "" {
-		return false, errors.New("Transaction not found")
-	}
-
-	if tx.TxResult.Code != 0 {
-		log.Debug("[BURN SIGNER] Transaction failed")
-		return false, nil
-	}
-
-	if tx.TxResult.MessageType != "send" || tx.StdTx.Msg.Type != "pos/Send" {
-		log.Debug("[BURN SIGNER] Transaction message type is not send")
-		return false, nil
-	}
-
-	if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
-		log.Debug("[BURN SIGNER] Transaction recipient is zero address")
-		return false, nil
-	}
-
-	if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
-		log.Debug("[BURN SIGNER] Transaction recipient is not vault address")
-		return false, nil
-	}
-
-	if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, doc.SenderAddress) {
-		log.Debug("[BURN SIGNER] Transaction signer is not sender address")
-		return false, nil
-	}
-
-	amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
-
-	if !ok || amount.Cmp(x.minimumAmount) != 1 {
-		log.Debug("[BURN SIGNER] Transaction amount too low")
-		return false, nil
-	}
-
-	if tx.StdTx.Msg.Value.Amount != doc.Amount {
-		log.Debug("[BURN SIGNER] Transaction amount does not match invalid mint amount")
-		return false, nil
-	}
-
-	if tx.StdTx.Memo != doc.Memo {
-		log.Debug("[BURN SIGNER] Memo mismatch")
-		return false, nil
-	}
-
-	_, valid := util.ValidateMemo(doc.Memo)
-	if valid {
-		log.Error("[BURN SIGNER] Memo is valid, should be invalid")
-		return false, nil
-	}
-
+	// if tx == nil || tx.Tx == "" {
+	// 	return false, errors.New("Transaction not found")
+	// }
+	//
+	// if tx.TxResult.Code != 0 {
+	// 	log.Debug("[BURN SIGNER] Transaction failed")
+	// 	return false, nil
+	// }
+	//
+	// if tx.TxResult.MessageType != "send" || tx.StdTx.Msg.Type != "pos/Send" {
+	// 	log.Debug("[BURN SIGNER] Transaction message type is not send")
+	// 	return false, nil
+	// }
+	//
+	// if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
+	// 	log.Debug("[BURN SIGNER] Transaction recipient is zero address")
+	// 	return false, nil
+	// }
+	//
+	// if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
+	// 	log.Debug("[BURN SIGNER] Transaction recipient is not vault address")
+	// 	return false, nil
+	// }
+	//
+	// if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, doc.SenderAddress) {
+	// 	log.Debug("[BURN SIGNER] Transaction signer is not sender address")
+	// 	return false, nil
+	// }
+	//
+	// amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
+	//
+	// if !ok || amount.Cmp(x.minimumAmount) != 1 {
+	// 	log.Debug("[BURN SIGNER] Transaction amount too low")
+	// 	return false, nil
+	// }
+	//
+	// if tx.StdTx.Msg.Value.Amount != doc.Amount {
+	// 	log.Debug("[BURN SIGNER] Transaction amount does not match invalid mint amount")
+	// 	return false, nil
+	// }
+	//
+	// if tx.StdTx.Memo != doc.Memo {
+	// 	log.Debug("[BURN SIGNER] Memo mismatch")
+	// 	return false, nil
+	// }
+	//
+	// _, valid := util.ValidateMemo(doc.Memo)
+	// if valid {
+	// 	log.Error("[BURN SIGNER] Memo is valid, should be invalid")
+	// 	return false, nil
+	// }
+	//
 	log.Debug("[BURN SIGNER] Validated invalid mint")
 	return true, nil
 }
@@ -465,31 +467,25 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 	}
 
 	log.Debug("[BURN SIGNER] Initializing")
+	config := app.Config.Pocket
 
-	// pk, err := crypto.NewPrivateKey(app.Config.Pocket.PrivateKey)
-	// if err != nil {
-	// 	log.Fatal("[BURN SIGNER] Error initializing burn signer: ", err)
-	// }
-	// log.Info("[BURN SIGNER] public key: ", pk.PublicKey().RawString())
-	// log.Debug("[BURN SIGNER] address: ", pk.PublicKey().Address().String())
-	//
-	// var pks []crypto.PublicKey
-	// for _, pk := range app.Config.Pocket.MultisigPublicKeys {
-	// 	p, err := crypto.NewPublicKey(pk)
-	// 	if err != nil {
-	// 		log.Fatal("[BURN SIGNER] Error parsing multisig public key: ", err)
-	// 	}
-	// 	pks = append(pks, p)
-	// }
-	//
-	// multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	// vaultAddress := multisigPk.Address().String()
-	// log.Debug("[BURN SIGNER] Vault address: ", vaultAddress)
-	// if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
-	// 	log.Fatal("[BURN SIGNER] Multisig address does not match vault address")
-	// }
+	var pks []crypto.PubKey
+	for _, pk := range config.MultisigPublicKeys {
+		pKey, err := common.CosmosPublicKeyFromHex(pk)
+		if err != nil {
+			log.Fatalf("Error parsing public key: %s", err)
+		}
+		pks = append(pks, pKey)
+	}
 
-	poktClient := pokt.NewClient()
+	multisigPk := multisig.NewLegacyAminoPubKey(int(config.MultisigThreshold), pks)
+	multisigAddressBytes := multisigPk.Address().Bytes()
+	multisigAddress, _ := common.Bech32FromBytes(config.Bech32Prefix, multisigAddressBytes)
+
+	if !strings.EqualFold(multisigAddress, config.MultisigAddress) {
+		log.Fatalf("Multisig address does not match config")
+	}
+
 	ethClient, err := eth.NewClient()
 	if err != nil {
 		log.Fatal("[BURN SIGNER] Error initializing ethereum client: ", err)
@@ -502,13 +498,18 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 	}
 	log.Debug("[BURN SIGNER] Connected to wpokt contract")
 
+	poktClient, err := cosmosNewClient(config)
+	if err != nil {
+		log.Fatalf("Error creating pokt client: %s", err)
+	}
+
 	x := &BurnSignerRunner{
 		// privateKey:     pk,
 		// multisigPubKey: multisigPk,
-		// numSigners:    len(pks),
-		ethClient:  ethClient,
-		poktClient: poktClient,
-		// vaultAddress:  strings.ToLower(vaultAddress),
+		numSigners:    len(pks),
+		ethClient:     ethClient,
+		poktClient:    poktClient,
+		vaultAddress:  multisigAddress,
 		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		wpoktContract: eth.NewWrappedPocketContract(contract),
 		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
