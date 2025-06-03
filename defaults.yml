@@ -26,15 +26,15 @@ pocket:
   multisig_public_keys:
 
 mint_monitor:
-  enabled: true
+  enabled: false
   interval_ms: 30000
 
 mint_signer:
-  enabled: true
+  enabled: false
   interval_ms: 30000
 
 mint_executor:
-  enabled: true
+  enabled: false
   interval_ms: 30000
 
 burn_monitor:

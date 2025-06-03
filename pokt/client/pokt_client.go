@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/dan13ram/wpokt-validator/app"
-	"github.com/pokt-network/pocket-core/app/cmd/rpc"
+	// "github.com/pokt-network/pocket-core/app/cmd/rpc"
 )
 
 type PocketClient interface {
 	GetBlock() (*BlockResponse, error)
 	GetHeight() (*HeightResponse, error)
-	SubmitRawTx(params rpc.SendRawTxParams) (*SubmitRawTxResponse, error)
+	// SubmitRawTx(params rpc.SendRawTxParams) (*SubmitRawTxResponse, error)
 	GetTx(hash string) (*TxResponse, error)
 	GetAccountTxsByHeight(address string, height int64) ([]*TxResponse, error)
 	ValidateNetwork()
@@ -63,69 +63,69 @@ var (
 )
 
 func init() {
-	routes := rpc.GetRoutes()
-	for _, route := range routes {
-		switch route.Name {
-		case "SendRawTx":
-			sendRawTxPath = route.Path
-		case "QueryNode":
-			getNodePath = route.Path
-		case "QueryACL":
-			getACLPath = route.Path
-		case "QueryUpgrade":
-			getUpgradePath = route.Path
-		case "QueryDAOOwner":
-			getDAOOwnerPath = route.Path
-		case "QueryHeight":
-			getHeightPath = route.Path
-		case "QueryAccount":
-			getAccountPath = route.Path
-		case "QueryAccounts":
-			getAccountsPath = route.Path
-		case "QueryApp":
-			getAppPath = route.Path
-		case "QueryTX":
-			getTxPath = route.Path
-		case "QueryBlock":
-			getBlockPath = route.Path
-		case "QuerySupportedChains":
-			getSupportedChainsPath = route.Path
-		case "QueryBalance":
-			getBalancePath = route.Path
-		case "QueryAccountTxs":
-			getAccountTxsPath = route.Path
-		case "QueryNodeParams":
-			getNodeParamsPath = route.Path
-		case "QueryNodes":
-			getNodesPath = route.Path
-		case "QuerySigningInfo":
-			getSigningInfoPath = route.Path
-		case "QueryApps":
-			getAppsPath = route.Path
-		case "QueryAppParams":
-			getAppParamsPath = route.Path
-		case "QueryPocketParams":
-			getPocketParamsPath = route.Path
-		case "QueryBlockTxs":
-			getBlockTxsPath = route.Path
-		case "QuerySupply":
-			getSupplyPath = route.Path
-		case "QueryNodeClaim":
-			getNodeClaimPath = route.Path
-		case "QueryNodeClaims":
-			getNodeClaimsPath = route.Path
-		case "QueryAllParams":
-			getAllParamsPath = route.Path
-		case "QueryParam":
-			getParamPath = route.Path
-		case "Stop":
-			getStopPath = route.Path
-		case "QueryChains":
-			getQueryChains = route.Path
-		default:
-			continue
-		}
-	}
+	// routes := rpc.GetRoutes()
+	// for _, route := range routes {
+	// 	switch route.Name {
+	// 	case "SendRawTx":
+	// 		sendRawTxPath = route.Path
+	// 	case "QueryNode":
+	// 		getNodePath = route.Path
+	// 	case "QueryACL":
+	// 		getACLPath = route.Path
+	// 	case "QueryUpgrade":
+	// 		getUpgradePath = route.Path
+	// 	case "QueryDAOOwner":
+	// 		getDAOOwnerPath = route.Path
+	// 	case "QueryHeight":
+	// 		getHeightPath = route.Path
+	// 	case "QueryAccount":
+	// 		getAccountPath = route.Path
+	// 	case "QueryAccounts":
+	// 		getAccountsPath = route.Path
+	// 	case "QueryApp":
+	// 		getAppPath = route.Path
+	// 	case "QueryTX":
+	// 		getTxPath = route.Path
+	// 	case "QueryBlock":
+	// 		getBlockPath = route.Path
+	// 	case "QuerySupportedChains":
+	// 		getSupportedChainsPath = route.Path
+	// 	case "QueryBalance":
+	// 		getBalancePath = route.Path
+	// 	case "QueryAccountTxs":
+	// 		getAccountTxsPath = route.Path
+	// 	case "QueryNodeParams":
+	// 		getNodeParamsPath = route.Path
+	// 	case "QueryNodes":
+	// 		getNodesPath = route.Path
+	// 	case "QuerySigningInfo":
+	// 		getSigningInfoPath = route.Path
+	// 	case "QueryApps":
+	// 		getAppsPath = route.Path
+	// 	case "QueryAppParams":
+	// 		getAppParamsPath = route.Path
+	// 	case "QueryPocketParams":
+	// 		getPocketParamsPath = route.Path
+	// 	case "QueryBlockTxs":
+	// 		getBlockTxsPath = route.Path
+	// 	case "QuerySupply":
+	// 		getSupplyPath = route.Path
+	// 	case "QueryNodeClaim":
+	// 		getNodeClaimPath = route.Path
+	// 	case "QueryNodeClaims":
+	// 		getNodeClaimsPath = route.Path
+	// 	case "QueryAllParams":
+	// 		getAllParamsPath = route.Path
+	// 	case "QueryParam":
+	// 		getParamPath = route.Path
+	// 	case "Stop":
+	// 		getStopPath = route.Path
+	// 	case "QueryChains":
+	// 		getQueryChains = route.Path
+	// 	default:
+	// 		continue
+	// 	}
+	// }
 }
 
 func queryRPC(path string, jsonArgs []byte) (string, error) {
@@ -198,76 +198,76 @@ func (c *pocketClient) GetHeight() (*HeightResponse, error) {
 }
 
 func (c *pocketClient) GetTx(hash string) (*TxResponse, error) {
-	params := rpc.HashAndProveParams{Hash: hash, Prove: false}
-	j, err := json.Marshal(params)
-	if err != nil {
-		return nil, err
-	}
-	res, err := queryRPC(getTxPath, j)
-	if err != nil {
-		return nil, err
-	}
+	// params := rpc.HashAndProveParams{Hash: hash, Prove: false}
+	// j, err := json.Marshal(params)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// res, err := queryRPC(getTxPath, j)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	var obj TxResponse
-	err = json.Unmarshal([]byte(res), &obj)
-	return &obj, err
+	// err = json.Unmarshal([]byte(res), &obj)
+	return &obj, nil
 }
 
-func (c *pocketClient) SubmitRawTx(params rpc.SendRawTxParams) (*SubmitRawTxResponse, error) {
-	j, err := json.Marshal(params)
-	if err != nil {
-		return nil, err
-	}
-	res, err := queryRPC(sendRawTxPath, j)
-	if err != nil {
-		return nil, err
-	}
-	var obj SubmitRawTxResponse
-	err = json.Unmarshal([]byte(res), &obj)
-	return &obj, err
-}
+// func (c *pocketClient) SubmitRawTx(params rpc.SendRawTxParams) (*SubmitRawTxResponse, error) {
+// 	j, err := json.Marshal(params)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	res, err := queryRPC(sendRawTxPath, j)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var obj SubmitRawTxResponse
+// 	err = json.Unmarshal([]byte(res), &obj)
+// 	return &obj, err
+// }
 
 func (c *pocketClient) getAccountTxsPerPage(address string, page uint32) (*AccountTxsResponse, error) {
 	// filter by received transactions
-	params := rpc.PaginateAddrParams{
-		Address:  address,
-		Page:     int(page),
-		PerPage:  50,
-		Received: true,
-		Prove:    false,
-		Sort:     "asc",
-	}
-	j, err := json.Marshal(params)
-	if err != nil {
-		return nil, err
-	}
-	res, err := queryRPC(getAccountTxsPath, j)
-	if err != nil {
-		return nil, err
-	}
+	// params := rpc.PaginateAddrParams{
+	// 	Address:  address,
+	// 	Page:     int(page),
+	// 	PerPage:  50,
+	// 	Received: true,
+	// 	Prove:    false,
+	// 	Sort:     "asc",
+	// }
+	// j, err := json.Marshal(params)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// res, err := queryRPC(getAccountTxsPath, j)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	var obj AccountTxsResponse
-	err = json.Unmarshal([]byte(res), &obj)
-	return &obj, err
+	// err = json.Unmarshal([]byte(res), &obj)
+	return &obj, nil
 }
 
 func (c *pocketClient) GetAccountTxsByHeight(address string, height int64) ([]*TxResponse, error) {
 	var txs []*TxResponse
-	var page uint32 = 1
-	for {
-		res, err := c.getAccountTxsPerPage(address, page)
-		if err != nil {
-			return nil, err
-		}
-		// filter only type pos/Send
-		for _, tx := range res.Txs {
-			if tx.StdTx.Msg.Type == "pos/Send" && tx.Height >= height {
-				txs = append(txs, tx)
-			}
-		}
-		if len(res.Txs) == 0 || len(txs) >= int(res.TotalTxs) || res.Txs[len(res.Txs)-1].Height < height {
-			break
-		}
-		page++
-	}
+	// var page uint32 = 1
+	// for {
+	// 	res, err := c.getAccountTxsPerPage(address, page)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	// filter only type pos/Send
+	// 	for _, tx := range res.Txs {
+	// 		if tx.StdTx.Msg.Type == "pos/Send" && tx.Height >= height {
+	// 			txs = append(txs, tx)
+	// 		}
+	// 	}
+	// 	if len(res.Txs) == 0 || len(txs) >= int(res.TotalTxs) || res.Txs[len(res.Txs)-1].Height < height {
+	// 		break
+	// 	}
+	// 	page++
+	// }
 
 	return txs, nil
 }

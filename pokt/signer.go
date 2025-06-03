@@ -17,7 +17,7 @@ import (
 	"github.com/dan13ram/wpokt-validator/pokt/util"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/pokt-network/pocket-core/crypto"
+	// "github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -27,8 +27,8 @@ const (
 )
 
 type BurnSignerRunner struct {
-	privateKey     crypto.PrivateKey
-	multisigPubKey crypto.PublicKeyMultiSig
+	// privateKey     crypto.PrivateKey
+	// multisigPubKey crypto.PublicKeyMultiSig
 	numSigners     int
 	ethClient      eth.EthereumClient
 	poktClient     pokt.PocketClient
@@ -173,21 +173,21 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 		if doc.Status == models.StatusConfirmed {
 			log.Debug("[BURN SIGNER] Signing invalid mint")
 
-			doc, err = util.SignInvalidMint(doc, x.privateKey, x.multisigPubKey, x.numSigners)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
-				return false
-			}
-
-			update = bson.M{
-				"$set": bson.M{
-					"return_tx":     doc.ReturnTx,
-					"signers":       doc.Signers,
-					"status":        doc.Status,
-					"confirmations": doc.Confirmations,
-					"updated_at":    time.Now(),
-				},
-			}
+			// doc, err = util.SignInvalidMint(doc, x.privateKey, x.multisigPubKey, x.numSigners)
+			// if err != nil {
+			// 	log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
+			// 	return false
+			// }
+			//
+			// update = bson.M{
+			// 	"$set": bson.M{
+			// 		"return_tx":     doc.ReturnTx,
+			// 		"signers":       doc.Signers,
+			// 		"status":        doc.Status,
+			// 		"confirmations": doc.Confirmations,
+			// 		"updated_at":    time.Now(),
+			// 	},
+			// }
 		} else {
 			log.Debug("[BURN SIGNER] Not signing invalid mint")
 			update = bson.M{
@@ -308,21 +308,21 @@ func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
 
 		if doc.Status == models.StatusConfirmed {
 			log.Debug("[BURN SIGNER] Signing burn")
-			doc, err = util.SignBurn(doc, x.privateKey, x.multisigPubKey, x.numSigners)
-			if err != nil {
-				log.Error("[BURN SIGNER] Error signing burn: ", err)
-				return false
-			}
-
-			update = bson.M{
-				"$set": bson.M{
-					"return_tx":     doc.ReturnTx,
-					"signers":       doc.Signers,
-					"status":        doc.Status,
-					"confirmations": doc.Confirmations,
-					"updated_at":    time.Now(),
-				},
-			}
+			// doc, err = util.SignBurn(doc, x.privateKey, x.multisigPubKey, x.numSigners)
+			// if err != nil {
+			// 	log.Error("[BURN SIGNER] Error signing burn: ", err)
+			// 	return false
+			// }
+			//
+			// update = bson.M{
+			// 	"$set": bson.M{
+			// 		"return_tx":     doc.ReturnTx,
+			// 		"signers":       doc.Signers,
+			// 		"status":        doc.Status,
+			// 		"confirmations": doc.Confirmations,
+			// 		"updated_at":    time.Now(),
+			// 	},
+			// }
 		} else {
 			log.Debug("[BURN SIGNER] Not signing burn")
 			update = bson.M{
@@ -352,7 +352,9 @@ func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
 func (x *BurnSignerRunner) SyncInvalidMints() bool {
 	log.Debug("[BURN SIGNER] Syncing invalid mints")
 
-	signersFilter := bson.M{"$nin": []string{strings.ToLower(x.privateKey.PublicKey().RawString())}}
+	signersFilter := bson.M{"$nin": []string{
+		// strings.ToLower(	x.privateKey.PublicKey().RawString())
+	}}
 	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
 	filter := bson.M{
 		"vault_address": x.vaultAddress,
@@ -399,7 +401,9 @@ func (x *BurnSignerRunner) SyncInvalidMints() bool {
 func (x *BurnSignerRunner) SyncBurns() bool {
 	log.Debug("[BURN SIGNER] Syncing burns")
 
-	signersFilter := bson.M{"$nin": []string{strings.ToLower(x.privateKey.PublicKey().RawString())}}
+	signersFilter := bson.M{"$nin": []string{
+		// strings.ToLower(x.privateKey.PublicKey().RawString())
+	}}
 	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
 	filter := bson.M{
 		"wpokt_address": x.wpoktAddress,
@@ -462,28 +466,28 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 
 	log.Debug("[BURN SIGNER] Initializing")
 
-	pk, err := crypto.NewPrivateKey(app.Config.Pocket.PrivateKey)
-	if err != nil {
-		log.Fatal("[BURN SIGNER] Error initializing burn signer: ", err)
-	}
-	log.Info("[BURN SIGNER] public key: ", pk.PublicKey().RawString())
-	log.Debug("[BURN SIGNER] address: ", pk.PublicKey().Address().String())
-
-	var pks []crypto.PublicKey
-	for _, pk := range app.Config.Pocket.MultisigPublicKeys {
-		p, err := crypto.NewPublicKey(pk)
-		if err != nil {
-			log.Fatal("[BURN SIGNER] Error parsing multisig public key: ", err)
-		}
-		pks = append(pks, p)
-	}
-
-	multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
-	vaultAddress := multisigPk.Address().String()
-	log.Debug("[BURN SIGNER] Vault address: ", vaultAddress)
-	if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
-		log.Fatal("[BURN SIGNER] Multisig address does not match vault address")
-	}
+	// pk, err := crypto.NewPrivateKey(app.Config.Pocket.PrivateKey)
+	// if err != nil {
+	// 	log.Fatal("[BURN SIGNER] Error initializing burn signer: ", err)
+	// }
+	// log.Info("[BURN SIGNER] public key: ", pk.PublicKey().RawString())
+	// log.Debug("[BURN SIGNER] address: ", pk.PublicKey().Address().String())
+	//
+	// var pks []crypto.PublicKey
+	// for _, pk := range app.Config.Pocket.MultisigPublicKeys {
+	// 	p, err := crypto.NewPublicKey(pk)
+	// 	if err != nil {
+	// 		log.Fatal("[BURN SIGNER] Error parsing multisig public key: ", err)
+	// 	}
+	// 	pks = append(pks, p)
+	// }
+	//
+	// multisigPk := crypto.PublicKeyMultiSignature{PublicKeys: pks}
+	// vaultAddress := multisigPk.Address().String()
+	// log.Debug("[BURN SIGNER] Vault address: ", vaultAddress)
+	// if strings.ToLower(vaultAddress) != strings.ToLower(app.Config.Pocket.VaultAddress) {
+	// 	log.Fatal("[BURN SIGNER] Multisig address does not match vault address")
+	// }
 
 	poktClient := pokt.NewClient()
 	ethClient, err := eth.NewClient()
@@ -499,15 +503,15 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 	log.Debug("[BURN SIGNER] Connected to wpokt contract")
 
 	x := &BurnSignerRunner{
-		privateKey:     pk,
-		multisigPubKey: multisigPk,
-		numSigners:     len(pks),
-		ethClient:      ethClient,
-		poktClient:     poktClient,
-		vaultAddress:   strings.ToLower(vaultAddress),
-		wpoktAddress:   strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		wpoktContract:  eth.NewWrappedPocketContract(contract),
-		minimumAmount:  big.NewInt(app.Config.Pocket.TxFee),
+		// privateKey:     pk,
+		// multisigPubKey: multisigPk,
+		// numSigners:    len(pks),
+		ethClient:  ethClient,
+		poktClient: poktClient,
+		// vaultAddress:  strings.ToLower(vaultAddress),
+		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		wpoktContract: eth.NewWrappedPocketContract(contract),
+		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
 	}
 
 	x.UpdateBlocks()
