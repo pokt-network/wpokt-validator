@@ -42,7 +42,7 @@ type EthereumConfig struct {
 	Confirmations         int64    `yaml:"confirmations" json:"confirmations"`
 	PrivateKey            string   `yaml:"private_key" json:"private_key"`
 	RPCURL                string   `yaml:"rpc_url" json:"rpcurl"`
-	RPCTimeoutMillis      int64    `yaml:"rpc_timeout_ms" json:"rpc_time_out_ms"`
+	RPCTimeoutMillis      int64    `yaml:"rpc_timeout_ms" json:"rpc_timeout_ms"`
 	ChainId               string   `yaml:"chain_id" json:"chain_id"`
 	WrappedPocketAddress  string   `yaml:"wrapped_pocket_address" json:"wrapped_pocket_address"`
 	MintControllerAddress string   `yaml:"mint_controller_address" json:"mint_controller_address"`
@@ -52,20 +52,20 @@ type EthereumConfig struct {
 type PocketConfig struct {
 	StartHeight        int64    `yaml:"start_height" json:"start_height"`
 	Confirmations      int64    `yaml:"confirmations" json:"confirmations"`
+	Mnemonic           string   `yaml:"mnemonic" json:"mnemonic"`
 	RPCURL             string   `yaml:"rpc_url" json:"rpcurl"`
-	PrivateKey         string   `yaml:"private_key" json:"private_key"`
-	RPCTimeoutMillis   int64    `yaml:"rpc_timeout_ms" json:"rpc_time_out_ms"`
+	GRPCEnabled        bool     `yaml:"grpc_enabled" json:"grpc_enabled"`
+	GRPCHost           string   `yaml:"grpc_host" json:"grpc_host"`
+	GRPCPort           uint64   `yaml:"grpc_port" json:"grpc_port"`
+	RPCTimeoutMillis   int64    `yaml:"rpc_timeout_ms" json:"rpc_timeout_ms"`
 	ChainId            string   `yaml:"chain_id" json:"chain_id"`
 	TxFee              int64    `yaml:"tx_fee" json:"tx_fee"`
 	ChainName          string   `yaml:"chain_name" json:"chain_name"`
 	Bech32Prefix       string   `yaml:"bech32_prefix" json:"bech32_prefix"`
 	CoinDenom          string   `yaml:"coin_denom" json:"coin_denom"`
-	VaultAddress       string   `yaml:"vault_address" json:"vault_address"`
+	MultisigAddress    string   `yaml:"multisig_address" json:"multisig_address"`
 	MultisigPublicKeys []string `yaml:"multisig_public_keys" json:"multisig_public_keys"`
 	MultisigThreshold  uint64   `yaml:"multisig_threshold" json:"multisig_threshold"`
-	GRPCEnabled        bool     `yaml:"grpc_enabled" json:"grpc_enabled"`
-	GRPCHost           string   `yaml:"grpc_host" json:"grpc_host"`
-	GRPCPort           uint64   `yaml:"grpc_port" json:"grpc_port"`
 }
 
 type ServiceConfig struct {

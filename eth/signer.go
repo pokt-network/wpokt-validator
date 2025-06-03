@@ -457,7 +457,7 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 		privateKey:             privateKey,
 		address:                strings.ToLower(address),
 		wpoktAddress:           strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		vaultAddress:           strings.ToLower(app.Config.Pocket.VaultAddress),
+		vaultAddress:           strings.ToLower(app.Config.Pocket.MultisigAddress),
 		wpoktContract:          eth.NewWrappedPocketContract(contract),
 		mintControllerContract: eth.NewMintControllerContract(mintControllerContract),
 		ethClient:              ethClient,

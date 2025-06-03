@@ -242,7 +242,7 @@ func NewMintExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Se
 		mintControllerAbi:  mintControllerAbi,
 		client:             client,
 		wpoktAddress:       strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		vaultAddress:       strings.ToLower(app.Config.Pocket.VaultAddress),
+		vaultAddress:       strings.ToLower(app.Config.Pocket.MultisigAddress),
 	}
 
 	x.UpdateCurrentBlockNumber()
