@@ -16,9 +16,9 @@ type Mint struct {
 	Height              string              `bson:"height" json:"height"`
 	Confirmations       string              `bson:"confirmations" json:"confirmations"`
 	SenderAddress       string              `bson:"sender_address" json:"sender_address"`
-	SenderChainId       string              `bson:"sender_chain_id" json:"sender_chain_id"`
+	SenderChainID       string              `bson:"sender_chain_id" json:"sender_chain_id"`
 	RecipientAddress    string              `bson:"recipient_address" json:"recipient_address"`
-	RecipientChainId    string              `bson:"recipient_chain_id" json:"recipient_chain_id"`
+	RecipientChainID    string              `bson:"recipient_chain_id" json:"recipient_chain_id"`
 	WPOKTAddress        string              `bson:"wpokt_address" json:"wpokt_address"`
 	VaultAddress        string              `bson:"vault_address" json:"vault_address"`
 	Amount              string              `bson:"amount" json:"amount"`
@@ -35,7 +35,7 @@ type Mint struct {
 
 type MintMemo struct {
 	Address string `bson:"address" json:"address"`
-	ChainId string `bson:"chain_id" json:"chain_id"`
+	ChainID string `bson:"chain_id" json:"chain_id"`
 }
 
 type MintData struct {

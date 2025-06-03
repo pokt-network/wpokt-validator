@@ -17,9 +17,9 @@ type Burn struct {
 	BlockNumber      string              `bson:"block_number" json:"block_number"`
 	Confirmations    string              `bson:"confirmations" json:"confirmations"`
 	SenderAddress    string              `bson:"sender_address" json:"sender_address"`
-	SenderChainId    string              `bson:"sender_chain_id" json:"sender_chain_id"`
+	SenderChainID    string              `bson:"sender_chain_id" json:"sender_chain_id"`
 	RecipientAddress string              `bson:"recipient_address" json:"recipient_address"`
-	RecipientChainId string              `bson:"recipient_chain_id" json:"recipient_chain_id"`
+	RecipientChainID string              `bson:"recipient_chain_id" json:"recipient_chain_id"`
 	WPOKTAddress     string              `bson:"wpokt_address" json:"wpokt_address"`
 	Amount           string              `bson:"amount" json:"amount"`
 	CreatedAt        time.Time           `bson:"created_at" json:"created_at"`

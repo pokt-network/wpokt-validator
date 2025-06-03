@@ -128,7 +128,7 @@ func TestValidateConfig(t *testing.T) {
 		assert.Panics(t, func() { validateConfig() })
 	})
 
-	t.Run("Without Eth ChainId", func(t *testing.T) {
+	t.Run("Without Eth ChainID", func(t *testing.T) {
 		Config = models.Config{}
 		Config.MongoDB.URI = "mongodb://localhost:27017"
 		Config.MongoDB.Database = "mongodb-database"
@@ -147,7 +147,7 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
@@ -161,7 +161,7 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
@@ -176,7 +176,7 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 
@@ -192,7 +192,7 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
@@ -209,7 +209,7 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
@@ -227,7 +227,7 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
@@ -240,13 +240,13 @@ func TestValidateConfig(t *testing.T) {
 		assert.Panics(t, func() { validateConfig() })
 	})
 
-	t.Run("Without Pokt ChainId", func(t *testing.T) {
+	t.Run("Without Pokt ChainID", func(t *testing.T) {
 		Config = models.Config{}
 		Config.MongoDB.URI = "mongodb://localhost:27017"
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
@@ -266,14 +266,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
@@ -287,14 +287,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
@@ -309,14 +309,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 
@@ -332,14 +332,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000
@@ -356,14 +356,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000
@@ -381,14 +381,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000
@@ -413,14 +413,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000
@@ -446,14 +446,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000
@@ -480,14 +480,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000
@@ -515,14 +515,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000
@@ -551,14 +551,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000
@@ -588,14 +588,14 @@ func TestValidateConfig(t *testing.T) {
 		Config.MongoDB.Database = "mongodb-database"
 		Config.MongoDB.TimeoutMillis = 2000
 		Config.Ethereum.RPCURL = "http://localhost:8545"
-		Config.Ethereum.ChainId = "31337"
+		Config.Ethereum.ChainID = "31337"
 		Config.Ethereum.RPCTimeoutMillis = 2000
 		Config.Ethereum.PrivateKey = "abcd"
 		Config.Ethereum.WrappedPocketAddress = "0x1234"
 		Config.Ethereum.MintControllerAddress = "0x1234"
 		Config.Ethereum.ValidatorAddresses = []string{"0x1234"}
 		Config.Pocket.RPCURL = "http://localhost:8081"
-		Config.Pocket.ChainId = "localnet"
+		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
 		Config.Pocket.PrivateKey = "abcd"
 		Config.Pocket.TxFee = 10000

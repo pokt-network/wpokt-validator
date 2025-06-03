@@ -86,8 +86,8 @@ func validateConfig() {
 	if Config.Ethereum.RPCURL == "" {
 		log.Fatal("[CONFIG] Ethereum.RPCURL is required")
 	}
-	if Config.Ethereum.ChainId == "" {
-		log.Fatal("[CONFIG] Ethereum.ChainId is required")
+	if Config.Ethereum.ChainID == "" {
+		log.Fatal("[CONFIG] Ethereum.ChainID is required")
 	}
 	if Config.Ethereum.RPCTimeoutMillis == 0 {
 		log.Fatal("[CONFIG] Ethereum.RPCTimeoutMillis is required")
@@ -142,8 +142,8 @@ func validateConfig() {
 		if Config.Pocket.RPCTimeoutMillis == 0 {
 			log.Fatal("Pocket.TimeoutMS is required")
 		}
-		if Config.Pocket.ChainId == "" {
-			log.Fatal("Pocket.ChainId is required")
+		if Config.Pocket.ChainID == "" {
+			log.Fatal("Pocket.ChainID is required")
 		}
 		if Config.Pocket.ChainName == "" {
 			log.Fatal("Pocket.ChainName is required")

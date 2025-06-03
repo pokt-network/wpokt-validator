@@ -43,7 +43,7 @@ type EthereumConfig struct {
 	PrivateKey            string   `yaml:"private_key" json:"private_key"`
 	RPCURL                string   `yaml:"rpc_url" json:"rpcurl"`
 	RPCTimeoutMillis      int64    `yaml:"rpc_timeout_ms" json:"rpc_timeout_ms"`
-	ChainId               string   `yaml:"chain_id" json:"chain_id"`
+	ChainID               string   `yaml:"chain_id" json:"chain_id"`
 	WrappedPocketAddress  string   `yaml:"wrapped_pocket_address" json:"wrapped_pocket_address"`
 	MintControllerAddress string   `yaml:"mint_controller_address" json:"mint_controller_address"`
 	ValidatorAddresses    []string `yaml:"validator_addresses" json:"validator_addresses"`
@@ -58,7 +58,7 @@ type PocketConfig struct {
 	GRPCHost           string   `yaml:"grpc_host" json:"grpc_host"`
 	GRPCPort           uint64   `yaml:"grpc_port" json:"grpc_port"`
 	RPCTimeoutMillis   int64    `yaml:"rpc_timeout_ms" json:"rpc_timeout_ms"`
-	ChainId            string   `yaml:"chain_id" json:"chain_id"`
+	ChainID            string   `yaml:"chain_id" json:"chain_id"`
 	TxFee              int64    `yaml:"tx_fee" json:"tx_fee"`
 	ChainName          string   `yaml:"chain_name" json:"chain_name"`
 	Bech32Prefix       string   `yaml:"bech32_prefix" json:"bech32_prefix"`

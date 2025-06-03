@@ -43,7 +43,7 @@ func readConfigFromENV(envFile string) {
 		Config.Ethereum.RPCURL = os.Getenv("ETH_RPC_URL")
 	}
 	if os.Getenv("ETH_CHAIN_ID") != "" {
-		Config.Ethereum.ChainId = os.Getenv("ETH_CHAIN_ID")
+		Config.Ethereum.ChainID = os.Getenv("ETH_CHAIN_ID")
 	}
 	if os.Getenv("ETH_PRIVATE_KEY") != "" {
 		Config.Ethereum.PrivateKey = os.Getenv("ETH_PRIVATE_KEY")
@@ -87,7 +87,7 @@ func readConfigFromENV(envFile string) {
 		Config.Pocket.RPCURL = os.Getenv("POKT_RPC_URL")
 	}
 	if os.Getenv("POKT_CHAIN_ID") != "" {
-		Config.Pocket.ChainId = os.Getenv("POKT_CHAIN_ID")
+		Config.Pocket.ChainID = os.Getenv("POKT_CHAIN_ID")
 	}
 	// TODO: fix env support for latest config
 	// if os.Getenv("POKT_PRIVATE_KEY") != "" {

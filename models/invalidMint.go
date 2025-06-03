@@ -16,7 +16,7 @@ type InvalidMint struct {
 	Height          string              `bson:"height" json:"height"`
 	Confirmations   string              `bson:"confirmations" json:"confirmations"`
 	SenderAddress   string              `bson:"sender_address" json:"sender_address"`
-	SenderChainId   string              `bson:"sender_chain_id" json:"sender_chain_id"`
+	SenderChainID   string              `bson:"sender_chain_id" json:"sender_chain_id"`
 	VaultAddress    string              `bson:"vault_address" json:"vault_address"`
 	Amount          string              `bson:"amount" json:"amount"`
 	CreatedAt       time.Time           `bson:"created_at" json:"created_at"`

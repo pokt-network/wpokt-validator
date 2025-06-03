@@ -21,7 +21,7 @@ const (
 type EthereumClient interface {
 	ValidateNetwork()
 	GetBlockNumber() (uint64, error)
-	GetChainId() (*big.Int, error)
+	GetChainID() (*big.Int, error)
 	GetClient() *ethclient.Client
 	GetTransactionByHash(txHash string) (*types.Transaction, bool, error)
 	GetTransactionReceipt(txHash string) (*types.Receipt, error)
@@ -48,16 +48,16 @@ func (c *ethereumClient) GetBlockNumber() (uint64, error) {
 	return blockNumber, nil
 }
 
-func (c *ethereumClient) GetChainId() (*big.Int, error) {
+func (c *ethereumClient) GetChainID() (*big.Int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
 	defer cancel()
 
-	chainId, err := c.client.ChainID(ctx)
+	chainID, err := c.client.ChainID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return chainId, nil
+	return chainID, nil
 }
 
 func (c *ethereumClient) ValidateNetwork() {
@@ -69,7 +69,7 @@ func (c *ethereumClient) ValidateNetwork() {
 	}
 	c.client = client
 
-	chainId, err := c.GetChainId()
+	chainID, err := c.GetChainID()
 	if err != nil {
 		log.Fatalln("[ETH]", "Failed to get chain ID:", err)
 	}
@@ -78,10 +78,10 @@ func (c *ethereumClient) ValidateNetwork() {
 		log.Fatalln("[ETH]", "Failed to get block number:", err)
 	}
 
-	log.Debugln("[ETH]", "chainId", chainId.Uint64())
+	log.Debugln("[ETH]", "chainID", chainID.Uint64())
 
-	if chainId.String() != app.Config.Ethereum.ChainId {
-		log.Fatalln("[ETH]", "Chain ID Mismatch", "expected", app.Config.Ethereum.ChainId, "got", chainId.Uint64())
+	if chainID.String() != app.Config.Ethereum.ChainID {
+		log.Fatalln("[ETH]", "Chain ID Mismatch", "expected", app.Config.Ethereum.ChainID, "got", chainID.Uint64())
 	}
 
 	log.Debugln("[ETH]", "blockNumber", blockNumber)

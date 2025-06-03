@@ -40,16 +40,16 @@ test_coverage :; bash ./coverage.sh
 open_test_coverage :; bash ./coverage.sh && open ./coverage.html
 
 .PHONY: build
-build :; go build -o wpokt-oracle .
+build :; go build -o wpokt-validator .
 
 .PHONY: docker_build
-docker_build :; docker buildx build . -t dan13ram/wpokt-oracle:v0.0.2 --file ./docker/Dockerfile
+docker_build :; docker buildx build . -t dan13ram/wpokt-validator:v0.0.2 --file ./docker/Dockerfile
 
 .PHONY: docker_build_local_gcp
-docker_build_local_gcp :; docker buildx build . -t dan13ram/wpokt-oracle-local-gcp:v0.0.2 --file ./docker/Dockerfile-gcp
+docker_build_local_gcp :; docker buildx build . -t dan13ram/wpokt-validator-local-gcp:v0.0.2 --file ./docker/Dockerfile-gcp
 
 .PHONY: docker_push
-docker_push :; docker push dan13ram/wpokt-oracle:v0.0.2
+docker_push :; docker push dan13ram/wpokt-validator:v0.0.2
 
 .PHONY: docker_dev
 docker_dev : docker_one

@@ -205,7 +205,7 @@ func SignInvalidMint(
 	// 	returnTxBytes, err := buildMultiSigTxAndSign(
 	// 		doc.SenderAddress,
 	// 		memo,
-	// 		app.Config.Pocket.ChainId,
+	// 		app.Config.Pocket.ChainID,
 	// 		amount,
 	// 		app.Config.Pocket.TxFee,
 	// 		privateKey,
@@ -218,7 +218,7 @@ func SignInvalidMint(
 	// } else {
 	// 	returnTxBytes, err := signMultisigTx(
 	// 		returnTx,
-	// 		app.Config.Pocket.ChainId,
+	// 		app.Config.Pocket.ChainID,
 	// 		privateKey,
 	// 		multisigPubKey,
 	// 	)
@@ -295,7 +295,7 @@ func SignBurn(
 	// 	returnTxBytes, err := buildMultiSigTxAndSign(
 	// 		doc.RecipientAddress,
 	// 		memo,
-	// 		app.Config.Pocket.ChainId,
+	// 		app.Config.Pocket.ChainID,
 	// 		amount,
 	// 		app.Config.Pocket.TxFee,
 	// 		privateKey,
@@ -308,7 +308,7 @@ func SignBurn(
 	// } else {
 	// 	returnTxBytes, err := signMultisigTx(
 	// 		returnTx,
-	// 		app.Config.Pocket.ChainId,
+	// 		app.Config.Pocket.ChainID,
 	// 		privateKey,
 	// 		multisigPubKey,
 	// 	)
