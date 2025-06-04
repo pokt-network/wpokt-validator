@@ -7,7 +7,7 @@ ethereum:
   start_block_number: 10
   confirmations: 0
   private_key: "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-  rpc_url: "https://1rpc.io/sepolia"
+  rpc_url: "https://eth-sepolia.g.alchemy.com/v2/IGe16zdtMuUN1GL-C22TWELlvXRKglia"
   chain_id: "11155111"
   rpc_timeout_ms: 30000
   wrapped_pocket_address: "0x5fbdb2315678afecb367f032d93f642f64180aa3"
@@ -21,14 +21,12 @@ pocket:
   start_height: 0
   confirmations: 0
   mnemonic: "infant apart enroll relief kangaroo patch awesome wagon trap feature armor approve"
-  # rpc_url: "http://localhost:26657"
   rpc_url: "https://shannon-testnet-grove-rpc.beta.poktroll.com"
   rpc_timeout_ms: 5000
   grpc_enabled: false
   grpc_host: 'localhost'
   grpc_port: 9090
   chain_id: "pocket-beta"
-  chain_name: "pokt_localnet"
   tx_fee: 0
   bech32_prefix: "pokt"
   coin_denom: "upokt"

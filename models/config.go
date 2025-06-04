@@ -60,7 +60,6 @@ type PocketConfig struct {
 	RPCTimeoutMillis   int64    `yaml:"rpc_timeout_ms" json:"rpc_timeout_ms"`
 	ChainID            string   `yaml:"chain_id" json:"chain_id"`
 	TxFee              int64    `yaml:"tx_fee" json:"tx_fee"`
-	ChainName          string   `yaml:"chain_name" json:"chain_name"`
 	Bech32Prefix       string   `yaml:"bech32_prefix" json:"bech32_prefix"`
 	CoinDenom          string   `yaml:"coin_denom" json:"coin_denom"`
 	MultisigAddress    string   `yaml:"multisig_address" json:"multisig_address"`

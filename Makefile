@@ -14,6 +14,9 @@ dev_two :; SIGNER_MNEMONIC="shy smile praise educate custom fashion gun enjoy ze
 .PHONY: dev_three
 dev_three :; SIGNER_MNEMONIC="wink giant track dwarf visa feed visual drip play grant royal noise" go run . --yaml ./defaults/config.local.yml
 
+.PHONY: beta
+beta :; go run . --config ./config.beta.yml
+
 .PHONY: clean
 clean : clean_tmp_data
 	go clean && go mod tidy
