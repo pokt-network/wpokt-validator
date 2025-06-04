@@ -22,7 +22,8 @@ go.work
 *.sw[a-z]
 
 # config
-config.local.yml
+config/*
+!config/config.sample.yml
 
 # env
 .env*
@@ -32,3 +33,4 @@ credentials.json
 
 # mockery
 .mockery.yaml
+
