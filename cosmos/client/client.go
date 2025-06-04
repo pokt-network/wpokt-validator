@@ -35,7 +35,6 @@ const (
 )
 
 type CosmosClient interface {
-	Chain() models.Chain
 	Confirmations() uint64
 	GetLatestBlockHeight() (int64, error)
 	GetChainID() (string, error)
@@ -61,7 +60,7 @@ type cosmosClient struct {
 	confirmations uint64
 
 	timeout      time.Duration
-	chain        models.Chain
+	config       models.PocketConfig
 	bech32Prefix string
 	coinDenom    string
 
@@ -74,10 +73,6 @@ type cosmosClient struct {
 var cmtserviceNewServiceClient = cmtservice.NewServiceClient
 var authNewQueryClient = auth.NewQueryClient
 var txNewServiceClient = tx.NewServiceClient
-
-func (c *cosmosClient) Chain() models.Chain {
-	return c.chain
-}
 
 func (c *cosmosClient) Confirmations() uint64 {
 	return c.confirmations
@@ -410,8 +405,8 @@ func (c *cosmosClient) ValidateNetwork() error {
 	if err != nil {
 		return err
 	}
-	if chainID != c.chain.ChainID {
-		return fmt.Errorf("expected chain id %s, got %s", c.chain.ChainID, chainID)
+	if chainID != c.config.ChainID {
+		return fmt.Errorf("expected chain id %s, got %s", c.config.ChainID, chainID)
 	}
 	c.logger.Debugf("Validated network")
 	return nil
@@ -429,7 +424,6 @@ func NewClient(config models.PocketConfig) (CosmosClient, error) {
 	logger := log.
 		WithField("module", "cosmos").
 		WithField("package", "client").
-		WithField("chain_name", strings.ToLower(config.ChainName)).
 		WithField("chain_id", strings.ToLower(config.ChainID))
 
 	if config.GRPCEnabled {
@@ -453,9 +447,9 @@ func NewClient(config models.PocketConfig) (CosmosClient, error) {
 
 	c := &cosmosClient{
 		grpcEnabled: config.GRPCEnabled,
+		config:      config,
 
 		timeout:      time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
-		chain:        util.ParseChain(config),
 		bech32Prefix: config.Bech32Prefix,
 		coinDenom:    config.CoinDenom,
 

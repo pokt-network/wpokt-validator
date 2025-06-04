@@ -20,16 +20,22 @@ ethereum:
 pocket:
   start_height: 0
   confirmations: 0
-  private_key: "1234"
-  rpc_url: "https://<pokt-node-host>:<pokt-node-port>"
-  chain_id: "testnet"
-  rpc_timeout_ms: 2000
-  tx_fee: 10000
-  vault_address: "1234"
+  mnemonic: "test test test test test test test test test test test junk"
+  rpc_url: "http://localhost:26657"
+  rpc_timeout_ms: 5000
+  grpc_enabled: false
+  grpc_host: 'localhost'
+  grpc_port: 9090
+  chain_id: "poktroll"
+  tx_fee: 0
+  bech32_prefix: "pokt"
+  coin_denom: "upokt"
+  multisig_address: "pokt13tsl3aglfyzf02n7x28x2ajzw94muu6y57k2ar"
   multisig_public_keys:
-    - "1234"
-    - "1234"
-    - "1234"
+    - "026892de2ec7fdf3125bc1bfd2ff2590d2c9ba756f98a05e9e843ac4d2a1acd4d9"
+    - "02faaaf0f385bb17381f36dcd86ab2486e8ff8d93440436496665ac007953076c2"
+    - "02cae233806460db75a941a269490ca5165a620b43241edb8bc72e169f4143a6df"
+  multisig_threshold: 2
 
 mint_monitor:
   enabled: false

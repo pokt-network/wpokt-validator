@@ -17,13 +17,19 @@ ethereum:
 pocket:
   start_height: 0
   confirmations: 0
-  private_key: ""
+  mnemonic: ""
   rpc_url: ""
-  chain_id: "testnet"
   rpc_timeout_ms: 30000
   tx_fee: 10000
-  vault_address: ""
+  grpc_enabled: false
+  grpc_host: ""
+  grpc_port: 0
+  chain_id: "poktroll"
+  bech32_prefix: "pokt"
+  coin_denom: "upokt"
+  multisig_address: ""
   multisig_public_keys:
+  multisig_threshold: 0
 
 mint_monitor:
   enabled: false

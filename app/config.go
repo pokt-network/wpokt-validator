@@ -145,9 +145,6 @@ func validateConfig() {
 		if Config.Pocket.ChainID == "" {
 			log.Fatal("Pocket.ChainID is required")
 		}
-		if Config.Pocket.ChainName == "" {
-			log.Fatal("Pocket.ChainName is required")
-		}
 		if Config.Pocket.TxFee == 0 {
 			log.Warn("Pocket.TxFee is 0")
 		}
