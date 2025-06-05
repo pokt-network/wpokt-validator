@@ -94,10 +94,10 @@ func validateConfig() {
 	}
 	if Config.Ethereum.PrivateKey == "" {
 		log.Fatal("[CONFIG] Ethereum.PrivateKey is required")
+	} else {
+		Config.Ethereum.PrivateKey = strings.TrimPrefix(Config.Ethereum.PrivateKey, "0x")
 	}
-	if strings.HasPrefix(Config.Ethereum.PrivateKey, "0x") {
-		Config.Ethereum.PrivateKey = Config.Ethereum.PrivateKey[2:]
-	}
+
 	if Config.Ethereum.WrappedPocketAddress == "" {
 		log.Fatal("[CONFIG] Ethereum.WrappedPocketAddress is required")
 	}

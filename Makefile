@@ -2,27 +2,11 @@
 
 all : clean install test build
 
-.PHONY: dev
-dev : dev_one
-
-.PHONY: dev_one
-dev_one :; SIGNER_MNEMONIC="infant apart enroll relief kangaroo patch awesome wagon trap feature armor approve" go run . --yaml ./defaults/config.local.yml
-
-.PHONY: dev_two
-dev_two :; SIGNER_MNEMONIC="shy smile praise educate custom fashion gun enjoy zero powder garden second" go run . --yaml ./defaults/config.local.yml
-
-.PHONY: dev_three
-dev_three :; SIGNER_MNEMONIC="wink giant track dwarf visa feed visual drip play grant royal noise" go run . --yaml ./defaults/config.local.yml
-
 .PHONY: beta
 beta :; go run . --config ./config/config.beta.yml
 
 .PHONY: clean
-clean : clean_tmp_data
-	go clean && go mod tidy
-
-.PHONY: clean_tmp_data
-clean_tmp_data :; if [ -d "/tmp/data" ]; then sudo rm -rf /tmp/data; fi
+clean : go clean && go mod tidy
 
 .PHONY: install
 install :; go mod download && go mod verify
