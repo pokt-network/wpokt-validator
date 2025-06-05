@@ -9,17 +9,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
-	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+	"cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/common"
-	cosmos "github.com/dan13ram/wpokt-validator/cosmos/client"
+	"github.com/dan13ram/wpokt-validator/cosmos"
+	cosmosClient "github.com/dan13ram/wpokt-validator/cosmos/client"
+	"github.com/dan13ram/wpokt-validator/cosmos/util"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
-	"github.com/dan13ram/wpokt-validator/pokt/util"
 	"github.com/ethereum/go-ethereum/core/types"
-	// "github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -29,11 +29,10 @@ const (
 )
 
 type BurnSignerRunner struct {
-	// privateKey     crypto.PrivateKey
-	// multisigPubKey crypto.PublicKeyMultiSig
+	signer         *app.PocketSigner
 	numSigners     int
 	ethClient      eth.EthereumClient
-	poktClient     cosmos.CosmosClient
+	poktClient     cosmosClient.CosmosClient
 	poktHeight     int64
 	ethBlockNumber int64
 	vaultAddress   string
@@ -76,65 +75,101 @@ func (x *BurnSignerRunner) UpdateBlocks() {
 func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, error) {
 	log.Debug("[BURN SIGNER] Validating invalid mint: ", doc.TransactionHash)
 
-	// tx, err := x.poktClient.GetTx(doc.TransactionHash)
-	// if err != nil {
-	// 	return false, errors.New("Error fetching transaction: " + err.Error())
-	// }
+	txResponse, err := x.poktClient.GetTx(doc.TransactionHash)
+	if err != nil {
+		return false, errors.New("Error fetching transaction: " + err.Error())
+	}
 
-	// if tx == nil || tx.Tx == "" {
-	// 	return false, errors.New("Transaction not found")
-	// }
-	//
-	// if tx.TxResult.Code != 0 {
-	// 	log.Debug("[BURN SIGNER] Transaction failed")
-	// 	return false, nil
-	// }
-	//
-	// if tx.TxResult.MessageType != "send" || tx.StdTx.Msg.Type != "pos/Send" {
-	// 	log.Debug("[BURN SIGNER] Transaction message type is not send")
-	// 	return false, nil
-	// }
-	//
-	// if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
-	// 	log.Debug("[BURN SIGNER] Transaction recipient is zero address")
-	// 	return false, nil
-	// }
-	//
-	// if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
-	// 	log.Debug("[BURN SIGNER] Transaction recipient is not vault address")
-	// 	return false, nil
-	// }
-	//
-	// if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, doc.SenderAddress) {
-	// 	log.Debug("[BURN SIGNER] Transaction signer is not sender address")
-	// 	return false, nil
-	// }
-	//
-	// amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
-	//
-	// if !ok || amount.Cmp(x.minimumAmount) != 1 {
-	// 	log.Debug("[BURN SIGNER] Transaction amount too low")
-	// 	return false, nil
-	// }
-	//
-	// if tx.StdTx.Msg.Value.Amount != doc.Amount {
-	// 	log.Debug("[BURN SIGNER] Transaction amount does not match invalid mint amount")
-	// 	return false, nil
-	// }
-	//
-	// if tx.StdTx.Memo != doc.Memo {
-	// 	log.Debug("[BURN SIGNER] Memo mismatch")
-	// 	return false, nil
-	// }
-	//
-	// _, valid := util.ValidateMemo(doc.Memo)
-	// if valid {
-	// 	log.Error("[BURN SIGNER] Memo is valid, should be invalid")
-	// 	return false, nil
-	// }
-	//
+	if txResponse == nil {
+		return false, errors.New("Transaction not found")
+	}
+	result, err := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.poktHeight))
+	if err != nil {
+		log.WithError(err).Errorf("Error validating tx")
+		return false, nil
+	}
+	if result.TxStatus != models.TransactionStatusInvalid {
+		log.Debug("[BURN SIGNER] Transaction is not invalid")
+		return false, nil
+	}
+
 	log.Debug("[BURN SIGNER] Validated invalid mint")
 	return true, nil
+}
+
+func (x *BurnSignerRunner) FindMaxSequence() (uint64, error) {
+	lockID, err := cosmos.LockReadSequences()
+	if err != nil {
+		return 0, fmt.Errorf("could not lock sequences: %w", err)
+	}
+	//nolint:errcheck
+	defer app.DB.Unlock(lockID)
+
+	maxSequence, err := cosmos.FindMaxSequence()
+	if err != nil {
+		return 0, err
+	}
+	account, err := x.poktClient.GetAccount(x.signer.MultisigAddress)
+	if err != nil {
+		return 0, err
+	}
+	if maxSequence == nil {
+		return account.Sequence, nil
+	}
+	nextSequence := *maxSequence + 1
+	if nextSequence > account.Sequence {
+		return nextSequence, nil
+	}
+
+	return account.Sequence, nil
+}
+
+func (x *BurnSignerRunner) Sign(
+	sequence *uint64,
+	signatures []models.Signature,
+	transactionBody string,
+	toAddress []byte,
+	amount sdk.Coin,
+	memo string,
+) (bson.M, error) {
+
+	if sequence == nil {
+		gotSequence, err := x.FindMaxSequence()
+		if err != nil {
+			return nil, fmt.Errorf("error getting sequence: %w", err)
+		}
+		sequence = &gotSequence
+	}
+
+	txBody, finalSignatures, err := cosmos.SignTx(
+		x.signer.Signer,
+		app.Config.Pocket,
+		x.poktClient,
+		*sequence,
+		signatures,
+		transactionBody,
+		toAddress,
+		amount,
+		memo,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	update := bson.M{
+		"status":                  models.StatusConfirmed,
+		"return_transaction_body": string(txBody),
+		"signatures":              finalSignatures,
+		"sequence":                sequence,
+		"updated_at":              time.Now(),
+	}
+
+	if len(finalSignatures) >= int(app.Config.Pocket.MultisigThreshold) {
+		update["status"] = models.StatusSigned
+	}
+
+	return update, nil
 }
 
 func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
@@ -175,21 +210,26 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 		if doc.Status == models.StatusConfirmed {
 			log.Debug("[BURN SIGNER] Signing invalid mint")
 
-			// doc, err = util.SignInvalidMint(doc, x.privateKey, x.multisigPubKey, x.numSigners)
-			// if err != nil {
-			// 	log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
-			// 	return false
-			// }
-			//
-			// update = bson.M{
-			// 	"$set": bson.M{
-			// 		"return_tx":     doc.ReturnTx,
-			// 		"signers":       doc.Signers,
-			// 		"status":        doc.Status,
-			// 		"confirmations": doc.Confirmations,
-			// 		"updated_at":    time.Now(),
-			// 	},
-			// }
+			amount, _ := math.NewIntFromString(doc.Amount)
+			amountCoin := sdk.NewCoin(app.Config.Pocket.CoinDenom, amount)
+
+			toAddress, err := common.AddressBytesFromBech32(app.Config.Pocket.Bech32Prefix, doc.SenderAddress)
+			if err != nil {
+				log.Error("[BURN SIGNER] Error parsing to address: ", err)
+				return false
+			}
+
+			set, err := x.Sign(doc.Sequence, doc.Signatures, doc.ReturnTransactionBody, toAddress, amountCoin, "InvalidMint: "+doc.TransactionHash)
+
+			if err != nil {
+				log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
+				return false
+			}
+
+			update = bson.M{
+				"$set": set,
+			}
+
 		} else {
 			log.Debug("[BURN SIGNER] Not signing invalid mint")
 			update = bson.M{
@@ -310,21 +350,25 @@ func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
 
 		if doc.Status == models.StatusConfirmed {
 			log.Debug("[BURN SIGNER] Signing burn")
-			// doc, err = util.SignBurn(doc, x.privateKey, x.multisigPubKey, x.numSigners)
-			// if err != nil {
-			// 	log.Error("[BURN SIGNER] Error signing burn: ", err)
-			// 	return false
-			// }
-			//
-			// update = bson.M{
-			// 	"$set": bson.M{
-			// 		"return_tx":     doc.ReturnTx,
-			// 		"signers":       doc.Signers,
-			// 		"status":        doc.Status,
-			// 		"confirmations": doc.Confirmations,
-			// 		"updated_at":    time.Now(),
-			// 	},
-			// }
+			amount, _ := math.NewIntFromString(doc.Amount)
+			amountCoin := sdk.NewCoin(app.Config.Pocket.CoinDenom, amount)
+
+			toAddress, err := common.AddressBytesFromBech32(app.Config.Pocket.Bech32Prefix, doc.SenderAddress)
+			if err != nil {
+				log.Error("[BURN SIGNER] Error parsing to address: ", err)
+				return false
+			}
+
+			set, err := x.Sign(doc.Sequence, doc.Signatures, doc.ReturnTransactionBody, toAddress, amountCoin, "Burn: "+doc.TransactionHash)
+
+			if err != nil {
+				log.Error("[BURN SIGNER] Error signing invalid mint: ", err)
+				return false
+			}
+
+			update = bson.M{
+				"$set": set,
+			}
 		} else {
 			log.Debug("[BURN SIGNER] Not signing burn")
 			update = bson.M{
@@ -354,14 +398,22 @@ func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
 func (x *BurnSignerRunner) SyncInvalidMints() bool {
 	log.Debug("[BURN SIGNER] Syncing invalid mints")
 
-	signersFilter := bson.M{"$nin": []string{
-		// strings.ToLower(	x.privateKey.PublicKey().RawString())
-	}}
-	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
+	addressHex, _ := common.AddressHexFromBytes(x.signer.Signer.CosmosPublicKey().Address().Bytes())
 	filter := bson.M{
-		"vault_address": x.vaultAddress,
-		"status":        statusFilter,
-		"signers":       signersFilter,
+		"$and": []bson.M{
+			{
+				"vault_address": x.vaultAddress,
+			},
+			{"$or": []bson.M{
+				{"status": models.StatusPending},
+				{"status": models.StatusConfirmed},
+			}},
+			{"$nor": []bson.M{
+				{"signatures": bson.M{
+					"$elemMatch": bson.M{"signer": addressHex},
+				}},
+			}},
+		},
 	}
 
 	invalidMints := []models.InvalidMint{}
@@ -403,14 +455,22 @@ func (x *BurnSignerRunner) SyncInvalidMints() bool {
 func (x *BurnSignerRunner) SyncBurns() bool {
 	log.Debug("[BURN SIGNER] Syncing burns")
 
-	signersFilter := bson.M{"$nin": []string{
-		// strings.ToLower(x.privateKey.PublicKey().RawString())
-	}}
-	statusFilter := bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}}
+	addressHex, _ := common.AddressHexFromBytes(x.signer.Signer.CosmosPublicKey().Address().Bytes())
 	filter := bson.M{
-		"wpokt_address": x.wpoktAddress,
-		"status":        statusFilter,
-		"signers":       signersFilter,
+		"$and": []bson.M{
+			{
+				"wpokt_address": x.wpoktAddress,
+			},
+			{"$or": []bson.M{
+				{"status": models.StatusPending},
+				{"status": models.StatusConfirmed},
+			}},
+			{"$nor": []bson.M{
+				{"signatures": bson.M{
+					"$elemMatch": bson.M{"signer": addressHex},
+				}},
+			}},
+		},
 	}
 
 	burns := []models.Burn{}
@@ -467,23 +527,10 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 	}
 
 	log.Debug("[BURN SIGNER] Initializing")
-	config := app.Config.Pocket
 
-	var pks []crypto.PubKey
-	for _, pk := range config.MultisigPublicKeys {
-		pKey, err := common.CosmosPublicKeyFromHex(pk)
-		if err != nil {
-			log.Fatalf("Error parsing public key: %s", err)
-		}
-		pks = append(pks, pKey)
-	}
-
-	multisigPk := multisig.NewLegacyAminoPubKey(int(config.MultisigThreshold), pks)
-	multisigAddressBytes := multisigPk.Address().Bytes()
-	multisigAddress, _ := common.Bech32FromBytes(config.Bech32Prefix, multisigAddressBytes)
-
-	if !strings.EqualFold(multisigAddress, config.MultisigAddress) {
-		log.Fatalf("Multisig address does not match config")
+	signer, err := app.GetPocketSignerAndMultisig()
+	if err != nil {
+		log.Fatal("[BURN SIGNER] Error getting signer and multisig: ", err)
 	}
 
 	ethClient, err := eth.NewClient()
@@ -498,18 +545,17 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 	}
 	log.Debug("[BURN SIGNER] Connected to wpokt contract")
 
-	poktClient, err := cosmosNewClient(config)
+	poktClient, err := cosmosNewClient(app.Config.Pocket)
 	if err != nil {
 		log.Fatalf("Error creating pokt client: %s", err)
 	}
 
 	x := &BurnSignerRunner{
-		// privateKey:     pk,
-		// multisigPubKey: multisigPk,
-		numSigners:    len(pks),
+		signer:        signer,
+		numSigners:    len(signer.Multisig.GetPubKeys()),
 		ethClient:     ethClient,
 		poktClient:    poktClient,
-		vaultAddress:  multisigAddress,
+		vaultAddress:  signer.MultisigAddress,
 		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		wpoktContract: eth.NewWrappedPocketContract(contract),
 		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),

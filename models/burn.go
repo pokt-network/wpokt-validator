@@ -7,8 +7,13 @@ import (
 )
 
 const (
-	CollectionBurns = "burns"
+	CollectionBurns = "shannonBurns"
 )
+
+type Signature struct {
+	Signer    string `json:"signer" bson:"signer"`
+	Signature string `json:"signature" bson:"signature"`
+}
 
 type Burn struct {
 	Id               *primitive.ObjectID `bson:"_id,omitempty" json:"_id"`
@@ -25,7 +30,9 @@ type Burn struct {
 	CreatedAt        time.Time           `bson:"created_at" json:"created_at"`
 	UpdatedAt        time.Time           `bson:"updated_at" json:"updated_at"`
 	Status           string              `bson:"status" json:"status"`
-	ReturnTx         string              `bson:"return_tx" json:"return_tx"`
-	Signers          []string            `bson:"signers" json:"signers"`
-	ReturnTxHash     string              `bson:"return_tx_hash" json:"return_tx_hash"`
+
+	ReturnTransactionBody string      `json:"return_transaction_body" bson:"transaction_body"`
+	Signatures            []Signature `json:"signatures" bson:"signatures"`
+	Sequence              *uint64     `json:"sequence" bson:"sequence"` // account sequence for submitting the transaction
+	ReturnTransactionHash string      `json:"return_transaction_hash" bson:"transaction_hash"`
 }

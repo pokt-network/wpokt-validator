@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	CollectionInvalidMints = "invalidMints"
+	CollectionInvalidMints = "shannonInvalidMints"
 )
 
 type InvalidMint struct {
@@ -22,8 +22,10 @@ type InvalidMint struct {
 	CreatedAt       time.Time           `bson:"created_at" json:"created_at"`
 	UpdatedAt       time.Time           `bson:"updated_at" json:"updated_at"`
 	Status          string              `bson:"status" json:"status"`
-	ReturnTx        string              `bson:"return_tx" json:"return_tx"`
-	Signers         []string            `bson:"signers" json:"signers"`
-	ReturnTxHash    string              `bson:"return_tx_hash" json:"return_tx_hash"`
 	Memo            string              `bson:"memo" json:"memo"`
+
+	ReturnTransactionBody string      `json:"return_transaction_body" bson:"transaction_body"`
+	Signatures            []Signature `json:"signatures" bson:"signatures"`
+	Sequence              *uint64     `json:"sequence" bson:"sequence"` // account sequence for submitting the transaction
+	ReturnTransactionHash string      `json:"return_transaction_hash" bson:"transaction_hash"`
 }
