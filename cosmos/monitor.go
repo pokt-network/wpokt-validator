@@ -1,4 +1,4 @@
-package pokt
+package cosmos
 
 import (
 	"math/big"

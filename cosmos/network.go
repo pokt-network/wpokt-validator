@@ -1,4 +1,4 @@
-package pokt
+package cosmos
 
 import (
 	"github.com/dan13ram/wpokt-validator/app"

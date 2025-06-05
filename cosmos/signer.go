@@ -1,4 +1,4 @@
-package pokt
+package cosmos
 
 import (
 	"errors"
@@ -13,7 +13,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/common"
-	"github.com/dan13ram/wpokt-validator/cosmos"
 	cosmosClient "github.com/dan13ram/wpokt-validator/cosmos/client"
 	"github.com/dan13ram/wpokt-validator/cosmos/util"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
@@ -98,14 +97,14 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 }
 
 func (x *BurnSignerRunner) FindMaxSequence() (uint64, error) {
-	lockID, err := cosmos.LockReadSequences()
+	lockID, err := LockReadSequences()
 	if err != nil {
 		return 0, fmt.Errorf("could not lock sequences: %w", err)
 	}
 	//nolint:errcheck
 	defer app.DB.Unlock(lockID)
 
-	maxSequence, err := cosmos.FindMaxSequence()
+	maxSequence, err := FindMaxSequence()
 	if err != nil {
 		return 0, err
 	}
@@ -141,7 +140,7 @@ func (x *BurnSignerRunner) Sign(
 		sequence = &gotSequence
 	}
 
-	txBody, finalSignatures, err := cosmos.SignTx(
+	txBody, finalSignatures, err := SignTx(
 		x.signer.Signer,
 		app.Config.Pocket,
 		x.poktClient,

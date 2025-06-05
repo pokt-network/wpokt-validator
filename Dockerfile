@@ -8,7 +8,8 @@ RUN go mod download
 # copy the source code
 COPY app ./app
 COPY eth ./eth
-COPY pokt ./pokt
+COPY cosmos ./cosmos
+COPY common ./common
 COPY models ./models
 COPY main.go ./
 COPY defaults.yml ./
