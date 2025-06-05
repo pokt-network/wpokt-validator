@@ -117,7 +117,10 @@ func main() {
 
 	wg.Wait()
 
-	app.DB.Disconnect()
+	err = app.DB.Disconnect()
+	if err != nil {
+		log.Error("[MAIN] Error disconnecting from DB: ", err)
+	}
 	log.Info("[MAIN] Server stopped")
 }
 
