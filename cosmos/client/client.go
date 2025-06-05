@@ -41,6 +41,7 @@ type CosmosClient interface {
 	GetTxsSentFromAddressAfterHeight(address string, height uint64) ([]*sdk.TxResponse, error)
 	GetTxsSentToAddressAfterHeight(address string, height uint64) ([]*sdk.TxResponse, error)
 	GetAccount(address string) (*auth.BaseAccount, error)
+	Simulate(txBytes []byte) (*sdk.GasInfo, error)
 	BroadcastTx(txBytes []byte) (string, error)
 	GetTx(hash string) (*sdk.TxResponse, error)
 	ValidateNetwork() error
@@ -53,6 +54,7 @@ type CosmosHTTPClient interface {
 	TxSearch(ctx context.Context, query string, prove bool, page *int, limit *int, orderBy string) (*rpctypes.ResultTxSearch, error)
 	ABCIQuery(ctx context.Context, path string, data bytes.HexBytes) (*rpctypes.ResultABCIQuery, error)
 	BroadcastTxSync(ctx context.Context, tx ctypes.Tx) (*rpctypes.ResultBroadcastTx, error)
+	CheckTx(ctx context.Context, tx ctypes.Tx) (*rpctypes.ResultCheckTx, error)
 }
 
 type cosmosClient struct {
@@ -378,6 +380,50 @@ func (c *cosmosClient) BroadcastTx(txBytes []byte) (string, error) {
 		return c.broadcastTxGRPC(txBytes)
 	}
 	return c.broadcastTxRPC(txBytes)
+}
+
+func (c *cosmosClient) simulateGRPC(txBytes []byte) (*sdk.GasInfo, error) {
+	client := txNewServiceClient(c.grpcConn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	req := &tx.SimulateRequest{
+		TxBytes: txBytes,
+	}
+
+	resp, err := client.Simulate(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to simulate tx: %s", err)
+	}
+
+	return resp.GasInfo, nil
+}
+
+func (c *cosmosClient) simulateRPC(txBytes []byte) (*sdk.GasInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	res, err := c.rpcClient.CheckTx(ctx, txBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to simulate tx: %s", err)
+	}
+
+	if res.Code != 0 {
+		return nil, fmt.Errorf("failed to simulate tx, got code %d: %s", res.Code, res.Log)
+	}
+
+	return &sdk.GasInfo{
+		GasWanted: uint64(res.GasWanted),
+		GasUsed:   uint64(res.GasUsed),
+	}, nil
+}
+
+func (c *cosmosClient) Simulate(txBytes []byte) (*sdk.GasInfo, error) {
+	if c.grpcEnabled {
+		return c.simulateGRPC(txBytes)
+	}
+	return c.simulateRPC(txBytes)
 }
 
 func (c *cosmosClient) GetChainID() (string, error) {

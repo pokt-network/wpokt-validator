@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"crypto/ecdsa"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+	multisigtypes "github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	"github.com/dan13ram/wpokt-validator/common"
 	"github.com/dan13ram/wpokt-validator/models"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -109,46 +111,42 @@ func (x *HealthCheckRunner) SetServices(services []Service) {
 	x.services = services
 }
 
-func NewHealthCheck() *HealthCheckRunner {
-	log.Debug("[HEALTH] Initializing health")
+type PocketSigner struct {
+	Signer          common.Signer
+	Address         string
+	SignerIndex     int
+	Multisig        multisigtypes.PubKey
+	MultisigAddress string
+}
 
+func GetPocketSignerAndMultisig() (*PocketSigner, error) {
 	signer, err := common.NewMnemonicSigner(Config.Pocket.Mnemonic)
 	if err != nil {
-		log.Fatal("[HEALTH] Error initializing pokt signer: ", err)
+		return nil, fmt.Errorf("error initializing pokt signer: %w", err)
 	}
 
 	cosmosPubKey := signer.CosmosPublicKey()
-	poktPubKeyHex := hex.EncodeToString(cosmosPubKey.Bytes())
 	poktAddress, err := common.Bech32FromBytes(Config.Pocket.Bech32Prefix, cosmosPubKey.Address().Bytes())
-
-	log.Debug("[HEALTH] Initialized pokt signer private key")
-	log.Debug("[HEALTH] Pokt signer public key: ", poktPubKeyHex)
-	log.Debug("[HEALTH] Pokt signer address: ", poktAddress)
-
-	ethPK, err := ethCrypto.HexToECDSA(Config.Ethereum.PrivateKey)
 	if err != nil {
-		log.Fatal("[HEALTH] Error initializing ethereum signer: ", err)
+		return nil, fmt.Errorf("error getting pokt address: %w", err)
 	}
-	log.Debug("[HEALTH] Initialized private key")
-	log.Debug("[HEALTH] ETH Address: ", ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex())
-
-	ethAddress := ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex()
 
 	var pks []crypto.PubKey
 	signerIndex := -1
-	for _, pk := range Config.Pocket.MultisigPublicKeys {
+	for index, pk := range Config.Pocket.MultisigPublicKeys {
 		pKey, err := common.CosmosPublicKeyFromHex(pk)
 		if err != nil {
-			log.Fatalf("Error parsing public key: %s", err)
+			return nil, fmt.Errorf("error parsing multisig public key [%d]: %w", index, err)
 		}
 		pks = append(pks, pKey)
-		if strings.EqualFold(hex.EncodeToString(pKey.Bytes()), poktPubKeyHex) {
-			signerIndex = len(pks)
+		if pKey.Equals(cosmosPubKey) {
+			signerIndex = index
 		}
 	}
 
 	if signerIndex == -1 {
-		log.Fatal("[HEALTH] Multisig public keys do not contain signer")
+		// log.Fatal("[HEALTH] Multisig public keys do not contain signer")
+		return nil, fmt.Errorf("multisig public keys do not contain signer")
 	}
 
 	multisigPk := multisig.NewLegacyAminoPubKey(int(Config.Pocket.MultisigThreshold), pks)
@@ -156,25 +154,68 @@ func NewHealthCheck() *HealthCheckRunner {
 	multisigAddress, _ := common.Bech32FromBytes(Config.Pocket.Bech32Prefix, multisigAddressBytes)
 
 	if !strings.EqualFold(multisigAddress, Config.Pocket.MultisigAddress) {
-		log.Fatal("[HEALTH] Multisig address does not match vault address")
+		return nil, fmt.Errorf("multisig address does not match vault address")
 	}
 
-	validatorId := "wpokt-validator-" + fmt.Sprintf("%02d", signerIndex)
+	return &PocketSigner{
+		Signer:          signer,
+		SignerIndex:     signerIndex,
+		Multisig:        multisigPk,
+		MultisigAddress: multisigAddress,
+		Address:         poktAddress,
+	}, nil
+}
+
+type EthereumSigner struct {
+	PrivateKey *ecdsa.PrivateKey
+	Address    string
+}
+
+func GetEthereumSigner() (*EthereumSigner, error) {
+	ethPK, err := ethCrypto.HexToECDSA(Config.Ethereum.PrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing ethereum signer: %w", err)
+	}
+
+	ethAddress := ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex()
+
+	return &EthereumSigner{
+		PrivateKey: ethPK,
+		Address:    ethAddress,
+	}, nil
+}
+
+func NewHealthCheck() *HealthCheckRunner {
+	log.Debug("[HEALTH] Initializing health")
+
+	poktSigner, err := GetPocketSignerAndMultisig()
+	if err != nil {
+		log.Fatal("[HEALTH] Error getting pokt signer and multisig: ", err)
+	}
+
+	log.Debug("[HEALTH] POKT address: ", poktSigner.Address)
+
+	ethSigner, err := GetEthereumSigner()
+	if err != nil {
+		log.Fatal("[HEALTH] Error getting ethereum signer: ", err)
+	}
+
+	log.Debug("[HEALTH] ETH Address: ", ethSigner.Address)
+
+	validatorId := "wpokt-validator-" + fmt.Sprintf("%02d", poktSigner.SignerIndex+1)
 
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatal("[HEALTH] Error getting hostname: ", err)
 	}
 
-	log.Debug("[HEALTH] Multisig address: ", multisigAddress)
-
 	x := &HealthCheckRunner{
-		poktVaultAddress: strings.ToLower(multisigAddress),
+		poktVaultAddress: poktSigner.MultisigAddress,
 		poktSigners:      Config.Pocket.MultisigPublicKeys,
-		poktPublicKey:    poktPubKeyHex,
-		poktAddress:      strings.ToLower(poktAddress),
+		poktPublicKey:    hex.EncodeToString(poktSigner.Signer.CosmosPublicKey().Bytes()),
+		poktAddress:      poktSigner.Address,
 		ethValidators:    Config.Ethereum.ValidatorAddresses,
-		ethAddress:       strings.ToLower(ethAddress),
+		ethAddress:       ethSigner.Address,
 		wpoktAddress:     strings.ToLower(Config.Ethereum.WrappedPocketAddress),
 		hostname:         hostname,
 		validatorId:      validatorId,

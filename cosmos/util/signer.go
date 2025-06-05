@@ -2,18 +2,11 @@ package util
 
 import (
 	// "encoding/hex"
-	// "strconv"
+	"strconv"
 	// "strings"
-	//
-	// "github.com/dan13ram/wpokt-validator/app"
+
+	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/models"
-	// pokt "github.com/pokt-network/pocket-core/app"
-	// "github.com/pokt-network/pocket-core/crypto"
-	// sdk "github.com/pokt-network/pocket-core/types"
-	// "github.com/pokt-network/pocket-core/x/auth"
-	// authTypes "github.com/pokt-network/pocket-core/x/auth/types"
-	// nodeTypes "github.com/pokt-network/pocket-core/x/nodes/types"
-	// "github.com/tendermint/tendermint/libs/rand"
 )
 
 // var txEncoder sdk.TxEncoder = auth.DefaultTxEncoder(pokt.Codec())
@@ -152,30 +145,30 @@ import (
 // }
 
 func UpdateStatusAndConfirmationsForInvalidMint(doc *models.InvalidMint, currentHeight int64) (*models.InvalidMint, error) {
-	// status := doc.Status
-	// confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
-	// if err != nil || confirmations < 0 {
-	// 	confirmations = 0
-	// }
-	//
-	// if status == models.StatusPending || confirmations == 0 {
-	// 	status = models.StatusPending
-	// 	if app.Config.Pocket.Confirmations == 0 {
-	// 		status = models.StatusConfirmed
-	// 	} else {
-	// 		mintHeight, err := strconv.ParseInt(doc.Height, 10, 64)
-	// 		if err != nil {
-	// 			return doc, err
-	// 		}
-	// 		confirmations = currentHeight - mintHeight
-	// 		if confirmations >= app.Config.Pocket.Confirmations {
-	// 			status = models.StatusConfirmed
-	// 		}
-	// 	}
-	// }
-	//
-	// doc.Status = status
-	// doc.Confirmations = strconv.FormatInt(confirmations, 10)
+	status := doc.Status
+	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
+	if err != nil || confirmations < 0 {
+		confirmations = 0
+	}
+
+	if status == models.StatusPending || confirmations == 0 {
+		status = models.StatusPending
+		if app.Config.Pocket.Confirmations == 0 {
+			status = models.StatusConfirmed
+		} else {
+			mintHeight, err := strconv.ParseInt(doc.Height, 10, 64)
+			if err != nil {
+				return doc, err
+			}
+			confirmations = currentHeight - mintHeight
+			if confirmations >= app.Config.Pocket.Confirmations {
+				status = models.StatusConfirmed
+			}
+		}
+	}
+
+	doc.Status = status
+	doc.Confirmations = strconv.FormatInt(confirmations, 10)
 
 	return doc, nil
 }
@@ -241,31 +234,31 @@ func SignInvalidMint(
 }
 
 func UpdateStatusAndConfirmationsForBurn(doc *models.Burn, blockNumber int64) (*models.Burn, error) {
-	// status := doc.Status
-	// confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
-	// if err != nil || confirmations < 0 {
-	// 	confirmations = 0
-	// }
-	//
-	// if status == models.StatusPending || confirmations == 0 {
-	// 	status = models.StatusPending
-	// 	if app.Config.Ethereum.Confirmations == 0 {
-	// 		status = models.StatusConfirmed
-	// 	} else {
-	// 		burnBlockNumber, err := strconv.ParseInt(doc.BlockNumber, 10, 64)
-	// 		if err != nil {
-	// 			return doc, err
-	// 		}
-	//
-	// 		confirmations = blockNumber - burnBlockNumber
-	// 		if confirmations >= app.Config.Ethereum.Confirmations {
-	// 			status = models.StatusConfirmed
-	// 		}
-	// 	}
-	// }
-	//
-	// doc.Status = status
-	// doc.Confirmations = strconv.FormatInt(confirmations, 10)
+	status := doc.Status
+	confirmations, err := strconv.ParseInt(doc.Confirmations, 10, 64)
+	if err != nil || confirmations < 0 {
+		confirmations = 0
+	}
+
+	if status == models.StatusPending || confirmations == 0 {
+		status = models.StatusPending
+		if app.Config.Ethereum.Confirmations == 0 {
+			status = models.StatusConfirmed
+		} else {
+			burnBlockNumber, err := strconv.ParseInt(doc.BlockNumber, 10, 64)
+			if err != nil {
+				return doc, err
+			}
+
+			confirmations = blockNumber - burnBlockNumber
+			if confirmations >= app.Config.Ethereum.Confirmations {
+				status = models.StatusConfirmed
+			}
+		}
+	}
+
+	doc.Status = status
+	doc.Confirmations = strconv.FormatInt(confirmations, 10)
 	return doc, nil
 }
 

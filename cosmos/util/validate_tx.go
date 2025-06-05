@@ -19,8 +19,9 @@ type ValidateTxResult struct {
 	Confirmations uint64
 	TxStatus      models.TransactionStatus
 	Tx            *tx.Tx
+	TxHash        string
 	Amount        sdk.Coin
-	SenderAddress []byte
+	SenderAddress string
 	NeedsRefund   bool
 }
 
@@ -37,8 +38,9 @@ func ValidateTxToCosmosMultisig(
 		Memo:          models.MintMemo{},
 		TxStatus:      models.TransactionStatusInvalid,
 		Tx:            nil,
+		TxHash:        common.Ensure0xPrefix(txResponse.TxHash),
 		Amount:        sdk.Coin{},
-		SenderAddress: nil,
+		SenderAddress: "",
 		NeedsRefund:   false,
 	}
 
@@ -54,7 +56,7 @@ func ValidateTxToCosmosMultisig(
 		return &result, err
 	}
 
-	result.SenderAddress = senderAddress
+	result.SenderAddress = sender
 
 	if txResponse.Code != 0 {
 		logger.Debugf("Found tx with non-zero code")
