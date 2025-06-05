@@ -119,8 +119,27 @@ type PocketSigner struct {
 	MultisigAddress string
 }
 
+func CreatePocketSigner() (common.Signer, error) {
+	return common.NewMnemonicSigner(Config.Pocket.Mnemonic)
+
+	// // Mnemonic for both Ethereum and Cosmos networks
+	// if config.Mnemonic == "" && config.GcpKmsKeyName == "" {
+	// 	return nil, fmt.Errorf("Mnemonic or GcpKmsKeyName is required")
+	// }
+	// if config.Mnemonic != "" {
+	// 	if !bip39.IsMnemonicValid(config.Mnemonic) {
+	// 		return nil, fmt.Errorf("Mnemonic is invalid")
+	// 	}
+	//
+	// 	return common.NewMnemonicSigner(config.Mnemonic)
+	// }
+	//
+	// return common.NewGcpKmsSigner(config.GcpKmsKeyName)
+
+}
+
 func GetPocketSignerAndMultisig() (*PocketSigner, error) {
-	signer, err := common.NewMnemonicSigner(Config.Pocket.Mnemonic)
+	signer, err := CreatePocketSigner()
 	if err != nil {
 		return nil, fmt.Errorf("error initializing pokt signer: %w", err)
 	}
@@ -141,12 +160,17 @@ func GetPocketSignerAndMultisig() (*PocketSigner, error) {
 		pks = append(pks, pKey)
 		if pKey.Equals(cosmosPubKey) {
 			signerIndex = index
+			log.Debugf("[HEALTH] Found current pocket signer at index %d", index)
 		}
 	}
 
 	if signerIndex == -1 {
 		// log.Fatal("[HEALTH] Multisig public keys do not contain signer")
 		return nil, fmt.Errorf("multisig public keys do not contain signer")
+	}
+
+	if Config.Pocket.MultisigThreshold == 0 || Config.Pocket.MultisigThreshold > uint64(len(Config.Pocket.MultisigPublicKeys)) {
+		return nil, fmt.Errorf("multisig threshold is invalid")
 	}
 
 	multisigPk := multisig.NewLegacyAminoPubKey(int(Config.Pocket.MultisigThreshold), pks)

@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/hex"
 	"os"
 	"strings"
 
@@ -10,11 +9,6 @@ import (
 	"github.com/dan13ram/wpokt-validator/common"
 	"github.com/dan13ram/wpokt-validator/models"
 	"gopkg.in/yaml.v2"
-
-	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
-
-	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 )
 
 var (
@@ -48,77 +42,71 @@ func readConfigFromConfigFile(configFile string) bool {
 	return true
 }
 
-func validateAndCreateSigner(mnemonic string) (common.Signer, error) {
-	log.Debug("Initializing signer")
-
-	return common.NewMnemonicSigner(mnemonic)
-
-	// // Mnemonic for both Ethereum and Cosmos networks
-	// if config.Mnemonic == "" && config.GcpKmsKeyName == "" {
-	// 	return nil, fmt.Errorf("Mnemonic or GcpKmsKeyName is required")
-	// }
-	// if config.Mnemonic != "" {
-	// 	if !bip39.IsMnemonicValid(config.Mnemonic) {
-	// 		return nil, fmt.Errorf("Mnemonic is invalid")
-	// 	}
-	//
-	// 	return common.NewMnemonicSigner(config.Mnemonic)
-	// }
-	//
-	// return common.NewGcpKmsSigner(config.GcpKmsKeyName)
-
-}
-
 func validateConfig() {
 	log.Debug("[CONFIG] Validating config")
-	// mongodb
-	if Config.MongoDB.URI == "" {
-		log.Fatal("[CONFIG] MongoDB.URI is required")
-	}
-	if Config.MongoDB.Database == "" {
-		log.Fatal("[CONFIG] MongoDB.Database is required")
-	}
-	if Config.MongoDB.TimeoutMillis == 0 {
-		log.Fatal("[CONFIG] MongoDB.TimeoutMillis is required")
-	}
-
-	// ethereum
-	if Config.Ethereum.RPCURL == "" {
-		log.Fatal("[CONFIG] Ethereum.RPCURL is required")
-	}
-	if Config.Ethereum.ChainID == "" {
-		log.Fatal("[CONFIG] Ethereum.ChainID is required")
-	}
-	if Config.Ethereum.RPCTimeoutMillis == 0 {
-		log.Fatal("[CONFIG] Ethereum.RPCTimeoutMillis is required")
-	}
-	if Config.Ethereum.PrivateKey == "" {
-		log.Fatal("[CONFIG] Ethereum.PrivateKey is required")
-	} else {
-		Config.Ethereum.PrivateKey = strings.TrimPrefix(Config.Ethereum.PrivateKey, "0x")
+	{
+		// mongodb
+		if Config.MongoDB.URI == "" {
+			log.Fatal("[CONFIG] MongoDB.URI is required")
+		}
+		if Config.MongoDB.Database == "" {
+			log.Fatal("[CONFIG] MongoDB.Database is required")
+		}
+		if Config.MongoDB.TimeoutMillis == 0 {
+			log.Fatal("[CONFIG] MongoDB.TimeoutMillis is required")
+		}
 	}
 
-	if Config.Ethereum.WrappedPocketAddress == "" {
-		log.Fatal("[CONFIG] Ethereum.WrappedPocketAddress is required")
-	}
-	if Config.Ethereum.MintControllerAddress == "" {
-		log.Fatal("[CONFIG] Ethereum.MintControllerAddress is required")
-	}
-	if len(Config.Ethereum.ValidatorAddresses) == 0 {
-		log.Fatal("[CONFIG] Ethereum.ValidatorAddresses is required")
+	{
+		// ethereum
+		if Config.Ethereum.RPCURL == "" {
+			log.Fatal("[CONFIG] Ethereum.RPCURL is required")
+		}
+		if Config.Ethereum.ChainID == "" {
+			log.Fatal("[CONFIG] Ethereum.ChainID is required")
+		}
+		if Config.Ethereum.RPCTimeoutMillis == 0 {
+			log.Fatal("[CONFIG] Ethereum.RPCTimeoutMillis is required")
+		}
+		if Config.Ethereum.PrivateKey == "" {
+			log.Fatal("[CONFIG] Ethereum.PrivateKey is required")
+		} else {
+			Config.Ethereum.PrivateKey = strings.TrimPrefix(Config.Ethereum.PrivateKey, "0x")
+		}
+
+		if Config.Ethereum.WrappedPocketAddress == "" {
+			log.Fatal("[CONFIG] Ethereum.WrappedPocketAddress is required")
+		}
+		if Config.Ethereum.MintControllerAddress == "" {
+			log.Fatal("[CONFIG] Ethereum.MintControllerAddress is required")
+		}
+		if len(Config.Ethereum.ValidatorAddresses) == 0 {
+			log.Fatal("[CONFIG] Ethereum.ValidatorAddresses is required")
+		}
+
+		signer, err := GetEthereumSigner()
+		if err != nil {
+			log.Fatalf("[CONFIG] Error creating ethereum signer: %s", err.Error())
+		}
+
+		foundValidatorAddress := false
+		for index, validatorAddress := range Config.Ethereum.ValidatorAddresses {
+			if !common.IsValidEthereumAddress(validatorAddress) {
+				log.Fatalf("[CONFIG] Ethereum.ValidatorAddresses[%d] is invalid", validatorAddress)
+			}
+			if strings.EqualFold(validatorAddress, signer.Address) {
+				foundValidatorAddress = true
+				log.Debugf("[CONFIG] Found current ethereum validator address at index %d", index)
+			}
+		}
+		if !foundValidatorAddress {
+			log.Fatalf("[CONFIG] Ethereum.ValidatorAddresses does not contain validator address")
+		}
+
 	}
 
 	// pocket
-	if Config.Pocket.Mnemonic == "" {
-		log.Fatal("[CONFIG] Pocket.Mnemonic is required")
-	}
 
-	signer, err := validateAndCreateSigner(Config.Pocket.Mnemonic)
-	if err != nil {
-		log.Fatalf("[CONFIG] Error creating signer: %s", err.Error())
-	}
-
-	cosmosPubKeyHex := hex.EncodeToString(signer.CosmosPublicKey().Bytes())
 	{
 		// cosmos
 		if Config.Pocket.StartHeight == 0 {
@@ -160,60 +148,45 @@ func validateConfig() {
 		if len(Config.Pocket.MultisigPublicKeys) <= 1 {
 			log.Fatal("Pocket.MultisigPublicKeys is required and must have at least 2 public keys")
 		}
-		foundPublicKey := false
-		seen := make(map[string]bool)
-		var pKeys []crypto.PubKey
-		for j, publicKey := range Config.Pocket.MultisigPublicKeys {
-			publicKey = strings.ToLower(publicKey)
-			if !common.IsValidCosmosPublicKey(publicKey) {
-				log.Fatalf("Pocket.MultisigPublicKeys[%d] is invalid", j)
-			}
-			if strings.EqualFold(publicKey, cosmosPubKeyHex) {
-				foundPublicKey = true
-			}
-			pKey, _ := common.CosmosPublicKeyFromHex(publicKey) // cannot fail because public key is valid
-			pKeys = append(pKeys, pKey)
-			if seen[publicKey] {
-				log.Fatalf("Pocket.MultisigPublicKeys[%d] is duplicated", j)
-			}
-			seen[publicKey] = true
+
+		if Config.Pocket.Mnemonic == "" {
+			log.Fatal("[CONFIG] Pocket.Mnemonic is required")
 		}
-		if !foundPublicKey {
-			log.Fatal("Pocket.MultisigPublicKeys must contain the public key of this oracle")
-		}
-		if Config.Pocket.MultisigThreshold == 0 || Config.Pocket.MultisigThreshold > uint64(len(Config.Pocket.MultisigPublicKeys)) {
-			log.Fatal("Pocket.MultisigThreshold is invalid")
-		}
-		multisigPk := multisig.NewLegacyAminoPubKey(int(Config.Pocket.MultisigThreshold), pKeys)
-		multisigBech32, _ := bech32.ConvertAndEncode(Config.Pocket.Bech32Prefix, multisigPk.Address().Bytes()) // no reason it should fail
-		if !strings.EqualFold(Config.Pocket.MultisigAddress, multisigBech32) {
-			log.Fatal("Pocket.MultisigAddress is not valid for the given public keys and threshold")
+
+		_, err := GetPocketSignerAndMultisig()
+		if err != nil {
+			log.Fatalf("[CONFIG] Error creating pocket signer: %s", err.Error())
 		}
 
 	}
 
-	// services
-	if Config.MintMonitor.Enabled && Config.MintMonitor.IntervalMillis == 0 {
-		log.Fatal("[CONFIG] MintMonitor.Interval is required")
-	}
-	if Config.MintSigner.Enabled && Config.MintSigner.IntervalMillis == 0 {
-		log.Fatal("[CONFIG] MintSigner.Interval is required")
-	}
-	if Config.MintExecutor.Enabled && Config.MintExecutor.IntervalMillis == 0 {
-		log.Fatal("[CONFIG] MintExecutor.Interval is required")
-	}
-	if Config.BurnMonitor.Enabled && Config.BurnMonitor.IntervalMillis == 0 {
-		log.Fatal("[CONFIG] BurnMonitor.Interval is required")
-	}
-	if Config.BurnSigner.Enabled && Config.BurnSigner.IntervalMillis == 0 {
-		log.Fatal("[CONFIG] BurnSigner.Interval is required")
-	}
-	if Config.BurnExecutor.Enabled && Config.BurnExecutor.IntervalMillis == 0 {
-		log.Fatal("[CONFIG] BurnExecutor.Interval is required")
+	{
+		// services
+		if Config.MintMonitor.Enabled && Config.MintMonitor.IntervalMillis == 0 {
+			log.Fatal("[CONFIG] MintMonitor.Interval is required")
+		}
+		if Config.MintSigner.Enabled && Config.MintSigner.IntervalMillis == 0 {
+			log.Fatal("[CONFIG] MintSigner.Interval is required")
+		}
+		if Config.MintExecutor.Enabled && Config.MintExecutor.IntervalMillis == 0 {
+			log.Fatal("[CONFIG] MintExecutor.Interval is required")
+		}
+		if Config.BurnMonitor.Enabled && Config.BurnMonitor.IntervalMillis == 0 {
+			log.Fatal("[CONFIG] BurnMonitor.Interval is required")
+		}
+		if Config.BurnSigner.Enabled && Config.BurnSigner.IntervalMillis == 0 {
+			log.Fatal("[CONFIG] BurnSigner.Interval is required")
+		}
+		if Config.BurnExecutor.Enabled && Config.BurnExecutor.IntervalMillis == 0 {
+			log.Fatal("[CONFIG] BurnExecutor.Interval is required")
+		}
 	}
 
-	if Config.HealthCheck.IntervalMillis == 0 {
-		log.Fatal("[CONFIG] HealthCheck.Interval is required")
+	{
+		// health check
+		if Config.HealthCheck.IntervalMillis == 0 {
+			log.Fatal("[CONFIG] HealthCheck.Interval is required")
+		}
 	}
 
 	log.Debug("[CONFIG] Config validated")
