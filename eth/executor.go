@@ -83,7 +83,7 @@ func (x *MintExecutorRunner) HandleMintEvent(event *autogen.WrappedPocketMinted)
 		},
 	}
 
-	err := app.DB.UpdateOne(models.CollectionMints, filter, update)
+	_, err := app.DB.UpdateOne(models.CollectionMints, filter, update)
 
 	if err != nil {
 		log.Error("[MINT EXECUTOR] Error while updating mint: ", err)

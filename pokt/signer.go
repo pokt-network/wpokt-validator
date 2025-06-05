@@ -206,7 +206,7 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 		"_id":    doc.Id,
 		"status": bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
 	}
-	err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
+	_, err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error updating invalid mint: ", err)
 		return false
@@ -341,7 +341,7 @@ func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
 		"_id":    doc.Id,
 		"status": bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
 	}
-	err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
+	_, err = app.DB.UpdateOne(models.CollectionBurns, filter, update)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error updating burn: ", err)
 		return false

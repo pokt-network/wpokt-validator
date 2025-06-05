@@ -321,7 +321,7 @@ func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
 		"status": bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
 	}
 
-	err = app.DB.UpdateOne(models.CollectionMints, filter, update)
+	_, err = app.DB.UpdateOne(models.CollectionMints, filter, update)
 	if err != nil {
 		log.Error("[MINT SIGNER] Error updating mint: ", err)
 		return false

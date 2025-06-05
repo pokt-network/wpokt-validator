@@ -104,7 +104,7 @@ func validateConfig() {
 	if Config.Ethereum.MintControllerAddress == "" {
 		log.Fatal("[CONFIG] Ethereum.MintControllerAddress is required")
 	}
-	if Config.Ethereum.ValidatorAddresses == nil || len(Config.Ethereum.ValidatorAddresses) == 0 {
+	if len(Config.Ethereum.ValidatorAddresses) == 0 {
 		log.Fatal("[CONFIG] Ethereum.ValidatorAddresses is required")
 	}
 
@@ -115,7 +115,7 @@ func validateConfig() {
 
 	signer, err := validateAndCreateSigner(Config.Pocket.Mnemonic)
 	if err != nil {
-		log.Fatal("[CONFIG] Error creating signer: %s", err.Error())
+		log.Fatalf("[CONFIG] Error creating signer: %s", err.Error())
 	}
 
 	cosmosPubKeyHex := hex.EncodeToString(signer.CosmosPublicKey().Bytes())
@@ -157,7 +157,7 @@ func validateConfig() {
 		if !common.IsValidBech32Address(Config.Pocket.Bech32Prefix, Config.Pocket.MultisigAddress) {
 			log.Fatal("Pocket.MultisigAddress is invalid")
 		}
-		if Config.Pocket.MultisigPublicKeys == nil || len(Config.Pocket.MultisigPublicKeys) <= 1 {
+		if len(Config.Pocket.MultisigPublicKeys) <= 1 {
 			log.Fatal("Pocket.MultisigPublicKeys is required and must have at least 2 public keys")
 		}
 		foundPublicKey := false
@@ -166,7 +166,7 @@ func validateConfig() {
 		for j, publicKey := range Config.Pocket.MultisigPublicKeys {
 			publicKey = strings.ToLower(publicKey)
 			if !common.IsValidCosmosPublicKey(publicKey) {
-				log.Fatal("Pocket.MultisigPublicKeys[%d] is invalid", j)
+				log.Fatalf("Pocket.MultisigPublicKeys[%d] is invalid", j)
 			}
 			if strings.EqualFold(publicKey, cosmosPubKeyHex) {
 				foundPublicKey = true
@@ -174,7 +174,7 @@ func validateConfig() {
 			pKey, _ := common.CosmosPublicKeyFromHex(publicKey) // cannot fail because public key is valid
 			pKeys = append(pKeys, pKey)
 			if seen[publicKey] {
-				log.Fatal("Pocket.MultisigPublicKeys[%d] is duplicated", j)
+				log.Fatalf("Pocket.MultisigPublicKeys[%d] is duplicated", j)
 			}
 			seen[publicKey] = true
 		}
