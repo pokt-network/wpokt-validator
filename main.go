@@ -10,21 +10,21 @@ import (
 	"syscall"
 
 	"github.com/dan13ram/wpokt-validator/app"
+	"github.com/dan13ram/wpokt-validator/cosmos"
 	"github.com/dan13ram/wpokt-validator/eth"
 	"github.com/dan13ram/wpokt-validator/models"
-	"github.com/dan13ram/wpokt-validator/pokt"
 	log "github.com/sirupsen/logrus"
 )
 
 type ServiceFactory = func(*sync.WaitGroup, models.ServiceHealth) app.Service
 
 var ServiceFactoryMap map[string]ServiceFactory = map[string]ServiceFactory{
-	pokt.MintMonitorName:  pokt.NewMintMonitor,
-	pokt.BurnSignerName:   pokt.NewBurnSigner,
-	pokt.BurnExecutorName: pokt.NewBurnExecutor,
-	eth.BurnMonitorName:   eth.NewBurnMonitor,
-	eth.MintSignerName:    eth.NewMintSigner,
-	eth.MintExecutorName:  eth.NewMintExecutor,
+	cosmos.MintMonitorName:  cosmos.NewMintMonitor,
+	cosmos.BurnSignerName:   cosmos.NewBurnSigner,
+	cosmos.BurnExecutorName: cosmos.NewBurnExecutor,
+	eth.BurnMonitorName:     eth.NewBurnMonitor,
+	eth.MintSignerName:      eth.NewMintSigner,
+	eth.MintExecutorName:    eth.NewMintExecutor,
 }
 
 func main() {
@@ -65,7 +65,7 @@ func main() {
 	app.InitLogger()
 	app.InitDB()
 
-	pokt.ValidateNetwork()
+	cosmos.ValidateNetwork()
 	eth.ValidateNetwork()
 
 	healthcheck := app.NewHealthCheck()
