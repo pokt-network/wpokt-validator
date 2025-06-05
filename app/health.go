@@ -7,11 +7,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
+	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+	"github.com/dan13ram/wpokt-validator/common"
 	"github.com/dan13ram/wpokt-validator/models"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
-	// poktCrypto "github.com/pokt-network/pocket-core/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
+
+	"encoding/hex"
 )
 
 const (
@@ -108,14 +112,19 @@ func (x *HealthCheckRunner) SetServices(services []Service) {
 func NewHealthCheck() *HealthCheckRunner {
 	log.Debug("[HEALTH] Initializing health")
 
-	// pk, err := poktCrypto.NewPrivateKey(Config.Pocket.PrivateKey)
-	// if err != nil {
-	// 	log.Fatal("[HEALTH] Error initializing pokt signer: ", err)
-	// }
-	// log.Debug("[HEALTH] Initialized pokt signer private key")
-	// log.Debug("[HEALTH] Pokt signer public key: ", pk.PublicKey().RawString())
-	// log.Debug("[HEALTH] Pokt signer address: ", pk.PublicKey().Address().String())
-	//
+	signer, err := common.NewMnemonicSigner(Config.Pocket.Mnemonic)
+	if err != nil {
+		log.Fatal("[HEALTH] Error initializing pokt signer: ", err)
+	}
+
+	cosmosPubKey := signer.CosmosPublicKey()
+	poktPubKeyHex := hex.EncodeToString(cosmosPubKey.Bytes())
+	poktAddress, err := common.Bech32FromBytes(Config.Pocket.Bech32Prefix, cosmosPubKey.Address().Bytes())
+
+	log.Debug("[HEALTH] Initialized pokt signer private key")
+	log.Debug("[HEALTH] Pokt signer public key: ", poktPubKeyHex)
+	log.Debug("[HEALTH] Pokt signer address: ", poktAddress)
+
 	ethPK, err := ethCrypto.HexToECDSA(Config.Ethereum.PrivateKey)
 	if err != nil {
 		log.Fatal("[HEALTH] Error initializing ethereum signer: ", err)
@@ -124,26 +133,31 @@ func NewHealthCheck() *HealthCheckRunner {
 	log.Debug("[HEALTH] ETH Address: ", ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex())
 
 	ethAddress := ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex()
-	// poktAddress := pk.PublicKey().Address().String()
 
-	// var pks []poktCrypto.PublicKey
-	// signerIndex := -1
-	// for _, pk := range Config.Pocket.MultisigPublicKeys {
-	// 	p, err := poktCrypto.NewPublicKey(pk)
-	// 	if err != nil {
-	// 		log.Fatal("[HEALTH] Error parsing multisig public key: ", err)
-	// 	}
-	// 	pks = append(pks, p)
-	// 	if p.Address().String() == poktAddress {
-	// 		signerIndex = len(pks)
-	// 	}
-	// }
-	//
-	// if signerIndex == -1 {
-	// 	log.Fatal("[HEALTH] Multisig public keys do not contain signer")
-	// }
+	var pks []crypto.PubKey
+	signerIndex := -1
+	for _, pk := range Config.Pocket.MultisigPublicKeys {
+		pKey, err := common.CosmosPublicKeyFromHex(pk)
+		if err != nil {
+			log.Fatalf("Error parsing public key: %s", err)
+		}
+		pks = append(pks, pKey)
+		if strings.EqualFold(hex.EncodeToString(pKey.Bytes()), poktPubKeyHex) {
+			signerIndex = len(pks)
+		}
+	}
 
-	signerIndex := 0
+	if signerIndex == -1 {
+		log.Fatal("[HEALTH] Multisig public keys do not contain signer")
+	}
+
+	multisigPk := multisig.NewLegacyAminoPubKey(int(Config.Pocket.MultisigThreshold), pks)
+	multisigAddressBytes := multisigPk.Address().Bytes()
+	multisigAddress, _ := common.Bech32FromBytes(Config.Pocket.Bech32Prefix, multisigAddressBytes)
+
+	if !strings.EqualFold(multisigAddress, Config.Pocket.MultisigAddress) {
+		log.Fatal("[HEALTH] Multisig address does not match vault address")
+	}
 
 	validatorId := "wpokt-validator-" + fmt.Sprintf("%02d", signerIndex)
 
@@ -152,22 +166,18 @@ func NewHealthCheck() *HealthCheckRunner {
 		log.Fatal("[HEALTH] Error getting hostname: ", err)
 	}
 
-	// multisigPkAddress := poktCrypto.PublicKeyMultiSignature{PublicKeys: pks}.Address().String()
-	// log.Debug("[HEALTH] Multisig address: ", multisigPkAddress)
-	// if strings.ToLower(multisigPkAddress) != strings.ToLower(Config.Pocket.VaultAddress) {
-	// 	log.Fatal("[HEALTH] Multisig address does not match vault address")
-	// }
+	log.Debug("[HEALTH] Multisig address: ", multisigAddress)
 
 	x := &HealthCheckRunner{
-		// poktVaultAddress: strings.ToLower(multisigPkAddress),
-		// poktSigners:      Config.Pocket.MultisigPublicKeys,
-		// poktPublicKey:    pk.PublicKey().RawString(),
-		// poktAddress:      strings.ToLower(poktAddress),
-		ethValidators: Config.Ethereum.ValidatorAddresses,
-		ethAddress:    strings.ToLower(ethAddress),
-		wpoktAddress:  strings.ToLower(Config.Ethereum.WrappedPocketAddress),
-		hostname:      hostname,
-		validatorId:   validatorId,
+		poktVaultAddress: strings.ToLower(multisigAddress),
+		poktSigners:      Config.Pocket.MultisigPublicKeys,
+		poktPublicKey:    poktPubKeyHex,
+		poktAddress:      strings.ToLower(poktAddress),
+		ethValidators:    Config.Ethereum.ValidatorAddresses,
+		ethAddress:       strings.ToLower(ethAddress),
+		wpoktAddress:     strings.ToLower(Config.Ethereum.WrappedPocketAddress),
+		hostname:         hostname,
+		validatorId:      validatorId,
 	}
 
 	log.Info("[HEALTH] Initialized health")
