@@ -50,79 +50,79 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 	var filter bson.M
 	var update bson.M
 
-	if doc.Status == models.StatusSigned {
-		log.Debug("[BURN EXECUTOR] Submitting invalid mint")
+	// if doc.Status == models.StatusSigned {
+	// 	log.Debug("[BURN EXECUTOR] Submitting invalid mint")
 
-		// var err error
+	// var err error
 
-		// p := rpc.SendRawTxParams{
-		// 	Addr:        x.vaultAddress,
-		// 	RawHexBytes: doc.ReturnTx,
-		// }
-		//
-		// res, err := x.client.SubmitRawTx(p)
-		// if err != nil {
-		// 	log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
-		// 	return false
-		// }
-		//
-		// if res == nil || strings.TrimSpace(res.TransactionHash) == "" {
-		// 	log.Error("[BURN EXECUTOR] Invalid mint return tx hash not found")
-		// 	return false
-		// }
-		//
-		// filter = bson.M{
-		// 	"_id":    doc.Id,
-		// 	"status": models.StatusSigned,
-		// }
-		//
-		// update = bson.M{
-		// 	"$set": bson.M{
-		// 		"status":         models.StatusSubmitted,
-		// 		"return_tx_hash": res.TransactionHash,
-		// 		"updated_at":     time.Now(),
-		// 	},
-		// }
-	} else if doc.Status == models.StatusSubmitted {
-		// log.Debug("[BURN EXECUTOR] Checking invalid mint")
-		// tx, err := x.client.GetTx(doc.ReturnTxHash)
-		// if err != nil {
-		// 	log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
-		// 	return false
-		// }
-		// if tx == nil || tx.Tx == "" {
-		// 	log.Error("[BURN EXECUTOR] Invalid mint return tx not found: ", doc.ReturnTxHash)
-		// 	return false
-		// }
-		//
-		// filter = bson.M{
-		// 	"_id":    doc.Id,
-		// 	"status": models.StatusSubmitted,
-		// }
-		//
-		// if tx.TxResult.Code != 0 {
-		// 	log.Error("[BURN EXECUTOR] Invalid mint return tx failed: ", tx.Hash)
-		// 	update = bson.M{
-		// 		"$set": bson.M{
-		// 			"status":         models.StatusConfirmed,
-		// 			"updated_at":     time.Now(),
-		// 			"return_tx_hash": "",
-		// 			"return_tx":      "",
-		// 			"signers":        []string{},
-		// 		},
-		// 	}
-		// } else {
-		// 	log.Debug("[BURN EXECUTOR] Invalid mint return tx succeeded: ", tx.Hash)
-		// 	update = bson.M{
-		// 		"$set": bson.M{
-		// 			"status":     models.StatusSuccess,
-		// 			"updated_at": time.Now(),
-		// 		},
-		// 	}
-		// }
-	}
+	// p := rpc.SendRawTxParams{
+	// 	Addr:        x.vaultAddress,
+	// 	RawHexBytes: doc.ReturnTx,
+	// }
+	//
+	// res, err := x.client.SubmitRawTx(p)
+	// if err != nil {
+	// 	log.Error("[BURN EXECUTOR] Error submitting transaction: ", err)
+	// 	return false
+	// }
+	//
+	// if res == nil || strings.TrimSpace(res.TransactionHash) == "" {
+	// 	log.Error("[BURN EXECUTOR] Invalid mint return tx hash not found")
+	// 	return false
+	// }
+	//
+	// filter = bson.M{
+	// 	"_id":    doc.Id,
+	// 	"status": models.StatusSigned,
+	// }
+	//
+	// update = bson.M{
+	// 	"$set": bson.M{
+	// 		"status":         models.StatusSubmitted,
+	// 		"return_tx_hash": res.TransactionHash,
+	// 		"updated_at":     time.Now(),
+	// 	},
+	// }
+	// } else if doc.Status == models.StatusSubmitted {
+	// log.Debug("[BURN EXECUTOR] Checking invalid mint")
+	// tx, err := x.client.GetTx(doc.ReturnTxHash)
+	// if err != nil {
+	// 	log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
+	// 	return false
+	// }
+	// if tx == nil || tx.Tx == "" {
+	// 	log.Error("[BURN EXECUTOR] Invalid mint return tx not found: ", doc.ReturnTxHash)
+	// 	return false
+	// }
+	//
+	// filter = bson.M{
+	// 	"_id":    doc.Id,
+	// 	"status": models.StatusSubmitted,
+	// }
+	//
+	// if tx.TxResult.Code != 0 {
+	// 	log.Error("[BURN EXECUTOR] Invalid mint return tx failed: ", tx.Hash)
+	// 	update = bson.M{
+	// 		"$set": bson.M{
+	// 			"status":         models.StatusConfirmed,
+	// 			"updated_at":     time.Now(),
+	// 			"return_tx_hash": "",
+	// 			"return_tx":      "",
+	// 			"signers":        []string{},
+	// 		},
+	// 	}
+	// } else {
+	// 	log.Debug("[BURN EXECUTOR] Invalid mint return tx succeeded: ", tx.Hash)
+	// 	update = bson.M{
+	// 		"$set": bson.M{
+	// 			"status":     models.StatusSuccess,
+	// 			"updated_at": time.Now(),
+	// 		},
+	// 	}
+	// }
+	// }
 
-	if err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update); err != nil {
+	if _, err := app.DB.UpdateOne(models.CollectionInvalidMints, filter, update); err != nil {
 		log.Error("[BURN EXECUTOR] Error updating invalid mint: ", err)
 		return false
 	}
@@ -214,7 +214,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 		// }
 	}
 
-	if err := app.DB.UpdateOne(models.CollectionBurns, filter, update); err != nil {
+	if _, err := app.DB.UpdateOne(models.CollectionBurns, filter, update); err != nil {
 		log.Error("[BURN EXECUTOR] Error updating burn: ", err)
 		return false
 	}

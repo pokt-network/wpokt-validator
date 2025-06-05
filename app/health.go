@@ -90,7 +90,7 @@ func (x *HealthCheckRunner) PostHealth() bool {
 
 	update := bson.M{"$set": onUpdate, "$setOnInsert": onInsert}
 
-	err := DB.UpsertOne(models.CollectionHealthChecks, filter, update)
+	_, err := DB.UpsertOne(models.CollectionHealthChecks, filter, update)
 
 	if err != nil {
 		log.Error("[HEALTH] Error posting health: ", err)
@@ -117,6 +117,9 @@ func NewHealthCheck() *HealthCheckRunner {
 	// log.Debug("[HEALTH] Pokt signer address: ", pk.PublicKey().Address().String())
 	//
 	ethPK, err := ethCrypto.HexToECDSA(Config.Ethereum.PrivateKey)
+	if err != nil {
+		log.Fatal("[HEALTH] Error initializing ethereum signer: ", err)
+	}
 	log.Debug("[HEALTH] Initialized private key")
 	log.Debug("[HEALTH] ETH Address: ", ethCrypto.PubkeyToAddress(ethPK.PublicKey).Hex())
 

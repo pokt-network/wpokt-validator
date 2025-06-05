@@ -62,7 +62,7 @@ func (x *BurnMonitorRunner) HandleBurnEvent(event *autogen.WrappedPocketBurnAndB
 	// each event is a combination of transaction hash and log index
 	log.Debug("[BURN MONITOR] Handling burn event: ", event.Raw.TxHash, " ", event.Raw.Index)
 
-	err := app.DB.InsertOne(models.CollectionBurns, doc)
+	_, err := app.DB.InsertOne(models.CollectionBurns, doc)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Info("[BURN MONITOR] Found duplicate burn event: ", event.Raw.TxHash, " ", event.Raw.Index)

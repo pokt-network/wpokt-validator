@@ -19,66 +19,66 @@ import (
 // var txEncoder sdk.TxEncoder = auth.DefaultTxEncoder(pokt.Codec())
 // var txDecoder sdk.TxDecoder = auth.DefaultTxDecoder(pokt.Codec())
 
-func buildMultiSigTxAndSign(
-	toAddr string,
-	memo string,
-	chainID string,
-	amount int64,
-	fees int64,
-	// signerKey crypto.PrivateKey,
-	// multisigKey crypto.PublicKeyMultiSig,
-) ([]byte, error) {
+// func buildMultiSigTxAndSign(
+// 	toAddr string,
+// 	memo string,
+// 	chainID string,
+// 	amount int64,
+// 	fees int64,
+// 	// signerKey crypto.PrivateKey,
+// 	// multisigKey crypto.PublicKeyMultiSig,
+// ) ([]byte, error) {
 
-	// fa, err := sdk.AddressFromHex(multisigKey.Address().String())
-	// if err != nil {
-	return nil, nil
-	// }
-	//
-	// ta, err := sdk.AddressFromHex(toAddr)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// m := &nodeTypes.MsgSend{
-	// 	FromAddress: fa,
-	// 	ToAddress:   ta,
-	// 	Amount:      sdk.NewInt(amount),
-	// }
-	//
-	// entropy := rand.Int64()
-	// fee := sdk.NewCoins(sdk.NewCoin(sdk.DefaultStakeDenom, sdk.NewInt(fees)))
-	//
-	// signBz, err := authTypes.StdSignBytes(chainID, entropy, fee, m, memo)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// sigBytes, err := signerKey.Sign(signBz)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// // sign using multisignature structure
-	// var ms = crypto.MultiSig(crypto.MultiSignature{})
-	// ms = ms.NewMultiSignature()
-	//
-	// // loop through all the keys and add signatures
-	// for i := 0; i < len(multisigKey.Keys()); i++ {
-	// 	ms = ms.AddSignatureByIndex(sigBytes, i)
-	// 	// when new signatures are added they will replace the old ones
-	// }
-	//
-	// sig := authTypes.StdSignature{
-	// 	PublicKey: multisigKey,
-	// 	Signature: ms.Marshal(),
-	// }
-	//
-	// // create a new standard transaction object
-	// tx := authTypes.NewTx(m, fee, sig, memo, entropy)
-	//
-	// // encode it using the default encoder
-	// return txEncoder(tx, -1)
-}
+// fa, err := sdk.AddressFromHex(multisigKey.Address().String())
+// if err != nil {
+// return nil, nil
+// }
+//
+// ta, err := sdk.AddressFromHex(toAddr)
+// if err != nil {
+// 	return nil, err
+// }
+//
+// m := &nodeTypes.MsgSend{
+// 	FromAddress: fa,
+// 	ToAddress:   ta,
+// 	Amount:      sdk.NewInt(amount),
+// }
+//
+// entropy := rand.Int64()
+// fee := sdk.NewCoins(sdk.NewCoin(sdk.DefaultStakeDenom, sdk.NewInt(fees)))
+//
+// signBz, err := authTypes.StdSignBytes(chainID, entropy, fee, m, memo)
+// if err != nil {
+// 	return nil, err
+// }
+//
+// sigBytes, err := signerKey.Sign(signBz)
+// if err != nil {
+// 	return nil, err
+// }
+//
+// // sign using multisignature structure
+// var ms = crypto.MultiSig(crypto.MultiSignature{})
+// ms = ms.NewMultiSignature()
+//
+// // loop through all the keys and add signatures
+// for i := 0; i < len(multisigKey.Keys()); i++ {
+// 	ms = ms.AddSignatureByIndex(sigBytes, i)
+// 	// when new signatures are added they will replace the old ones
+// }
+//
+// sig := authTypes.StdSignature{
+// 	PublicKey: multisigKey,
+// 	Signature: ms.Marshal(),
+// }
+//
+// // create a new standard transaction object
+// tx := authTypes.NewTx(m, fee, sig, memo, entropy)
+//
+// // encode it using the default encoder
+// return txEncoder(tx, -1)
+// }
 
 // func decodeTx(txHex string, chainID string) (authTypes.StdTx, []byte, error) {
 // bz, err := hex.DecodeString(txHex)
@@ -101,55 +101,55 @@ func buildMultiSigTxAndSign(
 // return tx, bytesToSign, nil
 // }
 
-func signMultisigTx(
-	txHex string,
-	chainID string,
-	// signerKey crypto.PrivateKey,
-	// multisigKey crypto.PublicKeyMultiSig,
-) ([]byte, error) {
+// func signMultisigTx(
+// 	txHex string,
+// 	chainID string,
+// signerKey crypto.PrivateKey,
+// multisigKey crypto.PublicKeyMultiSig,
+// ) ([]byte, error) {
 
-	// tx, bytesToSign, err := decodeTx(txHex, chainID)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// sigBytes, err := signerKey.Sign(bytesToSign)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// var ms = crypto.MultiSig(crypto.MultiSignature{})
-	//
-	// if tx.GetSignature().GetSignature() == nil || len(tx.GetSignature().GetSignature()) == 0 {
-	// 	ms = ms.NewMultiSignature()
-	// } else {
-	// 	ms = ms.Unmarshal(tx.GetSignature().GetSignature())
-	// }
-	//
-	// ms, err = ms.AddSignature(
-	// 	sigBytes,
-	// 	signerKey.PublicKey(),
-	// 	multisigKey.Keys(),
-	// )
-	//
-	// if err != nil {
-	return nil, nil
-	// }
-	//
-	// sig := authTypes.StdSignature{
-	// 	PublicKey: tx.Signature.PublicKey,
-	// 	Signature: ms.Marshal(),
-	// }
-	//
-	// // replace the old multi-signature with the new multi-signature (containing the additional signature)
-	// tx, err = tx.WithSignature(sig)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// // encode using the standard encoder
-	// return txEncoder(tx, -1)
-}
+// tx, bytesToSign, err := decodeTx(txHex, chainID)
+// if err != nil {
+// 	return nil, err
+// }
+//
+// sigBytes, err := signerKey.Sign(bytesToSign)
+// if err != nil {
+// 	return nil, err
+// }
+//
+// var ms = crypto.MultiSig(crypto.MultiSignature{})
+//
+// if tx.GetSignature().GetSignature() == nil || len(tx.GetSignature().GetSignature()) == 0 {
+// 	ms = ms.NewMultiSignature()
+// } else {
+// 	ms = ms.Unmarshal(tx.GetSignature().GetSignature())
+// }
+//
+// ms, err = ms.AddSignature(
+// 	sigBytes,
+// 	signerKey.PublicKey(),
+// 	multisigKey.Keys(),
+// )
+//
+// if err != nil {
+// return nil, nil
+// }
+//
+// sig := authTypes.StdSignature{
+// 	PublicKey: tx.Signature.PublicKey,
+// 	Signature: ms.Marshal(),
+// }
+//
+// // replace the old multi-signature with the new multi-signature (containing the additional signature)
+// tx, err = tx.WithSignature(sig)
+// if err != nil {
+// 	return nil, err
+// }
+//
+// // encode using the standard encoder
+// return txEncoder(tx, -1)
+// }
 
 func UpdateStatusAndConfirmationsForInvalidMint(doc *models.InvalidMint, currentHeight int64) (*models.InvalidMint, error) {
 	// status := doc.Status
