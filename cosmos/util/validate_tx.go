@@ -36,7 +36,7 @@ func ValidateTxToCosmosMultisig(
 
 	result := ValidateTxResult{
 		Memo:          models.MintMemo{},
-		TxStatus:      models.TransactionStatusInvalid,
+		TxStatus:      models.TransactionStatusFailed,
 		Tx:            nil,
 		TxHash:        common.Ensure0xPrefix(txResponse.TxHash),
 		Amount:        sdk.Coin{},

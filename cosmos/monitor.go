@@ -149,7 +149,7 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 			continue
 		}
 
-		if result.TxStatus == models.TransactionStatusInvalid {
+		if result.NeedsRefund {
 			log.Info("[MINT MONITOR] Found invalid mint tx: ", result.TxHash)
 			success = x.HandleInvalidMint(txResponse, result) && success
 			continue

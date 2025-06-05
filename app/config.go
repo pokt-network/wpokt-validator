@@ -92,7 +92,7 @@ func validateConfig() {
 		foundValidatorAddress := false
 		for index, validatorAddress := range Config.Ethereum.ValidatorAddresses {
 			if !common.IsValidEthereumAddress(validatorAddress) {
-				log.Fatalf("[CONFIG] Ethereum.ValidatorAddresses[%d] is invalid", validatorAddress)
+				log.Fatalf("[CONFIG] Ethereum.ValidatorAddresses[%d] is invalid: %s", index, validatorAddress)
 			}
 			if strings.EqualFold(validatorAddress, signer.Address) {
 				foundValidatorAddress = true
