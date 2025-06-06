@@ -36,13 +36,10 @@ open_test_coverage :; bash ./coverage.sh && open ./coverage.html
 build :; go build -o wpokt-validator .
 
 .PHONY: docker_build
-docker_build :; docker buildx build . -t dan13ram/wpokt-validator:v0.0.2 --file ./docker/Dockerfile
-
-.PHONY: docker_build_local_gcp
-docker_build_local_gcp :; docker buildx build . -t dan13ram/wpokt-validator-local-gcp:v0.0.2 --file ./docker/Dockerfile-gcp
+docker_build :; docker buildx build . -t dan13ram/wpokt-validator:v0.2.0 --file ./Dockerfile
 
 .PHONY: docker_push
-docker_push :; docker push dan13ram/wpokt-validator:v0.0.2
+docker_push :; docker push dan13ram/wpokt-validator:v0.2.0
 
 .PHONY: docker_dev
 docker_dev : docker_one

@@ -5,18 +5,21 @@ mongodb:
 
 ethereum:
   start_block_number: 0
-  confirmations: 0
+  confirmations: 3
   private_key: ""
   rpc_url: ""
-  chain_id: "5"
+  chain_id: "11155111"
   rpc_timeout_ms: 30000
-  wrapped_pocket_address: ""
-  mint_controller_address: ""
+  wrapped_pocket_address: "0xf3cb3c50bc095d7fa15ec5515f849b96cca1ab81"
+  mint_controller_address: "0x8ec8384b9cd40f596a609180c9452384d523cf4d"
   validator_addresses:
+    - "0xDDe60B4F384Fb0960BA6c1f47fF6D4aAB652ED3a"
+    - "0xE525149C25cc6bF8D743fdc36aAf8BC2EaedFB11"
+    - "0xDf79D52a5Cf1aeFf5bC311bAB682283Ee476aA80"
 
 pocket:
   start_height: 0
-  confirmations: 0
+  confirmations: 1
   mnemonic: ""
   rpc_url: ""
   rpc_timeout_ms: 30000
@@ -24,23 +27,27 @@ pocket:
   grpc_enabled: false
   grpc_host: ""
   grpc_port: 0
-  chain_id: "poktroll"
+  chain_id: "pocket-beta"
   bech32_prefix: "pokt"
   coin_denom: "upokt"
-  multisig_address: ""
+  multisig_address: "pokt1433jl3yt58hat57vwyv6h4z5ygreffdr7svcpt"
   multisig_public_keys:
-  multisig_threshold: 0
+    - "02d4a6b5871433affc1664e9cacfb6b714166c087221dae53635868a135ed33669"
+    - "03f6aa5c079a6283551442e5437b61bb3b380c7ca787151efdee5097afbd56d6a6"
+    - "02b8a948a952205fac44ad89c254e04fae697038f7d4677a3f3d977c4f76605a60"
+  multisig_threshold: 2
+  mint_disabled: false
 
 mint_monitor:
-  enabled: false
+  enabled: true
   interval_ms: 30000
 
 mint_signer:
-  enabled: false
+  enabled: true
   interval_ms: 30000
 
 mint_executor:
-  enabled: false
+  enabled: true
   interval_ms: 30000
 
 burn_monitor:
