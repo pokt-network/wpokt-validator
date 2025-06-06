@@ -19,6 +19,7 @@ type DomainData struct {
 }
 
 type MintControllerContract interface {
+	SignerThreshold(opts *bind.CallOpts) (*big.Int, error)
 	ValidatorCount(opts *bind.CallOpts) (*big.Int, error)
 	Eip712Domain(opts *bind.CallOpts) (DomainData, error)
 	MaxMintLimit(opts *bind.CallOpts) (*big.Int, error)
@@ -26,6 +27,10 @@ type MintControllerContract interface {
 
 type MintControllerContractImpl struct {
 	contract *autogen.MintController
+}
+
+func (x *MintControllerContractImpl) SignerThreshold(opts *bind.CallOpts) (*big.Int, error) {
+	return x.contract.SignerThreshold(opts)
 }
 
 func (x *MintControllerContractImpl) ValidatorCount(opts *bind.CallOpts) (*big.Int, error) {

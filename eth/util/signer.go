@@ -165,7 +165,7 @@ func SignMint(
 	data *autogen.MintControllerMintData,
 	domain eth.DomainData,
 	privateKey *ecdsa.PrivateKey,
-	numSigners int,
+	signerThreshold int,
 ) (*models.Mint, error) {
 	signature, err := signTypedData(domain, data, privateKey)
 	if err != nil {
@@ -184,7 +184,7 @@ func SignMint(
 
 	sortedSigners, sortedSignatures := sortSignersAndSignatures(signers, signatures)
 
-	if len(sortedSignatures) == numSigners {
+	if len(sortedSignatures) >= signerThreshold {
 		mint.Status = models.StatusSigned
 	}
 

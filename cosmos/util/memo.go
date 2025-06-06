@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/common"
 	"github.com/dan13ram/wpokt-validator/models"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -29,12 +30,12 @@ func ValidateMemo(txMemo string) (models.MintMemo, error) {
 		return memo, fmt.Errorf("zero address: %s", memo.Address)
 	}
 
-	chainID, ok := math.ParseUint64(memo.ChainID)
+	_, ok := math.ParseUint64(memo.ChainID)
 	if !ok {
 		return memo, fmt.Errorf("invalid chain id: %s", memo.ChainID)
 	}
 
-	if chainID != 1 {
+	if memo.ChainID != app.Config.Ethereum.ChainID {
 		return memo, fmt.Errorf("unsupported chain id: %s", memo.ChainID)
 	}
 
