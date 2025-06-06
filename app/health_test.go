@@ -14,8 +14,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/dan13ram/wpokt-validator/app/mocks"
 )
 
 func init() {
@@ -41,7 +44,7 @@ func TestHealthStatus(t *testing.T) {
 func TestFindLastHealth(t *testing.T) {
 
 	t.Run("No Error", func(t *testing.T) {
-		mockDB := NewMockDatabase(t)
+		mockDB := mocks.NewMockDatabase(t)
 		DB = mockDB
 
 		x := NewTestHealthCheck()
@@ -58,7 +61,7 @@ func TestFindLastHealth(t *testing.T) {
 	})
 
 	t.Run("With Error", func(t *testing.T) {
-		mockDB := NewMockDatabase(t)
+		mockDB := mocks.NewMockDatabase(t)
 		DB = mockDB
 
 		x := NewTestHealthCheck()
@@ -145,7 +148,7 @@ func TestPostHealth(t *testing.T) {
 			NewMockService(),
 		})
 
-		mockDB := NewMockDatabase(t)
+		mockDB := mocks.NewMockDatabase(t)
 		DB = mockDB
 
 		filter := bson.M{
@@ -185,7 +188,7 @@ func TestPostHealth(t *testing.T) {
 
 			assert.Equal(t, updateArg, update)
 		})
-		call.Return(nil)
+		call.Return(primitive.NewObjectID(), nil)
 
 		success := x.PostHealth()
 		assert.True(t, success)
@@ -200,11 +203,11 @@ func TestPostHealth(t *testing.T) {
 			NewMockService(),
 		})
 
-		mockDB := NewMockDatabase(t)
+		mockDB := mocks.NewMockDatabase(t)
 		DB = mockDB
 
 		call := mockDB.EXPECT().UpsertOne(mock.Anything, mock.Anything, mock.Anything)
-		call.Return(errors.New("error"))
+		call.Return(primitive.NewObjectID(), errors.New("error"))
 
 		success := x.PostHealth()
 		assert.False(t, success)
@@ -219,11 +222,11 @@ func TestPostHealth(t *testing.T) {
 			NewMockService(),
 		})
 
-		mockDB := NewMockDatabase(t)
+		mockDB := mocks.NewMockDatabase(t)
 		DB = mockDB
 
 		call := mockDB.EXPECT().UpsertOne(mock.Anything, mock.Anything, mock.Anything)
-		call.Return(errors.New("error"))
+		call.Return(primitive.NewObjectID(), errors.New("error"))
 
 		x.Run()
 	})
@@ -232,6 +235,7 @@ func TestPostHealth(t *testing.T) {
 
 func TestNewHealthCheck(t *testing.T) {
 	t.Run("With Empty Pocket Private Key", func(t *testing.T) {
+		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
 
@@ -239,7 +243,7 @@ func TestNewHealthCheck(t *testing.T) {
 	})
 
 	t.Run("With Empty Eth Private Key", func(t *testing.T) {
-		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "test test test test test test test test test test test junk"
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
 
@@ -248,7 +252,10 @@ func TestNewHealthCheck(t *testing.T) {
 
 	t.Run("With Empty MultiSig Keys", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "test test test test test test test test test test test junk"
+		Config.Pocket.MultisigAddress = "pokt10r5n6x28p9qntchsmhxd4ftq9lk6vzcx3dv4gx"
+		Config.Pocket.MultisigThreshold = 2
+		Config.Pocket.Bech32Prefix = "pokt"
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
 
@@ -256,9 +263,12 @@ func TestNewHealthCheck(t *testing.T) {
 	})
 
 	t.Run("With Invalid MultiSig Keys", func(t *testing.T) {
-		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
 		Config.Pocket.MultisigPublicKeys = []string{"0x1234"}
+		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+		Config.Pocket.Mnemonic = "test test test test test test test test test test test junk"
+		Config.Pocket.MultisigAddress = "pokt10r5n6x28p9qntchsmhxd4ftq9lk6vzcx3dv4gx"
+		Config.Pocket.MultisigThreshold = 2
+		Config.Pocket.Bech32Prefix = "pokt"
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
@@ -268,12 +278,15 @@ func TestNewHealthCheck(t *testing.T) {
 
 	t.Run("With Valid MultiSig Keys but Without Signer", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "test test test test test test test test test test test junk"
 		Config.Pocket.MultisigPublicKeys = []string{
-			// "eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
-			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
-			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
+			// "0223aa679d6d5344e201e0df9f02ab15a84726eee0dfb4e953c46a9e2cb52349dc",
+			"02faaaf0f385bb17381f36dcd86ab2486e8ff8d93440436496665ac007953076c2",
+			"02cae233806460db75a941a269490ca5165a620b43241edb8bc72e169f4143a6df",
 		}
+		Config.Pocket.MultisigAddress = "pokt10r5n6x28p9qntchsmhxd4ftq9lk6vzcx3dv4gx"
+		Config.Pocket.MultisigThreshold = 2
+		Config.Pocket.Bech32Prefix = "pokt"
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
@@ -282,14 +295,16 @@ func TestNewHealthCheck(t *testing.T) {
 	})
 
 	t.Run("With Valid MultiSig Keys but Empty Vault Address", func(t *testing.T) {
-		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
 		Config.Pocket.MultisigAddress = ""
+		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+		Config.Pocket.Mnemonic = "test test test test test test test test test test test junk"
 		Config.Pocket.MultisigPublicKeys = []string{
-			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
-			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
-			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
+			"0223aa679d6d5344e201e0df9f02ab15a84726eee0dfb4e953c46a9e2cb52349dc",
+			"02faaaf0f385bb17381f36dcd86ab2486e8ff8d93440436496665ac007953076c2",
+			"02cae233806460db75a941a269490ca5165a620b43241edb8bc72e169f4143a6df",
 		}
+		Config.Pocket.MultisigThreshold = 2
+		Config.Pocket.Bech32Prefix = "pokt"
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
@@ -299,13 +314,15 @@ func TestNewHealthCheck(t *testing.T) {
 
 	t.Run("With Valid Config", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "test test test test test test test test test test test junk"
 		Config.Pocket.MultisigPublicKeys = []string{
-			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
-			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
-			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
+			"0223aa679d6d5344e201e0df9f02ab15a84726eee0dfb4e953c46a9e2cb52349dc",
+			"02faaaf0f385bb17381f36dcd86ab2486e8ff8d93440436496665ac007953076c2",
+			"02cae233806460db75a941a269490ca5165a620b43241edb8bc72e169f4143a6df",
 		}
-		Config.Pocket.MultisigAddress = "E3BB46007E9BF127FD69B02DD5538848A80CADCE"
+		Config.Pocket.MultisigAddress = "pokt10r5n6x28p9qntchsmhxd4ftq9lk6vzcx3dv4gx"
+		Config.Pocket.MultisigThreshold = 2
+		Config.Pocket.Bech32Prefix = "pokt"
 
 		x := NewHealthCheck()
 

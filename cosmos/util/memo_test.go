@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/dan13ram/wpokt-validator/app"
 )
 
 func TestValidateMemo(t *testing.T) {
@@ -47,6 +49,7 @@ func TestValidateMemo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			app.Config.Ethereum.ChainID = "1"
 			memo, err := ValidateMemo(tt.txMemo)
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
