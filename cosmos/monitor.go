@@ -13,6 +13,7 @@ import (
 	"github.com/dan13ram/wpokt-validator/cosmos/util"
 	"github.com/dan13ram/wpokt-validator/models"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -81,6 +82,15 @@ func (x *MintMonitorRunner) HandleInvalidMint(tx *sdk.TxResponse, result *util.V
 
 	doc := util.CreateInvalidMint(tx, result, x.vaultAddress)
 
+	if app.Config.Pocket.MintDisabled {
+		// ensure that existing mints are not counted as invalid mints after the mint is disabled
+		err := app.DB.FindOne(models.CollectionMints, bson.M{"transaction_hash": doc.TransactionHash}, &models.Mint{})
+		if err == nil {
+			log.Warn("[MINT MONITOR] Ignoring invalid mint since it exists as a valid mint")
+			return true
+		}
+	}
+
 	log.Debug("[MINT MONITOR] Storing invalid mint tx")
 	_, err := app.DB.InsertOne(models.CollectionInvalidMints, doc)
 	if err != nil {
@@ -103,6 +113,15 @@ func (x *MintMonitorRunner) HandleValidMint(tx *sdk.TxResponse, result *util.Val
 	}
 
 	doc := util.CreateMint(tx, result, x.wpoktAddress, x.vaultAddress)
+
+	if !app.Config.Pocket.MintDisabled {
+		// ensure that existing invalid mints are not counted as valid mints after the mint is enabled
+		err := app.DB.FindOne(models.CollectionInvalidMints, bson.M{"transaction_hash": doc.TransactionHash}, &models.InvalidMint{})
+		if err == nil {
+			log.Warn("[MINT MONITOR] Ignoring valid mint since it exists as an invalid mint")
+			return true
+		}
+	}
 
 	log.Debug("[MINT MONITOR] Storing mint tx")
 	_, err := app.DB.InsertOne(models.CollectionMints, doc)
