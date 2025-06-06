@@ -224,6 +224,11 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 			return false
 		}
 
+		if !x.ValidateSignaturesAndAddMultiSignatureToTxConfig(doc.TransactionHash, *doc.Sequence, txCfg, txBuilder) {
+			log.Error("[BURN EXECUTOR] Error validating signatures and adding multisig to tx config")
+			return false
+		}
+
 		txJSON, err := txCfg.TxJSONEncoder()(txBuilder.GetTx())
 		if err != nil {
 			log.WithError(err).Errorf("Error encoding tx")

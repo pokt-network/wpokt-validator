@@ -8,9 +8,13 @@ import (
 	"github.com/dan13ram/wpokt-validator/app"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
 	"github.com/dan13ram/wpokt-validator/models"
+
+	"github.com/dan13ram/wpokt-validator/common"
 )
 
 func CreateBurn(event *autogen.WrappedPocketBurnAndBridge) models.Burn {
+	recipientAddress, _ := common.Bech32FromBytes(app.Config.Pocket.Bech32Prefix, event.PoktAddress.Bytes())
+
 	doc := models.Burn{
 		BlockNumber:           strconv.FormatInt(int64(event.Raw.BlockNumber), 10),
 		Confirmations:         "0",
@@ -19,7 +23,7 @@ func CreateBurn(event *autogen.WrappedPocketBurnAndBridge) models.Burn {
 		WPOKTAddress:          strings.ToLower(event.Raw.Address.String()),
 		SenderAddress:         strings.ToLower(event.From.String()),
 		SenderChainID:         app.Config.Ethereum.ChainID,
-		RecipientAddress:      strings.ToLower(strings.Split(event.PoktAddress.String(), "0x")[1]),
+		RecipientAddress:      recipientAddress,
 		RecipientChainID:      app.Config.Pocket.ChainID,
 		Amount:                event.Amount.String(),
 		CreatedAt:             time.Now(),
