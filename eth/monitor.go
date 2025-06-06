@@ -127,7 +127,7 @@ func (x *BurnMonitorRunner) SyncTxs() bool {
 		return true
 	}
 
-	var success bool = true
+	success := true
 	if (x.currentBlockNumber - x.startBlockNumber) > eth.MAX_QUERY_BLOCKS {
 		log.Debug("[BURN MONITOR] Syncing burn txs in chunks")
 		for i := x.startBlockNumber; i < x.currentBlockNumber; i += eth.MAX_QUERY_BLOCKS {
