@@ -14,7 +14,7 @@ import (
 
 	"github.com/dan13ram/wpokt-validator/app"
 	cosmos "github.com/dan13ram/wpokt-validator/cosmos/client"
-	// cosmosUtil "github.com/dan13ram/wpokt-validator/cosmos/util"
+	cosmosUtil "github.com/dan13ram/wpokt-validator/cosmos/util"
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/eth/util"
@@ -154,69 +154,16 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, errors.New("Transaction not found")
 	}
 
-	// if tx == nil || tx.Tx == "" {
-	// 	log.Debug("[MINT SIGNER] Transaction not found")
-	// 	return false, errors.New("Transaction not found")
-	// }
-	//
-	// if tx.TxResult.Code != 0 {
-	// 	log.Debug("[MINT SIGNER] Transaction failed")
-	// 	return false, nil
-	// }
-	//
-	// if tx.TxResult.MessageType != "send" || tx.StdTx.Msg.Type != "pos/Send" {
-	// 	log.Debug("[MINT SIGNER] Transaction message type is not send")
-	// 	return false, nil
-	// }
-	//
-	// if strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, "0000000000000000000000000000000000000000") {
-	// 	log.Debug("[MINT SIGNER] Transaction recipient is zero address")
-	// 	return false, nil
-	// }
-	//
-	// if !strings.EqualFold(tx.StdTx.Msg.Value.ToAddress, x.vaultAddress) {
-	// 	log.Debug("[MINT SIGNER] Transaction recipient is not vault address")
-	// 	return false, nil
-	// }
-	//
-	// if !strings.EqualFold(tx.StdTx.Msg.Value.FromAddress, mint.SenderAddress) {
-	// 	log.Debug("[MINT SIGNER] Transaction signer is not sender address")
-	// 	return false, nil
-	// }
-	//
-	// amount, ok := new(big.Int).SetString(tx.StdTx.Msg.Value.Amount, 10)
-	//
-	// if !ok || amount.Cmp(x.minimumAmount) != 1 {
-	// 	log.Debug("[MINT SIGNER] Transaction amount too low")
-	// 	return false, nil
-	// }
-	//
-	// if !ok || amount.Cmp(x.maximumAmount) == 1 {
-	// 	log.Debug("[MINT SIGNER] Transaction amount too high")
-	// 	return false, nil
-	// }
-	//
-	// if tx.StdTx.Msg.Value.Amount != mint.Amount {
-	// 	log.Debug("[MINT SIGNER] Transaction amount does not match mint amount")
-	// 	return false, nil
-	// }
-	//
-	// memo, valid := cosmosUtil.ValidateMemo(tx.StdTx.Memo)
-	// if !valid {
-	// 	log.Debug("[MINT SIGNER] Memo failed validation")
-	// 	return false, nil
-	// }
-	//
-	// if !strings.EqualFold(memo.Address, mint.RecipientAddress) {
-	// 	log.Debug("[MINT SIGNER] Memo address does not match recipient address")
-	// 	return false, nil
-	// }
-	//
-	// if memo.ChainID != mint.RecipientChainID {
-	// 	log.Debug("[MINT SIGNER] Memo chain id does not match recipient chain id")
-	// 	return false, nil
-	// }
-	//
+	result, err := cosmosUtil.ValidateTxToCosmosMultisig(tx, app.Config.Pocket, uint64(x.poktHeight))
+	if err != nil {
+		log.WithError(err).Errorf("Error validating tx")
+		return false, nil
+	}
+
+	if result.NeedsRefund || result.TxStatus == models.TransactionStatusFailed {
+		return false, nil
+	}
+
 	log.Debug("[MINT SIGNER] Mint validated")
 	return true, nil
 }

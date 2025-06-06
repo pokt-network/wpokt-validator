@@ -1,6 +1,7 @@
 package cosmos
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math/big"
@@ -29,7 +30,6 @@ const (
 
 type BurnSignerRunner struct {
 	signer         *app.PocketSigner
-	numSigners     int
 	ethClient      eth.EthereumClient
 	poktClient     cosmosClient.CosmosClient
 	poktHeight     int64
@@ -303,8 +303,8 @@ func (x *BurnSignerRunner) ValidateBurn(doc *models.Burn) (bool, error) {
 		log.Error("[BURN SIGNER] Invalid burn sender")
 		return false, nil
 	}
-	receiver := common.HexToAddress(fmt.Sprintf("0x%s", doc.RecipientAddress))
-	if !strings.EqualFold(burnEvent.PoktAddress.Hex(), receiver.Hex()) {
+	recipientBytes, _ := common.AddressBytesFromBech32(app.Config.Pocket.Bech32Prefix, doc.RecipientAddress)
+	if !bytes.Equal(burnEvent.PoktAddress.Bytes(), recipientBytes) {
 		log.Error("[BURN SIGNER] Invalid burn recipient")
 		return false, nil
 	}
@@ -352,7 +352,7 @@ func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
 			amount, _ := math.NewIntFromString(doc.Amount)
 			amountCoin := sdk.NewCoin(app.Config.Pocket.CoinDenom, amount)
 
-			toAddress, err := common.AddressBytesFromBech32(app.Config.Pocket.Bech32Prefix, doc.SenderAddress)
+			toAddress, err := common.AddressBytesFromBech32(app.Config.Pocket.Bech32Prefix, doc.RecipientAddress)
 			if err != nil {
 				log.Error("[BURN SIGNER] Error parsing to address: ", err)
 				return false
@@ -551,7 +551,6 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 
 	x := &BurnSignerRunner{
 		signer:        signer,
-		numSigners:    len(signer.Multisig.GetPubKeys()),
 		ethClient:     ethClient,
 		poktClient:    poktClient,
 		vaultAddress:  signer.MultisigAddress,
