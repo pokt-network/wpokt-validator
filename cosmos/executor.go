@@ -14,6 +14,11 @@ import (
 	"github.com/dan13ram/wpokt-validator/cosmos/util"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	multisigtypes "github.com/cosmos/cosmos-sdk/crypto/types/multisig"
+
+	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 )
 
 const (
@@ -35,6 +40,67 @@ func (x *BurnExecutorRunner) Status() models.RunnerStatus {
 	return models.RunnerStatus{}
 }
 
+var utilValidateSignature = util.ValidateSignature
+var multisigtypesAddSignatureV2 = multisigtypes.AddSignatureV2
+
+func (x *BurnExecutorRunner) ValidateSignaturesAndAddMultiSignatureToTxConfig(
+	originTxHash string,
+	sequence uint64,
+	txCfg client.TxConfig,
+	txBuilder client.TxBuilder,
+) bool {
+	logger := log.
+		WithField("tx_hash", originTxHash).
+		WithField("section", "validate-signatures")
+
+	sigV2s, err := txBuilder.GetTx().GetSignaturesV2()
+	if err != nil {
+		logger.WithError(err).Error("Error getting signatures")
+		return false
+	}
+
+	if len(sigV2s) == 0 || len(sigV2s) < int(x.signer.Multisig.GetThreshold()) {
+		logger.Errorf("Not enough signatures")
+		return false
+	}
+
+	account, err := x.client.GetAccount(x.signer.MultisigAddress)
+
+	if err != nil {
+		logger.WithError(err).Error("Error getting account")
+		return false
+	}
+
+	multisigSig := multisigtypes.NewMultisig(len(x.signer.Multisig.GetPubKeys()))
+
+	// read each signature and add it to the multisig if valid
+	for _, sig := range sigV2s {
+		if err := utilValidateSignature(app.Config.Pocket, &sig, account.AccountNumber, sequence, txCfg, txBuilder); err != nil {
+			logger.WithError(err).Error("Error validating signature")
+			return false
+		}
+		if err := multisigtypesAddSignatureV2(multisigSig, sig, x.signer.Multisig.GetPubKeys()); err != nil {
+			logger.WithError(err).Error("Error adding signature")
+			return false
+		}
+	}
+
+	sigV2 := signingtypes.SignatureV2{
+		PubKey:   x.signer.Multisig,
+		Data:     multisigSig,
+		Sequence: sequence,
+	}
+
+	err = txBuilder.SetSignatures(sigV2)
+	if err != nil {
+		logger.WithError(err).Error("Error setting signatures")
+		return false
+	}
+
+	// TODO: add more validation
+	return true
+}
+
 func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 
 	if doc == nil || (doc.Status != models.StatusSigned && doc.Status != models.StatusSubmitted) {
@@ -53,6 +119,11 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 		txBuilder, txCfg, err := util.WrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
 		if err != nil {
 			log.WithError(err).Errorf("Error wrapping tx builder")
+			return false
+		}
+
+		if !x.ValidateSignaturesAndAddMultiSignatureToTxConfig(doc.TransactionHash, *doc.Sequence, txCfg, txBuilder) {
+			log.Error("[BURN EXECUTOR] Error validating signatures and adding multisig to tx config")
 			return false
 		}
 
@@ -150,6 +221,11 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 		txBuilder, txCfg, err := util.WrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
 		if err != nil {
 			log.WithError(err).Errorf("Error wrapping tx builder")
+			return false
+		}
+
+		if !x.ValidateSignaturesAndAddMultiSignatureToTxConfig(doc.TransactionHash, *doc.Sequence, txCfg, txBuilder) {
+			log.Error("[BURN EXECUTOR] Error validating signatures and adding multisig to tx config")
 			return false
 		}
 
