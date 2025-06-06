@@ -230,19 +230,6 @@ func TestPostHealth(t *testing.T) {
 
 }
 
-/*
-  validator_addresses:
-    - "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-    - "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-    - "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
-  vault_address: "E3BB46007E9BF127FD69B02DD5538848A80CADCE"
-  multisig_public_keys:
-    - "eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
-    - "ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2"
-    - "abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283"
-
-*/
-
 func TestNewHealthCheck(t *testing.T) {
 	t.Run("With Empty Pocket Private Key", func(t *testing.T) {
 		defer func() { log.StandardLogger().ExitFunc = nil }()
@@ -252,7 +239,7 @@ func TestNewHealthCheck(t *testing.T) {
 	})
 
 	t.Run("With Empty Eth Private Key", func(t *testing.T) {
-		Config.Pocket.PrivateKey = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
 
@@ -261,7 +248,7 @@ func TestNewHealthCheck(t *testing.T) {
 
 	t.Run("With Empty MultiSig Keys", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.PrivateKey = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
 
@@ -270,7 +257,7 @@ func TestNewHealthCheck(t *testing.T) {
 
 	t.Run("With Invalid MultiSig Keys", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.PrivateKey = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
 		Config.Pocket.MultisigPublicKeys = []string{"0x1234"}
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
@@ -281,7 +268,7 @@ func TestNewHealthCheck(t *testing.T) {
 
 	t.Run("With Valid MultiSig Keys but Without Signer", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.PrivateKey = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
 		Config.Pocket.MultisigPublicKeys = []string{
 			// "eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
 			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
@@ -296,8 +283,8 @@ func TestNewHealthCheck(t *testing.T) {
 
 	t.Run("With Valid MultiSig Keys but Empty Vault Address", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.PrivateKey = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
-		Config.Pocket.VaultAddress = ""
+		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.MultisigAddress = ""
 		Config.Pocket.MultisigPublicKeys = []string{
 			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
 			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
@@ -312,20 +299,20 @@ func TestNewHealthCheck(t *testing.T) {
 
 	t.Run("With Valid Config", func(t *testing.T) {
 		Config.Ethereum.PrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-		Config.Pocket.PrivateKey = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
+		Config.Pocket.Mnemonic = "5efedbbc3d3d6f82d78eaf21258c81f462f3a25268be0018d4d75e1a4787bd14eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743"
 		Config.Pocket.MultisigPublicKeys = []string{
 			"eb0cf2a891382677f03c1b080ec270c693dda7a4c3ee4bcac259ad47c5fe0743",
 			"ec69e25c0f2d79e252c1fe0eb8ae07c3a3d8ff7bd616d736f2ded2e9167488b2",
 			"abc364918abe9e3966564f60baf74d7ea1c4f3efe92889de066e617989c54283",
 		}
-		Config.Pocket.VaultAddress = "E3BB46007E9BF127FD69B02DD5538848A80CADCE"
+		Config.Pocket.MultisigAddress = "E3BB46007E9BF127FD69B02DD5538848A80CADCE"
 
 		x := NewHealthCheck()
 
 		hostname, _ := os.Hostname()
 
 		assert.NotNil(t, x)
-		assert.Equal(t, strings.ToLower(Config.Pocket.VaultAddress), x.poktVaultAddress)
+		assert.Equal(t, strings.ToLower(Config.Pocket.MultisigAddress), x.poktVaultAddress)
 		assert.Equal(t, Config.Pocket.MultisigPublicKeys, x.poktSigners)
 		assert.Equal(t, "wpokt-validator-01", x.validatorId)
 		assert.Equal(t, hostname, x.hostname)

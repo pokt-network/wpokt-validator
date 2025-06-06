@@ -30,7 +30,3 @@ config/*
 
 # google cloud
 credentials.json
-
-# mockery
-.mockery.yaml
-
