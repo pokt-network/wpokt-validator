@@ -30,7 +30,7 @@ type Mint struct {
 	Data                *MintData           `bson:"data" json:"data"`
 	Signers             []string            `bson:"signers" json:"signers"`
 	Signatures          []string            `bson:"signatures" json:"signatures"`
-	MintTransactionHash string              `bson:"mint_tx_hash" json:"mint_transaction_hash"`
+	MintTransactionHash string              `bson:"mint_transaction_hash" json:"mint_transaction_hash"`
 }
 
 type MintMemo struct {
