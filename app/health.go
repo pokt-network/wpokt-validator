@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	multisigtypes "github.com/cosmos/cosmos-sdk/crypto/types/multisig"
+	"github.com/cosmos/go-bip39"
 	"github.com/dan13ram/wpokt-validator/common"
 	"github.com/dan13ram/wpokt-validator/models"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -123,21 +124,19 @@ type PocketSigner struct {
 }
 
 func CreatePocketSigner() (common.Signer, error) {
-	return common.NewMnemonicSigner(Config.Pocket.Mnemonic)
+	config := Config.Pocket
+	if config.Mnemonic == "" && config.GcpKmsKeyName == "" {
+		return nil, fmt.Errorf("Mnemonic or GcpKmsKeyName is required")
+	}
+	if config.Mnemonic != "" {
+		if !bip39.IsMnemonicValid(config.Mnemonic) {
+			return nil, fmt.Errorf("Mnemonic is invalid")
+		}
 
-	// // Mnemonic for both Ethereum and Cosmos networks
-	// if config.Mnemonic == "" && config.GcpKmsKeyName == "" {
-	// 	return nil, fmt.Errorf("Mnemonic or GcpKmsKeyName is required")
-	// }
-	// if config.Mnemonic != "" {
-	// 	if !bip39.IsMnemonicValid(config.Mnemonic) {
-	// 		return nil, fmt.Errorf("Mnemonic is invalid")
-	// 	}
-	//
-	// 	return common.NewMnemonicSigner(config.Mnemonic)
-	// }
-	//
-	// return common.NewGcpKmsSigner(config.GcpKmsKeyName)
+		return common.NewMnemonicSigner(config.Mnemonic)
+	}
+
+	return common.NewGcpKmsSigner(config.GcpKmsKeyName)
 
 }
 

@@ -149,8 +149,8 @@ func validateConfig() {
 			log.Fatal("Pocket.MultisigPublicKeys is required and must have at least 2 public keys")
 		}
 
-		if Config.Pocket.Mnemonic == "" {
-			log.Fatal("[CONFIG] Pocket.Mnemonic is required")
+		if Config.Pocket.Mnemonic == "" && Config.Pocket.GcpKmsKeyName == "" {
+			log.Fatal("[CONFIG] Pocket.Mnemonic or Pocket.GcpKmsKeyName is required")
 		}
 
 		_, err := GetPocketSignerAndMultisig()

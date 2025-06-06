@@ -53,6 +53,7 @@ type PocketConfig struct {
 	StartHeight        int64    `yaml:"start_height" json:"start_height"`
 	Confirmations      int64    `yaml:"confirmations" json:"confirmations"`
 	Mnemonic           string   `yaml:"mnemonic" json:"mnemonic"`
+	GcpKmsKeyName      string   `yaml:"gcp_kms_key_name" json:"gcp_kms_key_name"`
 	RPCURL             string   `yaml:"rpc_url" json:"rpcurl"`
 	GRPCEnabled        bool     `yaml:"grpc_enabled" json:"grpc_enabled"`
 	GRPCHost           string   `yaml:"grpc_host" json:"grpc_host"`
