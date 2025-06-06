@@ -87,8 +87,14 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 		log.WithError(err).Errorf("Error validating tx")
 		return false, nil
 	}
-	if !result.NeedsRefund || result.TxStatus == models.TransactionStatusFailed {
-		log.Debug("[BURN SIGNER] Invalid Mint Transaction is failed or does not need refund")
+	if result.TxStatus == models.TransactionStatusFailed {
+		log.Debug("[BURN SIGNER] Invalid Mint Transaction is failed")
+		return false, nil
+	}
+
+	// NOTE: If mint is disabled, we refund all txs
+	if !app.Config.Pocket.MintDisabled && !result.NeedsRefund {
+		log.Debug("[BURN SIGNER] Invalid Mint Transaction does not need refund")
 		return false, nil
 	}
 

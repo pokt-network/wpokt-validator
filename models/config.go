@@ -65,6 +65,7 @@ type PocketConfig struct {
 	MultisigAddress    string   `yaml:"multisig_address" json:"multisig_address"`
 	MultisigPublicKeys []string `yaml:"multisig_public_keys" json:"multisig_public_keys"`
 	MultisigThreshold  uint64   `yaml:"multisig_threshold" json:"multisig_threshold"`
+	MintDisabled       bool     `yaml:"mint_disabled" json:"mint_disabled"`
 }
 
 type ServiceConfig struct {

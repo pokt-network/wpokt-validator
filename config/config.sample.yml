@@ -36,6 +36,7 @@ pocket:
     - "02faaaf0f385bb17381f36dcd86ab2486e8ff8d93440436496665ac007953076c2"
     - "02cae233806460db75a941a269490ca5165a620b43241edb8bc72e169f4143a6df"
   multisig_threshold: 2
+  mint_disabled: true
 
 mint_monitor:
   enabled: false
