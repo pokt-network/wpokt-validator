@@ -13,43 +13,11 @@ packages:
       EthereumClient:
       WrappedPocketContract:
       MintControllerContract:
-  # github.com/cosmos/cosmos-sdk/client:
-  #   config: 
-  #     dir: "cosmos/client/mocks"
-  #   interfaces:
-  #     TxBuilder:
-  #     TxConfig:
-  # github.com/cosmos/cosmos-sdk/x/auth/signing:
-  #   config:
-  #     dir: "cosmos/client/mocks"
-  #   interfaces:
-  #     Tx:
-  # github.com/cosmos/cosmos-sdk/client/grpc/cmtservice:
-  #   config:
-  #     dir: "cosmos/client/client_mocks"
-  #     mockname: "MockCMT{{.InterfaceName}}"
-  #     filename: "cmt_{{ .InterfaceName | snakecase }}.go"
-  #   interfaces:
-  #     ServiceClient:
-  # github.com/cosmos/cosmos-sdk/x/auth/types:
-  #   config:
-  #     dir: "cosmos/client/client_mocks"
-  #     mockname: "MockAuth{{.InterfaceName}}"
-  #     filename: "auth_{{ .InterfaceName | snakecase }}.go"
-  #   interfaces:
-  #     QueryClient:
-  # github.com/cosmos/cosmos-sdk/types/tx:
-  #   config:
-  #     dir: "cosmos/client/client_mocks"
-  #     mockname: "MockTx{{.InterfaceName}}"
-  #     filename: "tx_{{ .InterfaceName | snakecase }}.go"
-  #   interfaces:
-  #     ServiceClient:
-  # github.com/cosmos/cosmos-sdk/crypto/types:
-  #   config:
-  #    dir: "cosmos/util/mocks"
-  #   interfaces:
-  #    PrivKey:
+  github.com/cosmos/cosmos-sdk/crypto/types:
+    config:
+     dir: "cosmos/util/mocks"
+    interfaces:
+     PrivKey:
   github.com/dan13ram/wpokt-validator/cosmos/client:
     interfaces:
       CosmosClient:
@@ -61,3 +29,35 @@ packages:
         config:
           dir: "{{.InterfaceDir}}/client_mocks"
           filename: "mock_{{ .InterfaceName | snakecase }}.go"
+  github.com/cosmos/cosmos-sdk/client:
+    config: 
+      dir: "cosmos/client/mocks"
+    interfaces:
+      TxBuilder:
+      TxConfig:
+  github.com/cosmos/cosmos-sdk/x/auth/signing:
+    config:
+      dir: "cosmos/client/mocks"
+    interfaces:
+      Tx:
+  github.com/cosmos/cosmos-sdk/client/grpc/cmtservice:
+    config:
+      dir: "cosmos/client/client_mocks"
+      mockname: "MockCMT{{.InterfaceName}}"
+      filename: "cmt_{{ .InterfaceName | snakecase }}.go"
+    interfaces:
+      ServiceClient:
+  github.com/cosmos/cosmos-sdk/x/auth/types:
+    config:
+      dir: "cosmos/client/client_mocks"
+      mockname: "MockAuth{{.InterfaceName}}"
+      filename: "auth_{{ .InterfaceName | snakecase }}.go"
+    interfaces:
+      QueryClient:
+  github.com/cosmos/cosmos-sdk/types/tx:
+    config:
+      dir: "cosmos/client/client_mocks"
+      mockname: "MockTx{{.InterfaceName}}"
+      filename: "tx_{{ .InterfaceName | snakecase }}.go"
+    interfaces:
+      ServiceClient:

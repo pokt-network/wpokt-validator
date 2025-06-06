@@ -193,7 +193,7 @@ func (c *cosmosClient) getTxsByEventsPerPageRPC(query string, page uint64) ([]*s
 
 func (c *cosmosClient) getTxsByEvents(query string) ([]*sdk.TxResponse, error) {
 	var page uint64 = 1
-	var txs []*sdk.TxResponse = make([]*sdk.TxResponse, 0)
+	var txs = make([]*sdk.TxResponse, 0)
 	for {
 
 		var respTxs []*sdk.TxResponse
