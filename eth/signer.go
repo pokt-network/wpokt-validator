@@ -390,7 +390,7 @@ func (x *MintSignerRunner) UpdateMaxMintLimit() {
 var cosmosNewClient = cosmos.NewClient
 
 func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
-	if !app.Config.MintSigner.Enabled {
+	if !app.Config.MintSigner.Enabled || app.Config.Pocket.MintDisabled {
 		log.Debug("[MINT SIGNER] Disabled")
 		return app.NewEmptyService(wg)
 	}

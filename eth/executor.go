@@ -208,7 +208,7 @@ func (x *MintExecutorRunner) InitStartBlockNumber(lastHealth models.ServiceHealt
 }
 
 func NewMintExecutor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
-	if !app.Config.MintExecutor.Enabled {
+	if !app.Config.MintExecutor.Enabled || app.Config.Pocket.MintDisabled {
 		log.Debug("[MINT EXECUTOR] Disabled")
 		return app.NewEmptyService(wg)
 	}
