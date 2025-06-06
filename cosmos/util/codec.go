@@ -25,7 +25,7 @@ func NewProtoCodec(bech32Prefix string) *codec.ProtoCodec {
 	std.RegisterInterfaces(reg)
 	authtypes.RegisterInterfaces(reg)
 	banktypes.RegisterInterfaces(reg)
-	// TODO: add more modules' interfaces
+	// TODO: add more modules' interfaces if necessary
 
 	codec := codec.NewProtoCodec(reg)
 
