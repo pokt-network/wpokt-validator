@@ -86,13 +86,35 @@ func readConfigFromENV(envFile string) {
 	if os.Getenv("POKT_RPC_URL") != "" {
 		Config.Pocket.RPCURL = os.Getenv("POKT_RPC_URL")
 	}
+	if os.Getenv("POKT_GRPC_ENABLED") != "" {
+		enabled, err := strconv.ParseBool(os.Getenv("POKT_GRPC_ENABLED"))
+		if err != nil {
+			log.Warn("[ENV] Error parsing POKT_GRPC_ENABLED: ", err.Error())
+		} else {
+			Config.Pocket.GRPCEnabled = enabled
+		}
+	}
+	if os.Getenv("POKT_GRPC_HOST") != "" {
+		Config.Pocket.GRPCHost = os.Getenv("POKT_GRPC_HOST")
+	}
+	if os.Getenv("POKT_GRPC_PORT") != "" {
+		port, err := strconv.ParseUint(os.Getenv("POKT_GRPC_PORT"), 10, 64)
+		if err != nil {
+			log.Warn("[ENV] Error parsing POKT_GRPC_PORT: ", err.Error())
+		} else {
+			Config.Pocket.GRPCPort = port
+		}
+	}
+
 	if os.Getenv("POKT_CHAIN_ID") != "" {
 		Config.Pocket.ChainID = os.Getenv("POKT_CHAIN_ID")
 	}
-	// TODO: fix env support for latest config
-	// if os.Getenv("POKT_PRIVATE_KEY") != "" {
-	// 	Config.Pocket.PrivateKey = os.Getenv("POKT_PRIVATE_KEY")
-	// }
+	if os.Getenv("POKT_MNEMONIC") != "" {
+		Config.Pocket.Mnemonic = os.Getenv("POKT_MNEMONIC")
+	}
+	if os.Getenv("POKT_GCP_KMS_KEY_NAME") != "" {
+		Config.Pocket.GcpKmsKeyName = os.Getenv("POKT_GCP_KMS_KEY_NAME")
+	}
 	if os.Getenv("POKT_START_HEIGHT") != "" {
 		startHeight, err := strconv.ParseInt(os.Getenv("POKT_START_HEIGHT"), 10, 64)
 		if err != nil {
@@ -125,9 +147,31 @@ func readConfigFromENV(envFile string) {
 			Config.Pocket.TxFee = txFee
 		}
 	}
-	// if os.Getenv("POKT_VAULT_ADDRESS") != "" {
-	// 	Config.Pocket.VaultAddress = os.Getenv("POKT_VAULT_ADDRESS")
-	// }
+	if os.Getenv("POKT_COIN_DENOM") != "" {
+		Config.Pocket.CoinDenom = os.Getenv("POKT_COIN_DENOM")
+	}
+	if os.Getenv("POKT_BECH32_PREFIX") != "" {
+		Config.Pocket.Bech32Prefix = os.Getenv("POKT_BECH32_PREFIX")
+	}
+	if os.Getenv("POKT_MULTISIG_ADDRESS") != "" {
+		Config.Pocket.MultisigAddress = os.Getenv("POKT_MULTISIG_ADDRESS")
+	}
+	if os.Getenv("POKT_MULTISIG_THRESHOLD") != "" {
+		threshold, err := strconv.ParseUint(os.Getenv("POKT_MULTISIG_THRESHOLD"), 10, 64)
+		if err != nil {
+			log.Warn("[ENV] Error parsing POKT_MULTISIG_THRESHOLD: ", err.Error())
+		} else {
+			Config.Pocket.MultisigThreshold = threshold
+		}
+	}
+	if os.Getenv("POKT_MINT_DISABLED") != "" {
+		disabled, err := strconv.ParseBool(os.Getenv("POKT_MINT_DISABLED"))
+		if err != nil {
+			log.Warn("[ENV] Error parsing POKT_MINT_DISABLED: ", err.Error())
+		} else {
+			Config.Pocket.MintDisabled = disabled
+		}
+	}
 	if os.Getenv("POKT_MULTISIG_PUBLIC_KEYS") != "" {
 		multisigPublicKeys := os.Getenv("POKT_MULTISIG_PUBLIC_KEYS")
 		Config.Pocket.MultisigPublicKeys = strings.Split(multisigPublicKeys, ",")
