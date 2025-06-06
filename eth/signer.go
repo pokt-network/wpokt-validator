@@ -37,7 +37,8 @@ type MintSignerRunner struct {
 	wpoktAddress           string
 	wpoktContract          eth.WrappedPocketContract
 	mintControllerContract eth.MintControllerContract
-	numSigners             int64
+	validatorCount         int64
+	signerThreshold        int64
 	domain                 eth.DomainData
 	poktClient             cosmos.CosmosClient
 	ethClient              eth.EthereumClient
@@ -281,7 +282,7 @@ func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
 		if mint.Status == models.StatusConfirmed {
 			log.Debug("[MINT SIGNER] Mint confirmed, signing")
 
-			mint, err := util.SignMint(mint, data, x.domain, x.privateKey, int(x.numSigners))
+			mint, err := util.SignMint(mint, data, x.domain, x.privateKey, int(x.signerThreshold))
 			if err != nil {
 				log.Error("[MINT SIGNER] Error signing mint: ", err)
 				return false
@@ -391,7 +392,22 @@ func (x *MintSignerRunner) UpdateValidatorCount() {
 		return
 	}
 	log.Debug("[MINT SIGNER] Fetched mint controller validator count")
-	x.numSigners = count.Int64()
+	x.validatorCount = count.Int64()
+}
+
+func (x *MintSignerRunner) UpdateSignerThreshold() {
+	log.Debug("[MINT SIGNER] Fetching mint controller signer threshold")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	count, err := x.mintControllerContract.SignerThreshold(opts)
+
+	if err != nil {
+		log.Error("[MINT SIGNER] Error fetching mint controller signer threshold: ", err)
+		return
+	}
+	log.Debug("[MINT SIGNER] Fetched mint controller signer threshold")
+	x.signerThreshold = count.Int64()
 }
 
 func (x *MintSignerRunner) UpdateDomainData() {
@@ -485,8 +501,14 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 
 	x.UpdateValidatorCount()
 
-	if x.numSigners != int64(len(app.Config.Ethereum.ValidatorAddresses)) {
+	x.UpdateSignerThreshold()
+
+	if x.validatorCount != int64(len(app.Config.Ethereum.ValidatorAddresses)) {
 		log.Fatal("[MINT SIGNER] Invalid validator count")
+	}
+
+	if x.signerThreshold > x.validatorCount {
+		log.Fatal("[MINT SIGNER] Invalid signer threshold")
 	}
 
 	x.UpdateDomainData()
