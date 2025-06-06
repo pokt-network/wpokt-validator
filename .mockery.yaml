@@ -12,6 +12,8 @@ packages:
     interfaces:
       EthereumClient:
       WrappedPocketContract:
+      WrappedPocketBurnAndBridgeIterator:
+      WrappedPocketMintedIterator:
       MintControllerContract:
   github.com/cosmos/cosmos-sdk/crypto/types:
     config:
