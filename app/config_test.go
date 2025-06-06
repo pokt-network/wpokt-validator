@@ -17,7 +17,7 @@ func init() {
 
 func TestReadConfigFromConfigFile(t *testing.T) {
 	t.Run("Config File Provided", func(t *testing.T) {
-		configFile := "../config.sample.yml"
+		configFile := "../config/config.sample.yml"
 
 		read := readConfigFromConfigFile(configFile)
 
@@ -55,7 +55,7 @@ func TestReadConfigFromConfigFile(t *testing.T) {
 
 func TestInitConfig(t *testing.T) {
 	t.Run("Config Initialization Success", func(t *testing.T) {
-		configFile := "../config.sample.yml"
+		configFile := "../config/config.sample.yml"
 		envFile := "../sample.env"
 
 		InitConfig(configFile, envFile)
@@ -74,7 +74,7 @@ func TestInitConfig(t *testing.T) {
 func TestValidateConfig(t *testing.T) {
 	t.Run("Valid Configuration", func(t *testing.T) {
 
-		configFile := "../config.sample.yml"
+		configFile := "../config/config.sample.yml"
 		envFile := "../sample.env"
 
 		InitConfig(configFile, envFile)
@@ -318,7 +318,7 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
@@ -341,7 +341,7 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
@@ -365,9 +365,9 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
-		Config.Pocket.VaultAddress = "0x1234"
+		Config.Pocket.MultisigAddress = "0x1234"
 
 		defer func() { log.StandardLogger().ExitFunc = nil }()
 		log.StandardLogger().ExitFunc = func(num int) { panic(fmt.Sprintf("exit %d", num)) }
@@ -390,9 +390,9 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
-		Config.Pocket.VaultAddress = "0x1234"
+		Config.Pocket.MultisigAddress = "0x1234"
 		Config.Pocket.MultisigPublicKeys = []string{"1234"}
 		Config.MintMonitor.Enabled = true
 		Config.MintSigner.Enabled = true
@@ -422,9 +422,9 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
-		Config.Pocket.VaultAddress = "0x1234"
+		Config.Pocket.MultisigAddress = "0x1234"
 		Config.Pocket.MultisigPublicKeys = []string{"1234"}
 		Config.MintMonitor.Enabled = true
 		Config.MintSigner.Enabled = true
@@ -455,9 +455,9 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
-		Config.Pocket.VaultAddress = "0x1234"
+		Config.Pocket.MultisigAddress = "0x1234"
 		Config.Pocket.MultisigPublicKeys = []string{"1234"}
 		Config.MintMonitor.Enabled = true
 		Config.MintSigner.Enabled = true
@@ -489,9 +489,9 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
-		Config.Pocket.VaultAddress = "0x1234"
+		Config.Pocket.MultisigAddress = "0x1234"
 		Config.Pocket.MultisigPublicKeys = []string{"1234"}
 		Config.MintMonitor.Enabled = true
 		Config.MintSigner.Enabled = true
@@ -524,9 +524,9 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
-		Config.Pocket.VaultAddress = "0x1234"
+		Config.Pocket.MultisigAddress = "0x1234"
 		Config.Pocket.MultisigPublicKeys = []string{"1234"}
 		Config.MintMonitor.Enabled = true
 		Config.MintSigner.Enabled = true
@@ -560,9 +560,9 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
-		Config.Pocket.VaultAddress = "0x1234"
+		Config.Pocket.MultisigAddress = "0x1234"
 		Config.Pocket.MultisigPublicKeys = []string{"1234"}
 		Config.MintMonitor.Enabled = true
 		Config.MintSigner.Enabled = true
@@ -597,9 +597,9 @@ func TestValidateConfig(t *testing.T) {
 		Config.Pocket.RPCURL = "http://localhost:8081"
 		Config.Pocket.ChainID = "localnet"
 		Config.Pocket.RPCTimeoutMillis = 2000
-		Config.Pocket.PrivateKey = "abcd"
+		Config.Pocket.Mnemonic = "abcd"
 		Config.Pocket.TxFee = 10000
-		Config.Pocket.VaultAddress = "0x1234"
+		Config.Pocket.MultisigAddress = "0x1234"
 		Config.Pocket.MultisigPublicKeys = []string{"1234"}
 		Config.MintMonitor.Enabled = true
 		Config.MintSigner.Enabled = true

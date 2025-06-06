@@ -6,16 +6,16 @@ mongodb:
 ethereum:
   start_block_number: 0
   confirmations: 0
-  private_key: "1234"
-  rpc_url: "https://<eth-node-host>:<eth-node-port>"
-  chain_id: "5"
+  private_key: "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+  rpc_url: "https://localhost:8545"
+  chain_id: "11155111"
   rpc_timeout_ms: 2000
-  wrapped_pocket_address: "0x1234"
-  mint_controller_address: "0x1234"
+  wrapped_pocket_address: "0xf3cb3c50bc095d7fa15ec5515f849b96cca1ab81"
+  mint_controller_address: "0x8ec8384b9cd40f596a609180c9452384d523cf4d"
   validator_addresses:
-    - "0x1234"
-    - "0x1234"
-    - "0x1234"
+    - "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    - "0xE525149C25cc6bF8D743fdc36aAf8BC2EaedFB11"
+    - "0xDf79D52a5Cf1aeFf5bC311bAB682283Ee476aA80"
 
 pocket:
   start_height: 0
@@ -30,9 +30,9 @@ pocket:
   tx_fee: 0
   bech32_prefix: "pokt"
   coin_denom: "upokt"
-  multisig_address: "pokt13tsl3aglfyzf02n7x28x2ajzw94muu6y57k2ar"
+  multisig_address: "pokt10r5n6x28p9qntchsmhxd4ftq9lk6vzcx3dv4gx"
   multisig_public_keys:
-    - "026892de2ec7fdf3125bc1bfd2ff2590d2c9ba756f98a05e9e843ac4d2a1acd4d9"
+    - "0223aa679d6d5344e201e0df9f02ab15a84726eee0dfb4e953c46a9e2cb52349dc"
     - "02faaaf0f385bb17381f36dcd86ab2486e8ff8d93440436496665ac007953076c2"
     - "02cae233806460db75a941a269490ca5165a620b43241edb8bc72e169f4143a6df"
   multisig_threshold: 2
