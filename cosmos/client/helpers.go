@@ -14,6 +14,8 @@ import (
 	"context"
 )
 
+// @dev internal methods copied from cosmos-sdk
+
 func getBlocksForTxResults(node CosmosHTTPClient, resTxs []*rpctypes.ResultTx) (map[int64]*rpctypes.ResultBlock, error) {
 	resBlocks := make(map[int64]*rpctypes.ResultBlock)
 
