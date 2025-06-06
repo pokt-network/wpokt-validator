@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"strings"
 
+	"bytes"
+	"sort"
+
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -62,10 +65,17 @@ func main() {
 		}
 		pKeys = append(pKeys, pKey)
 		fmt.Printf("public key %d: %v\n", i, key)
+		address, _ := common.Bech32FromBytes(DefaultBech32Prefix, pKey.Address().Bytes())
+		fmt.Printf("address: %s\n", address)
 	}
+
+	sort.Slice(pKeys, func(i, j int) bool {
+		return bytes.Compare(pKeys[i].Address(), pKeys[j].Address()) < 0
+	})
 
 	fmt.Printf("threshold: %v\n", threshold)
 	pk := multisig.NewLegacyAminoPubKey(threshold, pKeys)
+
 	fmt.Printf("multisig address: %v\n", strings.ToLower(pk.Address().String()))
 
 	bech32, err := common.Bech32FromBytes(DefaultBech32Prefix, pk.Address().Bytes())

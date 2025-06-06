@@ -5,6 +5,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"bytes"
+	"sort"
 	"time"
 
 	"crypto/ecdsa"
@@ -172,6 +175,10 @@ func GetPocketSignerAndMultisig() (*PocketSigner, error) {
 	if Config.Pocket.MultisigThreshold == 0 || Config.Pocket.MultisigThreshold > uint64(len(Config.Pocket.MultisigPublicKeys)) {
 		return nil, fmt.Errorf("multisig threshold is invalid")
 	}
+
+	sort.Slice(pks, func(i, j int) bool {
+		return bytes.Compare(pks[i].Address(), pks[j].Address()) < 0
+	})
 
 	multisigPk := multisig.NewLegacyAminoPubKey(int(Config.Pocket.MultisigThreshold), pks)
 	multisigAddressBytes := multisigPk.Address().Bytes()

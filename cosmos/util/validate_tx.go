@@ -1,8 +1,6 @@
 package util
 
 import (
-	"bytes"
-
 	"cosmossdk.io/math"
 	"github.com/dan13ram/wpokt-validator/common"
 	"github.com/dan13ram/wpokt-validator/models"
@@ -44,55 +42,35 @@ func ValidateTxToCosmosMultisig(
 		NeedsRefund:   false,
 	}
 
-	sender, err := ParseMessageSenderEvent(txResponse.Events)
-	if err != nil {
-		logger.WithError(err).Errorf("Error parsing message sender")
-		return &result, err
-	}
-
-	senderAddress, err := common.AddressBytesFromBech32(config.Bech32Prefix, sender)
-	if err != nil {
-		logger.WithError(err).Errorf("Error parsing sender address")
-		return &result, err
-	}
-
-	result.SenderAddress = sender
-
 	if txResponse.Code != 0 {
 		logger.Debugf("Found tx with non-zero code")
 		result.TxStatus = models.TransactionStatusFailed
 		return &result, nil
 	}
 
-	coinsReceived, err := ParseCoinsReceivedEvents(config.CoinDenom, config.MultisigAddress, txResponse.Events)
+	transfers, err := ParseTransferEvents(txResponse.Events,
+		config.MultisigAddress, config.CoinDenom)
 	if err != nil {
-		logger.WithError(err).Debugf("Error parsing coins received events")
+		logger.WithError(err).Debugf("Error parsing transfer events")
 		return &result, nil
 	}
 
-	coinsSpentSender, coinsSpent, err := ParseCoinsSpentEvents(config.CoinDenom, txResponse.Events)
-	if err != nil {
-		logger.WithError(err).Debugf("Error parsing coins spent events")
+	if len(transfers) != 1 {
+		logger.Debugf("Found tx with invalid transfers, expected 1, got %d", len(transfers))
 		return &result, nil
 	}
 
-	if coinsReceived.IsZero() || coinsSpent.IsZero() {
-		logger.Debugf("Found tx with zero coins")
+	result.SenderAddress = transfers[0].Sender
+	result.Amount = transfers[0].Amount
+	result.Confirmations = currentCosmosBlockHeight - uint64(txResponse.Height)
+
+	if result.Amount.IsZero() {
+		logger.Debugf("Found tx transfer with zero coins")
 		return &result, nil
 	}
 
-	if coinsReceived.Amount.LTE(math.NewIntFromUint64(uint64(config.TxFee))) {
-		logger.Debugf("Found tx with amount too low")
-		return &result, nil
-	}
-
-	spenderAddress, err := common.AddressBytesFromBech32(config.Bech32Prefix, coinsSpentSender)
-	if err != nil {
-		logger.WithError(err).Errorf("Error parsing spender address")
-		return &result, nil
-	}
-	if !bytes.Equal(senderAddress, spenderAddress) {
-		logger.Errorf("Sender address does not match spender address")
+	if result.Amount.Amount.LTE(math.NewIntFromUint64(uint64(config.TxFee))) {
+		logger.Debugf("Found tx transfer with amount too low")
 		return &result, nil
 	}
 
@@ -105,19 +83,8 @@ func ValidateTxToCosmosMultisig(
 	result.Tx = tx
 
 	result.TxStatus = models.TransactionStatusPending
-
-	result.Confirmations = currentCosmosBlockHeight - uint64(txResponse.Height)
 	if result.Confirmations >= uint64(config.Confirmations) {
 		result.TxStatus = models.TransactionStatusConfirmed
-	}
-
-	result.Amount = coinsSpent
-
-	if !coinsSpent.Amount.Equal(coinsReceived.Amount) {
-		logger.Debugf("Found tx with invalid coins")
-		// refund
-		result.NeedsRefund = true
-		return &result, nil
 	}
 
 	memo, err := ValidateMemo(tx.Body.Memo)
