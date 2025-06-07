@@ -2,9 +2,9 @@ package cosmos
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +19,7 @@ import (
 	"github.com/dan13ram/wpokt-validator/eth/autogen"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -29,15 +30,17 @@ const (
 )
 
 type BurnSignerRunner struct {
-	signer         *app.PocketSigner
-	ethClient      eth.EthereumClient
-	poktClient     cosmosClient.CosmosClient
-	poktHeight     int64
-	ethBlockNumber int64
-	vaultAddress   string
-	wpoktAddress   string
-	wpoktContract  eth.WrappedPocketContract
-	minimumAmount  *big.Int
+	signer                 *app.PocketSigner
+	ethClient              eth.EthereumClient
+	poktClient             cosmosClient.CosmosClient
+	poktHeight             int64
+	ethBlockNumber         int64
+	vaultAddress           string
+	wpoktAddress           string
+	wpoktContract          eth.WrappedPocketContract
+	mintControllerContract eth.MintControllerContract
+	minimumAmount          math.Int
+	maximumAmount          math.Int
 }
 
 func (x *BurnSignerRunner) Run() {
@@ -82,7 +85,7 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 	if txResponse == nil {
 		return false, errors.New("transaction not found")
 	}
-	result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.poktHeight))
+	result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.poktHeight), x.minimumAmount, x.maximumAmount)
 
 	if result.TxStatus == models.TransactionStatusFailed {
 		log.Debug("[BURN SIGNER] Invalid Mint Transaction is failed")
@@ -292,13 +295,15 @@ func (x *BurnSignerRunner) ValidateBurn(doc *models.Burn) (bool, error) {
 		return false, nil
 	}
 
-	amount, ok := new(big.Int).SetString(doc.Amount, 10)
-	if !ok || amount.Cmp(x.minimumAmount) != 1 {
+	amount, ok := math.NewIntFromString(doc.Amount)
+	if !ok || amount.LTE(x.minimumAmount) {
 		log.Debug("[BURN SIGNER] Burn amount too low")
 		return false, nil
 	}
 
-	if burnEvent.Amount.Cmp(amount) != 0 {
+	burnAmount := math.NewIntFromBigInt(burnEvent.Amount)
+
+	if !burnAmount.Equal(amount) {
 		log.Error("[BURN SIGNER] Invalid burn amount")
 		return false, nil
 	}
@@ -522,6 +527,21 @@ func (x *BurnSignerRunner) SyncTxs() bool {
 	return success
 }
 
+func (x *BurnSignerRunner) UpdateMaxMintLimit() {
+	log.Debug("[BURN SIGNER] Fetching mint controller max mint limit")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	mintLimit, err := x.mintControllerContract.MaxMintLimit(opts)
+
+	if err != nil {
+		log.Error("[BURN SIGNER] Error fetching mint controller max mint limit: ", err)
+		return
+	}
+	log.Debug("[BURN SIGNER] Fetched mint controller max mint limit")
+	x.maximumAmount = math.NewIntFromBigInt(mintLimit)
+}
+
 func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service {
 	if !app.Config.BurnSigner.Enabled {
 		log.Debug("[BURN SIGNER] Disabled")
@@ -547,22 +567,36 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 	}
 	log.Debug("[BURN SIGNER] Connected to wpokt contract")
 
+	log.Debug("[BURN SIGNER] Connecting to mint controller contract at: ", app.Config.Ethereum.MintControllerAddress)
+	mintControllerContract, err := autogen.NewMintController(common.HexToAddress(app.Config.Ethereum.MintControllerAddress), ethClient.GetClient())
+	if err != nil {
+		log.Fatal("[BURN SIGNER] Error initializing Mint Controller contract", err)
+	}
+	log.Debug("[BURN SIGNER] Connected to mint controller contract")
+
 	poktClient, err := cosmosNewClient(app.Config.Pocket)
 	if err != nil {
 		log.Fatalf("Error creating pokt client: %s", err)
 	}
 
 	x := &BurnSignerRunner{
-		signer:        signer,
-		ethClient:     ethClient,
-		poktClient:    poktClient,
-		vaultAddress:  signer.MultisigAddress,
-		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		wpoktContract: eth.NewWrappedPocketContract(contract),
-		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
+		signer:                 signer,
+		ethClient:              ethClient,
+		poktClient:             poktClient,
+		vaultAddress:           signer.MultisigAddress,
+		wpoktAddress:           strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		wpoktContract:          eth.NewWrappedPocketContract(contract),
+		mintControllerContract: eth.NewMintControllerContract(mintControllerContract),
+		minimumAmount:          math.NewIntFromUint64(uint64(app.Config.Pocket.TxFee)),
 	}
 
 	x.UpdateBlocks()
+
+	x.UpdateMaxMintLimit()
+
+	if x.maximumAmount.LT(x.minimumAmount) {
+		log.Fatal("[MINT MONITOR] Invalid max mint limit")
+	}
 
 	log.Info("[BURN SIGNER] Initialized")
 
