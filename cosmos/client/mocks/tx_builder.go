@@ -3,12 +3,15 @@
 package mocks
 
 import (
+	time "time"
 	proto "github.com/cosmos/gogoproto/proto"
 	mock "github.com/stretchr/testify/mock"
 
 	signing "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
 	tx "github.com/cosmos/cosmos-sdk/types/tx"
+
+	client "github.com/cosmos/cosmos-sdk/client"
 
 	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 
@@ -19,6 +22,8 @@ import (
 type MockTxBuilder struct {
 	mock.Mock
 }
+
+var _ client.TxBuilder = &MockTxBuilder{}
 
 type MockTxBuilder_Expecter struct {
 	mock *mock.Mock
@@ -286,6 +291,39 @@ func (_c *MockTxBuilder_SetMemo_Call) RunAndReturn(run func(string)) *MockTxBuil
 	return _c
 }
 
+// SetUnordered provides a mock function with given fields: v
+func (_m *MockTxBuilder) SetUnordered(v bool) {
+	_m.Called(v)
+}
+
+// MockTxBuilder_SetUnordered_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetUnordered'
+type MockTxBuilder_SetUnordered_Call struct {
+	*mock.Call
+}
+
+// SetUnordered is a helper method to define mock.On call
+//   - v bool
+func (_e *MockTxBuilder_Expecter) SetUnordered(v interface{}) *MockTxBuilder_SetUnordered_Call {
+	return &MockTxBuilder_SetUnordered_Call{Call: _e.mock.On("SetUnordered", v)}
+}
+
+func (_c *MockTxBuilder_SetUnordered_Call) Run(run func(v bool)) *MockTxBuilder_SetUnordered_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(bool))
+	})
+	return _c
+}
+
+func (_c *MockTxBuilder_SetUnordered_Call) Return() *MockTxBuilder_SetUnordered_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockTxBuilder_SetUnordered_Call) RunAndReturn(run func(bool)) *MockTxBuilder_SetUnordered_Call {
+	_c.Run(run)
+	return _c
+}
+
 // SetMsgs provides a mock function with given fields: msgs
 func (_m *MockTxBuilder) SetMsgs(msgs ...proto.Message) error {
 	_va := make([]interface{}, len(msgs))
@@ -433,6 +471,39 @@ func (_c *MockTxBuilder_SetTimeoutHeight_Call) Return() *MockTxBuilder_SetTimeou
 }
 
 func (_c *MockTxBuilder_SetTimeoutHeight_Call) RunAndReturn(run func(uint64)) *MockTxBuilder_SetTimeoutHeight_Call {
+	_c.Run(run)
+	return _c
+}
+
+// SetTimeoutTimestamp provides a mock function with given fields: timestamp
+func (_m *MockTxBuilder) SetTimeoutTimestamp(timestamp time.Time) {
+	_m.Called(timestamp)
+}
+
+// MockTxBuilder_SetTimeoutTimestamp_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTimeoutTimestamp'
+type MockTxBuilder_SetTimeoutTimestamp_Call struct {
+	*mock.Call
+}
+
+// SetTimeoutTimestamp is a helper method to define mock.On call
+//   - timestamp uint64
+func (_e *MockTxBuilder_Expecter) SetTimeoutTimestamp(timestamp interface{}) *MockTxBuilder_SetTimeoutTimestamp_Call {
+	return &MockTxBuilder_SetTimeoutTimestamp_Call{Call: _e.mock.On("SetTimeoutTimestamp", timestamp)}
+}
+
+func (_c *MockTxBuilder_SetTimeoutTimestamp_Call) Run(run func(timestamp time.Time)) *MockTxBuilder_SetTimeoutTimestamp_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(time.Time))
+	})
+	return _c
+}
+
+func (_c *MockTxBuilder_SetTimeoutTimestamp_Call) Return() *MockTxBuilder_SetTimeoutTimestamp_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockTxBuilder_SetTimeoutTimestamp_Call) RunAndReturn(run func(time.Time)) *MockTxBuilder_SetTimeoutTimestamp_Call {
 	_c.Run(run)
 	return _c
 }
