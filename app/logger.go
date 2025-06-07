@@ -10,12 +10,15 @@ func InitLogger() {
 	logLevel := strings.ToLower(Config.Logger.Level)
 	log.Debug("[LOGGER] Initializing logger with level: ", logLevel)
 
-	if logLevel == "debug" {
+	switch logLevel {
+	case "debug":
 		log.SetLevel(log.DebugLevel)
-	} else if logLevel == "info" {
+	case "info":
 		log.SetLevel(log.InfoLevel)
-	} else if logLevel == "warn" {
+	case "warn":
 		log.SetLevel(log.WarnLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
 	}
 
 	log.Info("[LOGGER] Logger initialized with level: ", logLevel)

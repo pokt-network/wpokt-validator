@@ -431,7 +431,7 @@ func (x *BurnSignerRunner) SyncInvalidMints() bool {
 	}
 	log.Info("[BURN SIGNER] Found invalid mints: ", len(invalidMints))
 
-	var success bool = true
+	var success = true
 	for i := range invalidMints {
 		doc := invalidMints[i]
 
@@ -488,7 +488,7 @@ func (x *BurnSignerRunner) SyncBurns() bool {
 	}
 	log.Info("[BURN SIGNER] Found burns: ", len(burns))
 
-	var success bool = true
+	var success = true
 
 	for i := range burns {
 		doc := burns[i]

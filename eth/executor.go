@@ -103,6 +103,7 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 	}, []common.Address{}, []*big.Int{}, []*big.Int{})
 
 	if filter != nil {
+		//nolint:errcheck
 		defer filter.Close()
 	}
 
@@ -111,7 +112,7 @@ func (x *MintExecutorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber 
 		return false
 	}
 
-	var success bool = true
+	var success = true
 	for filter.Next() {
 		if err = filter.Error(); err != nil {
 			success = false
@@ -163,7 +164,7 @@ func (x *MintExecutorRunner) SyncTxs() bool {
 		return true
 	}
 
-	var success bool = true
+	var success = true
 
 	if (x.currentBlockNumber - x.startBlockNumber) > eth.MAX_QUERY_BLOCKS {
 		log.Debug("[MINT EXECUTOR] Syncing mint txs in chunks")
