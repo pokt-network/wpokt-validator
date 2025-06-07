@@ -53,7 +53,9 @@ func (x *BurnExecutorRunner) ValidateSignaturesAndAddMultiSignatureToTxConfig(
 		WithField("tx_hash", originTxHash).
 		WithField("section", "validate-signatures")
 
-	sigV2s, err := txBuilder.GetTx().GetSignaturesV2()
+	tx := txBuilder.GetTx()
+
+	sigV2s, err := tx.GetSignaturesV2()
 	if err != nil {
 		logger.WithError(err).Error("Error getting signatures")
 		return false
@@ -97,13 +99,12 @@ func (x *BurnExecutorRunner) ValidateSignaturesAndAddMultiSignatureToTxConfig(
 		return false
 	}
 
-	// TODO: add more validation
 	return true
 }
 
 func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 
-	if doc == nil || (doc.Status != models.StatusSigned && doc.Status != models.StatusSubmitted) {
+	if doc == nil {
 		log.Error("[BURN EXECUTOR] Invalid mint is nil or has invalid status")
 		return false
 	}
@@ -118,7 +119,7 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 		{
 			log.Debug("[BURN EXECUTOR] Submitting invalid mint")
 
-			txBuilder, txCfg, err := util.WrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
+			txBuilder, txCfg, err := utilWrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
 			if err != nil {
 				log.WithError(err).Errorf("Error wrapping tx builder")
 				return false
@@ -210,8 +211,8 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 
 func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 
-	if doc == nil || (doc.Status != models.StatusSigned && doc.Status != models.StatusSubmitted) {
-		log.Error("[BURN EXECUTOR] Burn is nil or has invalid status")
+	if doc == nil {
+		log.Error("[BURN EXECUTOR] Burn is nil")
 		return false
 	}
 
