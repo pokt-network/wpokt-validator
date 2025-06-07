@@ -161,7 +161,7 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 		return false
 	}
 	log.Info("[MINT MONITOR] Found ", len(txResponses), " txs to sync")
-	var success bool = true
+	var success = true
 	for _, txResponse := range txResponses {
 
 		result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.currentHeight), x.minimumAmount, x.maximumAmount)

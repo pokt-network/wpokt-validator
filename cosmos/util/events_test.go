@@ -3,8 +3,6 @@ package util
 import (
 	"testing"
 
-	"fmt"
-
 	"cosmossdk.io/math"
 	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -46,7 +44,7 @@ func TestParseTransferEvents(t *testing.T) {
 			expectedSender:    "pokt1abcd",
 			expectedRecipient: "pokt1efgh",
 			expectedAmount:    sdk.NewCoin(denom, math.NewInt(0)),
-			expectedErr:       fmt.Sprintf("no attribute found with key: sender"),
+			expectedErr:       ("no attribute found with key: sender"),
 		},
 		{
 			name: "No Recipient",
@@ -59,7 +57,7 @@ func TestParseTransferEvents(t *testing.T) {
 			expectedSender:    "pokt1abcd",
 			expectedRecipient: "pokt1efgh",
 			expectedAmount:    sdk.NewCoin(denom, math.NewInt(100)),
-			expectedErr:       fmt.Sprintf("no attribute found with key: recipient"),
+			expectedErr:       ("no attribute found with key: recipient"),
 		},
 		{
 			name: "Different Recipient",

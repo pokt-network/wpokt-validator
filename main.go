@@ -44,7 +44,7 @@ func main() {
 	flag.StringVar(&envPath, "env", "", "path to env file")
 	flag.Parse()
 
-	var absConfigPath string = ""
+	var absConfigPath = ""
 	var err error
 	if configPath != "" {
 		absConfigPath, err = filepath.Abs(configPath)
@@ -53,7 +53,7 @@ func main() {
 		}
 	}
 
-	var absEnvPath string = ""
+	var absEnvPath = ""
 	if envPath != "" {
 		absEnvPath, err = filepath.Abs(envPath)
 		if err != nil {

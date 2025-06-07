@@ -126,11 +126,11 @@ type PocketSigner struct {
 func CreatePocketSigner() (common.Signer, error) {
 	config := Config.Pocket
 	if config.Mnemonic == "" && config.GcpKmsKeyName == "" {
-		return nil, fmt.Errorf("Mnemonic or GcpKmsKeyName is required")
+		return nil, fmt.Errorf("both Mnemonic and GcpKmsKeyName are empty")
 	}
 	if config.Mnemonic != "" {
 		if !bip39.IsMnemonicValid(config.Mnemonic) {
-			return nil, fmt.Errorf("Mnemonic is invalid")
+			return nil, fmt.Errorf("mnemonic is invalid")
 		}
 
 		return common.NewMnemonicSigner(config.Mnemonic)
