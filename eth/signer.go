@@ -154,7 +154,7 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 
 	if tx == nil {
 		log.Debug("[MINT SIGNER] Transaction not found")
-		return false, errors.New("Transaction not found")
+		return false, errors.New("transaction not found")
 	}
 
 	result := cosmosUtilValidateTxToCosmosMultisig(tx, app.Config.Pocket, uint64(x.poktHeight), x.minimumAmount, x.maximumAmount)
@@ -298,7 +298,7 @@ func (x *MintSignerRunner) SyncTxs() bool {
 		return false
 	}
 
-	var success bool = true
+	var success = true
 	for i := range mints {
 		mint := mints[i]
 

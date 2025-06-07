@@ -84,6 +84,7 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 	}, []*big.Int{}, []common.Address{}, []common.Address{})
 
 	if filter != nil {
+		//nolint:errcheck
 		defer filter.Close()
 	}
 
@@ -92,7 +93,7 @@ func (x *BurnMonitorRunner) SyncBlocks(startBlockNumber uint64, endBlockNumber u
 		return false
 	}
 
-	var success bool = true
+	var success = true
 	for filter.Next() {
 		if err := filter.Error(); err != nil {
 			success = false

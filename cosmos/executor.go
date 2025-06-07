@@ -113,83 +113,88 @@ func (x *BurnExecutorRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 	var filter bson.M
 	var update bson.M
 
-	if doc.Status == models.StatusSigned {
-		log.Debug("[BURN EXECUTOR] Submitting invalid mint")
+	switch doc.Status {
+	case models.StatusSigned:
+		{
+			log.Debug("[BURN EXECUTOR] Submitting invalid mint")
 
-		txBuilder, txCfg, err := util.WrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
-		if err != nil {
-			log.WithError(err).Errorf("Error wrapping tx builder")
-			return false
-		}
+			txBuilder, txCfg, err := util.WrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
+			if err != nil {
+				log.WithError(err).Errorf("Error wrapping tx builder")
+				return false
+			}
 
-		if !x.ValidateSignaturesAndAddMultiSignatureToTxConfig(doc.TransactionHash, *doc.Sequence, txCfg, txBuilder) {
-			log.Error("[BURN EXECUTOR] Error validating signatures and adding multisig to tx config")
-			return false
-		}
+			if !x.ValidateSignaturesAndAddMultiSignatureToTxConfig(doc.TransactionHash, *doc.Sequence, txCfg, txBuilder) {
+				log.Error("[BURN EXECUTOR] Error validating signatures and adding multisig to tx config")
+				return false
+			}
 
-		txJSON, err := txCfg.TxJSONEncoder()(txBuilder.GetTx())
-		if err != nil {
-			log.WithError(err).Errorf("Error encoding tx")
-			return false
-		}
+			txJSON, err := txCfg.TxJSONEncoder()(txBuilder.GetTx())
+			if err != nil {
+				log.WithError(err).Errorf("Error encoding tx")
+				return false
+			}
 
-		txBytes, err := txCfg.TxEncoder()(txBuilder.GetTx())
-		if err != nil {
-			log.WithError(err).Errorf("Error encoding tx")
-			return false
-		}
+			txBytes, err := txCfg.TxEncoder()(txBuilder.GetTx())
+			if err != nil {
+				log.WithError(err).Errorf("Error encoding tx")
+				return false
+			}
 
-		txHash, err := x.client.BroadcastTx(txBytes)
-		if err != nil {
-			log.WithError(err).Errorf("Error broadcasting tx")
-			return false
-		}
+			txHash, err := x.client.BroadcastTx(txBytes)
+			if err != nil {
+				log.WithError(err).Errorf("Error broadcasting tx")
+				return false
+			}
 
-		filter = bson.M{
-			"_id":    doc.Id,
-			"status": models.StatusSigned,
-		}
+			filter = bson.M{
+				"_id":    doc.Id,
+				"status": models.StatusSigned,
+			}
 
-		update = bson.M{
-			"$set": bson.M{
-				"status":                  models.StatusSubmitted,
-				"return_transaction_body": string(txJSON),
-				"return_transaction_hash": common.Ensure0xPrefix(txHash),
-				"updated_at":              time.Now(),
-			},
-		}
-	} else if doc.Status == models.StatusSubmitted {
-		log.Debug("[BURN EXECUTOR] Checking invalid mint")
-		tx, err := x.client.GetTx(doc.ReturnTransactionHash)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
-			return false
-		}
-
-		filter = bson.M{
-			"_id":    doc.Id,
-			"status": models.StatusSubmitted,
-		}
-
-		if tx.Code != 0 {
-			log.Error("[BURN EXECUTOR] Invalid mint return tx failed: ", tx.TxHash)
 			update = bson.M{
 				"$set": bson.M{
-					"status":                  models.StatusConfirmed,
+					"status":                  models.StatusSubmitted,
+					"return_transaction_body": string(txJSON),
+					"return_transaction_hash": common.Ensure0xPrefix(txHash),
 					"updated_at":              time.Now(),
-					"return_transaction_hash": "",
-					"return_transaction_body": "",
-					"signatures":              []models.Signature{},
-					"sequence":                nil,
 				},
 			}
-		} else {
-			log.Debug("[BURN EXECUTOR] Invalid mint return tx succeeded: ", tx.TxHash)
-			update = bson.M{
-				"$set": bson.M{
-					"status":     models.StatusSuccess,
-					"updated_at": time.Now(),
-				},
+		}
+	case models.StatusSubmitted:
+		{
+			log.Debug("[BURN EXECUTOR] Checking invalid mint")
+			tx, err := x.client.GetTx(doc.ReturnTransactionHash)
+			if err != nil {
+				log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
+				return false
+			}
+
+			filter = bson.M{
+				"_id":    doc.Id,
+				"status": models.StatusSubmitted,
+			}
+
+			if tx.Code != 0 {
+				log.Error("[BURN EXECUTOR] Invalid mint return tx failed: ", tx.TxHash)
+				update = bson.M{
+					"$set": bson.M{
+						"status":                  models.StatusConfirmed,
+						"updated_at":              time.Now(),
+						"return_transaction_hash": "",
+						"return_transaction_body": "",
+						"signatures":              []models.Signature{},
+						"sequence":                nil,
+					},
+				}
+			} else {
+				log.Debug("[BURN EXECUTOR] Invalid mint return tx succeeded: ", tx.TxHash)
+				update = bson.M{
+					"$set": bson.M{
+						"status":     models.StatusSuccess,
+						"updated_at": time.Now(),
+					},
+				}
 			}
 		}
 	}
@@ -215,83 +220,88 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 	var filter bson.M
 	var update bson.M
 
-	if doc.Status == models.StatusSigned {
-		log.Debug("[BURN EXECUTOR] Submitting burn")
+	switch doc.Status {
+	case models.StatusSigned:
+		{
+			log.Debug("[BURN EXECUTOR] Submitting burn")
 
-		txBuilder, txCfg, err := util.WrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
-		if err != nil {
-			log.WithError(err).Errorf("Error wrapping tx builder")
-			return false
-		}
+			txBuilder, txCfg, err := util.WrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
+			if err != nil {
+				log.WithError(err).Errorf("Error wrapping tx builder")
+				return false
+			}
 
-		if !x.ValidateSignaturesAndAddMultiSignatureToTxConfig(doc.TransactionHash, *doc.Sequence, txCfg, txBuilder) {
-			log.Error("[BURN EXECUTOR] Error validating signatures and adding multisig to tx config")
-			return false
-		}
+			if !x.ValidateSignaturesAndAddMultiSignatureToTxConfig(doc.TransactionHash, *doc.Sequence, txCfg, txBuilder) {
+				log.Error("[BURN EXECUTOR] Error validating signatures and adding multisig to tx config")
+				return false
+			}
 
-		txJSON, err := txCfg.TxJSONEncoder()(txBuilder.GetTx())
-		if err != nil {
-			log.WithError(err).Errorf("Error encoding tx")
-			return false
-		}
+			txJSON, err := txCfg.TxJSONEncoder()(txBuilder.GetTx())
+			if err != nil {
+				log.WithError(err).Errorf("Error encoding tx")
+				return false
+			}
 
-		txBytes, err := txCfg.TxEncoder()(txBuilder.GetTx())
-		if err != nil {
-			log.WithError(err).Errorf("Error encoding tx")
-			return false
-		}
+			txBytes, err := txCfg.TxEncoder()(txBuilder.GetTx())
+			if err != nil {
+				log.WithError(err).Errorf("Error encoding tx")
+				return false
+			}
 
-		txHash, err := x.client.BroadcastTx(txBytes)
-		if err != nil {
-			log.WithError(err).Errorf("Error broadcasting tx")
-			return false
-		}
+			txHash, err := x.client.BroadcastTx(txBytes)
+			if err != nil {
+				log.WithError(err).Errorf("Error broadcasting tx")
+				return false
+			}
 
-		filter = bson.M{
-			"_id":    doc.Id,
-			"status": models.StatusSigned,
-		}
+			filter = bson.M{
+				"_id":    doc.Id,
+				"status": models.StatusSigned,
+			}
 
-		update = bson.M{
-			"$set": bson.M{
-				"status":                  models.StatusSubmitted,
-				"return_transaction_body": string(txJSON),
-				"return_transaction_hash": common.Ensure0xPrefix(txHash),
-				"updated_at":              time.Now(),
-			},
-		}
-	} else if doc.Status == models.StatusSubmitted {
-		log.Debug("[BURN EXECUTOR] Checking burn")
-		tx, err := x.client.GetTx(doc.ReturnTransactionHash)
-		if err != nil {
-			log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
-			return false
-		}
-
-		filter = bson.M{
-			"_id":    doc.Id,
-			"status": models.StatusSubmitted,
-		}
-
-		if tx.Code != 0 {
-			log.Error("[BURN EXECUTOR] Burn return tx failed: ", tx.TxHash)
 			update = bson.M{
 				"$set": bson.M{
-					"status":                  models.StatusConfirmed,
+					"status":                  models.StatusSubmitted,
+					"return_transaction_body": string(txJSON),
+					"return_transaction_hash": common.Ensure0xPrefix(txHash),
 					"updated_at":              time.Now(),
-					"return_transaction_hash": "",
-					"return_transaction_body": "",
-					"signatures":              []models.Signature{},
-					"sequence":                nil,
 				},
 			}
-		} else {
-			log.Debug("[BURN EXECUTOR] Burn return tx succeeded: ", tx.TxHash)
-			update = bson.M{
-				"$set": bson.M{
-					"status":     models.StatusSuccess,
-					"updated_at": time.Now(),
-				},
+		}
+	case models.StatusSubmitted:
+		{
+			log.Debug("[BURN EXECUTOR] Checking burn")
+			tx, err := x.client.GetTx(doc.ReturnTransactionHash)
+			if err != nil {
+				log.Error("[BURN EXECUTOR] Error fetching transaction: ", err)
+				return false
+			}
+
+			filter = bson.M{
+				"_id":    doc.Id,
+				"status": models.StatusSubmitted,
+			}
+
+			if tx.Code != 0 {
+				log.Error("[BURN EXECUTOR] Burn return tx failed: ", tx.TxHash)
+				update = bson.M{
+					"$set": bson.M{
+						"status":                  models.StatusConfirmed,
+						"updated_at":              time.Now(),
+						"return_transaction_hash": "",
+						"return_transaction_body": "",
+						"signatures":              []models.Signature{},
+						"sequence":                nil,
+					},
+				}
+			} else {
+				log.Debug("[BURN EXECUTOR] Burn return tx succeeded: ", tx.TxHash)
+				update = bson.M{
+					"$set": bson.M{
+						"status":     models.StatusSuccess,
+						"updated_at": time.Now(),
+					},
+				}
 			}
 		}
 	}
@@ -327,7 +337,7 @@ func (x *BurnExecutorRunner) SyncInvalidMints() bool {
 
 	log.Info("[BURN EXECUTOR] Found invalid mints: ", len(invalidMints))
 
-	var success bool = true
+	var success = true
 	for i := range invalidMints {
 		doc := invalidMints[i]
 
@@ -377,7 +387,7 @@ func (x *BurnExecutorRunner) SyncBurns() bool {
 
 	log.Info("[BURN EXECUTOR] Found burns: ", len(burns))
 
-	var success bool = true
+	var success = true
 
 	for i := range burns {
 		doc := burns[i]

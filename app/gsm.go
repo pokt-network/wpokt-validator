@@ -34,6 +34,7 @@ func readKeysFromGSM() {
 	if err != nil {
 		log.Fatalf("[GSM] Failed to create secretmanager client: %v", err)
 	}
+	//nolint:errcheck
 	defer client.Close()
 
 	if Config.MongoDB.URI == "" && Config.GoogleSecretManager.MongoSecretName == "" {

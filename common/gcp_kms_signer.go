@@ -106,6 +106,7 @@ func NewGcpKmsSigner(keyName string) (Signer, error) {
 
 // Destructor Function
 func (s *GcpKmsSigner) Destroy() {
+	//nolint:errcheck
 	s.client.Close()
 }
 
