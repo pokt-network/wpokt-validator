@@ -10,15 +10,19 @@ import (
 	"testing"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dan13ram/wpokt-validator/app"
+	appMocks "github.com/dan13ram/wpokt-validator/app/mocks"
+	cosmosMocks "github.com/dan13ram/wpokt-validator/cosmos/client/mocks"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
+	ethMocks "github.com/dan13ram/wpokt-validator/eth/client/mocks"
 	"github.com/dan13ram/wpokt-validator/models"
-	pokt "github.com/dan13ram/wpokt-validator/pokt/client"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,18 +31,18 @@ func init() {
 	log.SetOutput(io.Discard)
 }
 
-func NewTestMintSigner(t *testing.T, mockWrappedPocketContract *eth.MockWrappedPocketContract,
-	mockMintControllerContract *eth.MockMintControllerContract,
-	mockEthClient *eth.MockEthereumClient, mockPoktClient *pokt.MockPocketClient) *MintSignerRunner {
+func NewTestMintSigner(t *testing.T, mockWrappedPocketContract *ethMocks.MockWrappedPocketContract,
+	mockMintControllerContract *ethMocks.MockMintControllerContract,
+	mockEthClient *ethMocks.MockEthereumClient, mockPoktClient *cosmosMocks.MockCosmosClient) *MintSignerRunner {
 	pk, _ := crypto.HexToECDSA("1395eeb9c36ef43e9e05692c9ee34034c00a9bef301135a96d082b2a65fd1680")
 	address := crypto.PubkeyToAddress(pk.PublicKey).Hex()
 
 	x := &MintSignerRunner{
-		address:      strings.ToLower(address),
-		privateKey:   pk,
-		vaultAddress: "vaultAddress",
-		wpoktAddress: "wpoktAddress",
-		numSigners:   3,
+		address:        strings.ToLower(address),
+		privateKey:     pk,
+		vaultAddress:   "vaultAddress",
+		wpoktAddress:   "wpoktAddress",
+		validatorCount: 3,
 		domain: eth.DomainData{
 			Name:              "Test",
 			Version:           "1",
@@ -57,10 +61,10 @@ func NewTestMintSigner(t *testing.T, mockWrappedPocketContract *eth.MockWrappedP
 }
 
 func TestMintSignerStatus(t *testing.T) {
-	mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-	mockMintControllerContract := eth.NewMockMintControllerContract(t)
-	mockEthClient := eth.NewMockEthereumClient(t)
-	mockPoktClient := pokt.NewMockPocketClient(t)
+	mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+	mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+	mockEthClient := ethMocks.NewMockEthereumClient(t)
+	mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 	x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 	status := x.Status()
@@ -71,15 +75,13 @@ func TestMintSignerStatus(t *testing.T) {
 func TestMintSignerUpdateBlocks(t *testing.T) {
 
 	t.Run("No Error", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
-		mockPoktClient.EXPECT().GetHeight().Return(&pokt.HeightResponse{
-			Height: 200,
-		}, nil)
+		mockPoktClient.EXPECT().GetLatestBlockHeight().Return(int64(200), nil)
 
 		x.UpdateBlocks()
 
@@ -87,13 +89,13 @@ func TestMintSignerUpdateBlocks(t *testing.T) {
 	})
 
 	t.Run("With Error", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
-		mockPoktClient.EXPECT().GetHeight().Return(nil, errors.New("error"))
+		mockPoktClient.EXPECT().GetLatestBlockHeight().Return(0, errors.New("error"))
 
 		x.UpdateBlocks()
 
@@ -105,31 +107,31 @@ func TestMintSignerUpdateBlocks(t *testing.T) {
 func TestMintSignerUpdateValidatorCount(t *testing.T) {
 
 	t.Run("No Error", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mockMintControllerContract.EXPECT().ValidatorCount(mock.Anything).Return(big.NewInt(5), nil)
 
 		x.UpdateValidatorCount()
 
-		assert.Equal(t, x.numSigners, int64(5))
+		assert.Equal(t, x.validatorCount, int64(5))
 	})
 
 	t.Run("With Error", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mockMintControllerContract.EXPECT().ValidatorCount(mock.Anything).Return(big.NewInt(5), errors.New("error"))
 
 		x.UpdateValidatorCount()
 
-		assert.Equal(t, x.numSigners, int64(3))
+		assert.Equal(t, x.validatorCount, int64(3))
 	})
 
 }
@@ -137,10 +139,10 @@ func TestMintSignerUpdateValidatorCount(t *testing.T) {
 func TestMintSignerUpdateDomainData(t *testing.T) {
 
 	t.Run("No Error", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		domain := eth.DomainData{
@@ -158,10 +160,10 @@ func TestMintSignerUpdateDomainData(t *testing.T) {
 	})
 
 	t.Run("With Error", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		domain := eth.DomainData{
@@ -183,10 +185,10 @@ func TestMintSignerUpdateDomainData(t *testing.T) {
 func TestMintSignerUpdateMaxMintLimit(t *testing.T) {
 
 	t.Run("No Error", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mockMintControllerContract.EXPECT().MaxMintLimit(mock.Anything).Return(big.NewInt(500000), nil)
@@ -197,10 +199,10 @@ func TestMintSignerUpdateMaxMintLimit(t *testing.T) {
 	})
 
 	t.Run("With Error", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mockMintControllerContract.EXPECT().MaxMintLimit(mock.Anything).Return(big.NewInt(500000), errors.New("error"))
@@ -215,11 +217,11 @@ func TestMintSignerUpdateMaxMintLimit(t *testing.T) {
 func TestMintSignerFindNonce(t *testing.T) {
 
 	t.Run("Nonce already set", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		app.DB = mockDB
@@ -236,11 +238,11 @@ func TestMintSignerFindNonce(t *testing.T) {
 	})
 
 	t.Run("No pending mints", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		app.DB = mockDB
@@ -273,11 +275,11 @@ func TestMintSignerFindNonce(t *testing.T) {
 	})
 
 	t.Run("With pending mints but current nonce is higher", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		app.DB = mockDB
@@ -331,11 +333,11 @@ func TestMintSignerFindNonce(t *testing.T) {
 	})
 
 	t.Run("Error with converting nonce", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		app.DB = mockDB
@@ -352,11 +354,11 @@ func TestMintSignerFindNonce(t *testing.T) {
 	})
 
 	t.Run("Error finding current nonce", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		app.DB = mockDB
@@ -373,11 +375,11 @@ func TestMintSignerFindNonce(t *testing.T) {
 	})
 
 	t.Run("Error finding pending mints", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		app.DB = mockDB
@@ -400,10 +402,10 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Error fetching transaction", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mint := &models.Mint{}
@@ -419,15 +421,15 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction code", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mint := &models.Mint{}
 
-		tx := &pokt.TxResponse{}
+		tx := &sdk.TxResponse{}
 
 		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
 
@@ -440,17 +442,17 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction msg type", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mint := &models.Mint{}
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code: 0,
 			},
 		}
@@ -466,26 +468,26 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction msg to address", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		ZERO_ADDRESS := "0000000000000000000000000000000000000000"
 
 		mint := &models.Mint{}
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress: ZERO_ADDRESS,
 					},
 				},
@@ -503,24 +505,24 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Incorrect transaction msg to address", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mint := &models.Mint{}
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress: "abcd",
 					},
 				},
@@ -538,26 +540,26 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction msg from address", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		ZERO_ADDRESS := "0x0000000000000000000000000000000000000000"
 
 		mint := &models.Mint{}
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: ZERO_ADDRESS,
 					},
@@ -576,10 +578,10 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction msg amount too low", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mint := &models.Mint{
@@ -587,16 +589,16 @@ func TestValidateMint(t *testing.T) {
 			Amount:        "100",
 		}
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "100",
@@ -615,10 +617,10 @@ func TestValidateMint(t *testing.T) {
 	})
 	t.Run("Invalid transaction msg amount too high", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mint := &models.Mint{
@@ -626,16 +628,16 @@ func TestValidateMint(t *testing.T) {
 			Amount:        "2000000",
 		}
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "2000000",
@@ -655,10 +657,10 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction msg amount mismatch", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mint := &models.Mint{
@@ -666,16 +668,16 @@ func TestValidateMint(t *testing.T) {
 			Amount:        "20000",
 		}
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "10500",
@@ -695,10 +697,10 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction memo", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		mint := &models.Mint{
@@ -708,16 +710,16 @@ func TestValidateMint(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -738,10 +740,10 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction memo address", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		address := common.HexToAddress("0x1234").Hex()
@@ -753,16 +755,16 @@ func TestValidateMint(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -783,10 +785,10 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Invalid transaction memo chainId", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		address := common.HexToAddress("0x1234").Hex()
@@ -799,16 +801,16 @@ func TestValidateMint(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -829,10 +831,10 @@ func TestValidateMint(t *testing.T) {
 
 	t.Run("Valid transaction and mint", func(t *testing.T) {
 
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
 		address := common.HexToAddress("0x1234").Hex()
@@ -841,21 +843,21 @@ func TestValidateMint(t *testing.T) {
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
 			Amount:           "20000",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -879,11 +881,11 @@ func TestValidateMint(t *testing.T) {
 func TestMintSignerHandleMint(t *testing.T) {
 
 	t.Run("Nil mint", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -893,11 +895,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Invalid mint amount", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -907,7 +909,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 			SenderAddress:    "abcd",
 			RecipientAddress: address,
 			Amount:           "invalid",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 		}
 
 		success := x.HandleMint(mint)
@@ -916,11 +918,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Error finding nonce", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -931,7 +933,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "invalid",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 		}
 
 		success := x.HandleMint(mint)
@@ -940,11 +942,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Error updating confirmations", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -957,7 +959,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "invalid",
 			Confirmations:    "invalid",
 		}
@@ -968,11 +970,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Error validating mint", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -985,7 +987,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "99",
 			Confirmations:    "invalid",
 		}
@@ -1001,11 +1003,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Validating mint returned false", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1018,23 +1020,23 @@ func TestMintSignerHandleMint(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "99",
 			Confirmations:    "invalid",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        10,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -1061,7 +1063,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Run(func(_ string, _ interface{}, gotUpdate interface{}) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
 				assert.Equal(t, update, gotUpdate)
-			}).Return(nil)
+			}).Return(primitive.NewObjectID(), nil)
 
 		success := x.HandleMint(mint)
 
@@ -1072,11 +1074,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Validating mint returned true, mint pending", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1089,23 +1091,23 @@ func TestMintSignerHandleMint(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "99",
 			Confirmations:    "invalid",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -1133,7 +1135,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Run(func(_ string, _ interface{}, gotUpdate interface{}) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
 				assert.Equal(t, update, gotUpdate)
-			}).Return(nil)
+			}).Return(primitive.NewObjectID(), nil)
 
 		success := x.HandleMint(mint)
 
@@ -1144,11 +1146,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Validating mint returned true, mint confirmed, signing failed", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1165,23 +1167,23 @@ func TestMintSignerHandleMint(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "99",
 			Confirmations:    "invalid",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -1202,11 +1204,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Error updating mint", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1219,23 +1221,23 @@ func TestMintSignerHandleMint(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "99",
 			Confirmations:    "invalid",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -1272,7 +1274,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
 				gotUpdate.(bson.M)["$set"].(bson.M)["signatures"] = update["$set"].(bson.M)["signatures"]
 				assert.Equal(t, update, gotUpdate)
-			}).Return(errors.New("error"))
+			}).Return(primitive.NewObjectID(), errors.New("error"))
 
 		success := x.HandleMint(mint)
 
@@ -1283,11 +1285,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 	})
 
 	t.Run("Successful case", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1300,23 +1302,23 @@ func TestMintSignerHandleMint(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "99",
 			Confirmations:    "invalid",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -1353,7 +1355,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
 				gotUpdate.(bson.M)["$set"].(bson.M)["signatures"] = update["$set"].(bson.M)["signatures"]
 				assert.Equal(t, update, gotUpdate)
-			}).Return(nil)
+			}).Return(primitive.NewObjectID(), nil)
 
 		success := x.HandleMint(mint)
 
@@ -1368,11 +1370,11 @@ func TestMintSignerHandleMint(t *testing.T) {
 func TestMintSignerSyncTxs(t *testing.T) {
 
 	t.Run("Error finding mints", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1385,11 +1387,11 @@ func TestMintSignerSyncTxs(t *testing.T) {
 	})
 
 	t.Run("No mints to handle", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1410,11 +1412,11 @@ func TestMintSignerSyncTxs(t *testing.T) {
 	})
 
 	t.Run("Error locking", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1443,11 +1445,11 @@ func TestMintSignerSyncTxs(t *testing.T) {
 	})
 
 	t.Run("Error unlocking", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1469,23 +1471,23 @@ func TestMintSignerSyncTxs(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "99",
 			Confirmations:    "invalid",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -1530,7 +1532,7 @@ func TestMintSignerSyncTxs(t *testing.T) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
 				gotUpdate.(bson.M)["$set"].(bson.M)["signatures"] = update["$set"].(bson.M)["signatures"]
 				assert.Equal(t, update, gotUpdate)
-			}).Return(nil)
+			}).Return(primitive.NewObjectID(), nil)
 
 		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
 		mockDB.EXPECT().Unlock("lockId").Return(errors.New("error"))
@@ -1541,11 +1543,11 @@ func TestMintSignerSyncTxs(t *testing.T) {
 	})
 
 	t.Run("Successful case", func(t *testing.T) {
-		mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := eth.NewMockMintControllerContract(t)
-		mockEthClient := eth.NewMockEthereumClient(t)
-		mockPoktClient := pokt.NewMockPocketClient(t)
-		mockDB := app.NewMockDatabase(t)
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		mockDB := appMocks.NewMockDatabase(t)
 		app.DB = mockDB
 		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1567,23 +1569,23 @@ func TestMintSignerSyncTxs(t *testing.T) {
 			RecipientAddress: address,
 			Amount:           "20000",
 			Nonce:            "1",
-			RecipientChainId: "31337",
+			RecipientChainID: "31337",
 			Height:           "99",
 			Confirmations:    "invalid",
 		}
 
-		app.Config.Ethereum.ChainId = "31337"
+		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &pokt.TxResponse{
+		tx := &sdk.TxResponse{
 			Tx: "abcd",
-			TxResult: pokt.TxResult{
+			TxResult: sdk.TxResult{
 				Code:        0,
 				MessageType: "send",
 			},
-			StdTx: pokt.StdTx{
-				Msg: pokt.Msg{
+			StdTx: sdk.StdTx{
+				Msg: sdk.Msg{
 					Type: "pos/Send",
-					Value: pokt.Value{
+					Value: sdk.Value{
 						ToAddress:   x.vaultAddress,
 						FromAddress: "abcd",
 						Amount:      "20000",
@@ -1628,7 +1630,7 @@ func TestMintSignerSyncTxs(t *testing.T) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
 				gotUpdate.(bson.M)["$set"].(bson.M)["signatures"] = update["$set"].(bson.M)["signatures"]
 				assert.Equal(t, update, gotUpdate)
-			}).Return(nil)
+			}).Return(primitive.NewObjectID(), nil)
 
 		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
 		mockDB.EXPECT().Unlock("lockId").Return(nil)
@@ -1642,11 +1644,11 @@ func TestMintSignerSyncTxs(t *testing.T) {
 
 func TestMintSignerRun(t *testing.T) {
 
-	mockWrappedPocketContract := eth.NewMockWrappedPocketContract(t)
-	mockMintControllerContract := eth.NewMockMintControllerContract(t)
-	mockEthClient := eth.NewMockEthereumClient(t)
-	mockPoktClient := pokt.NewMockPocketClient(t)
-	mockDB := app.NewMockDatabase(t)
+	mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+	mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+	mockEthClient := ethMocks.NewMockEthereumClient(t)
+	mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+	mockDB := appMocks.NewMockDatabase(t)
 	app.DB = mockDB
 	x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
 
@@ -1668,23 +1670,23 @@ func TestMintSignerRun(t *testing.T) {
 		RecipientAddress: address,
 		Amount:           "20000",
 		Nonce:            "1",
-		RecipientChainId: "31337",
+		RecipientChainID: "31337",
 		Height:           "99",
 		Confirmations:    "invalid",
 	}
 
-	app.Config.Ethereum.ChainId = "31337"
+	app.Config.Ethereum.ChainID = "31337"
 
-	tx := &pokt.TxResponse{
+	tx := &sdk.TxResponse{
 		Tx: "abcd",
-		TxResult: pokt.TxResult{
+		TxResult: sdk.TxResult{
 			Code:        0,
 			MessageType: "send",
 		},
-		StdTx: pokt.StdTx{
-			Msg: pokt.Msg{
+		StdTx: sdk.StdTx{
+			Msg: sdk.Msg{
 				Type: "pos/Send",
-				Value: pokt.Value{
+				Value: sdk.Value{
 					ToAddress:   x.vaultAddress,
 					FromAddress: "abcd",
 					Amount:      "20000",
@@ -1729,14 +1731,12 @@ func TestMintSignerRun(t *testing.T) {
 			gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
 			gotUpdate.(bson.M)["$set"].(bson.M)["signatures"] = update["$set"].(bson.M)["signatures"]
 			assert.Equal(t, update, gotUpdate)
-		}).Return(nil)
+		}).Return(primitive.NewObjectID(), nil)
 
 	mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
 	mockDB.EXPECT().Unlock("lockId").Return(nil)
 
-	mockPoktClient.EXPECT().GetHeight().Return(&pokt.HeightResponse{
-		Height: 200,
-	}, nil)
+	mockPoktClient.EXPECT().GetLatestBlockHeight().Return(int64(200), nil)
 
 	mockMintControllerContract.EXPECT().ValidatorCount(mock.Anything).Return(big.NewInt(3), nil)
 
