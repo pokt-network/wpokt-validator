@@ -84,7 +84,7 @@ func (x *MintMonitorRunner) HandleFailedMint(tx *sdk.TxResponse, result *util.Va
 }
 
 func (x *MintMonitorRunner) HandleInvalidMint(tx *sdk.TxResponse, result *util.ValidateTxResult) bool {
-	if tx == nil {
+	if tx == nil || result == nil {
 		log.Debug("[MINT MONITOR] Invalid tx response")
 		return false
 	}
@@ -92,7 +92,7 @@ func (x *MintMonitorRunner) HandleInvalidMint(tx *sdk.TxResponse, result *util.V
 	doc := util.CreateInvalidMint(tx, result, x.vaultAddress)
 
 	if app.Config.Pocket.MintDisabled {
-		// ensure that existing mints are not counted as invalid mints after the mint is disabled
+		// ensure that existing mints are not counted as invalid mints after mint is disabled
 		err := app.DB.FindOne(models.CollectionMints, bson.M{"transaction_hash": doc.TransactionHash}, &models.Mint{})
 		if err == nil {
 			log.Warn("[MINT MONITOR] Ignoring invalid mint since it exists as a valid mint")
@@ -116,25 +116,26 @@ func (x *MintMonitorRunner) HandleInvalidMint(tx *sdk.TxResponse, result *util.V
 }
 
 func (x *MintMonitorRunner) HandleValidMint(tx *sdk.TxResponse, result *util.ValidateTxResult) bool {
-	if tx == nil {
+	if tx == nil || result == nil {
 		log.Debug("[MINT MONITOR] Invalid tx response")
 		return false
 	}
 
+	if app.Config.Pocket.MintDisabled {
+		log.Error("[MINT MONITOR] HandleValidMint called when mint is disabled")
+		return true
+	}
+
 	doc := util.CreateMint(tx, result, x.wpoktAddress, x.vaultAddress)
 
-	if !app.Config.Pocket.MintDisabled {
-		// ensure that existing invalid mints are not counted as valid mints after the mint is enabled
-		err := app.DB.FindOne(models.CollectionInvalidMints, bson.M{"transaction_hash": doc.TransactionHash}, &models.InvalidMint{})
-		if err == nil {
-			log.Warn("[MINT MONITOR] Ignoring valid mint since it exists as an invalid mint")
-			return true
-		}
+	// ensure that existing invalid mints are not counted as valid mints after mint is enabled
+	if err := app.DB.FindOne(models.CollectionInvalidMints, bson.M{"transaction_hash": doc.TransactionHash}, &models.InvalidMint{}); err == nil {
+		log.Warn("[MINT MONITOR] Ignoring valid mint since it exists as an invalid mint")
+		return true
 	}
 
 	log.Debug("[MINT MONITOR] Storing mint tx")
-	_, err := app.DB.InsertOne(models.CollectionMints, doc)
-	if err != nil {
+	if _, err := app.DB.InsertOne(models.CollectionMints, doc); err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Info("[MINT MONITOR] Found duplicate mint tx")
 			return true
@@ -147,6 +148,8 @@ func (x *MintMonitorRunner) HandleValidMint(tx *sdk.TxResponse, result *util.Val
 	return true
 }
 
+var utilValidateTxToCosmosMultisig = util.ValidateTxToCosmosMultisig
+
 func (x *MintMonitorRunner) SyncTxs() bool {
 
 	if x.currentHeight <= x.startHeight {
@@ -154,7 +157,6 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 		return true
 	}
 
-	// txs, err := x.client.GetAccountTxsByHeight(x.vaultAddress, x.startHeight)
 	txResponses, err := x.client.GetTxsSentToAddressAfterHeight(x.vaultAddress, uint64(x.startHeight))
 	if err != nil {
 		log.Error("[MINT MONITOR] Error getting txs: ", err)
@@ -164,7 +166,7 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 	var success = true
 	for _, txResponse := range txResponses {
 
-		result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.currentHeight), x.minimumAmount, x.maximumAmount)
+		result := utilValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.currentHeight), x.minimumAmount, x.maximumAmount)
 
 		if result.TxStatus == models.TransactionStatusFailed {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", result.TxHash)
