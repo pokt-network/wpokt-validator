@@ -31,12 +31,6 @@ import (
 	goGRPC "google.golang.org/grpc"
 )
 
-func TestChain(t *testing.T) {
-	chain := models.Chain{ChainID: "TestChainID", ChainName: "TestChain"}
-	client := &cosmosClient{chain: chain}
-	assert.Equal(t, chain, client.Chain())
-}
-
 func TestConfirmations(t *testing.T) {
 	client := &cosmosClient{confirmations: 10}
 	assert.Equal(t, uint64(10), client.Confirmations())
@@ -53,18 +47,17 @@ func TestGetLatestBlockHeight_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
@@ -91,18 +84,17 @@ func TestGetLatestBlockHeight_GRPC_Error(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
@@ -121,18 +113,17 @@ func TestGetLatestBlockHeight_GRPC_Error(t *testing.T) {
 func TestGetLatestBlockHeight_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -150,18 +141,17 @@ func TestGetLatestBlockHeight_RPC(t *testing.T) {
 func TestGetLatestBlockHeight_RPC_Error(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -178,20 +168,19 @@ func TestGetLatestBlockHeight_RPC_Error(t *testing.T) {
 func TestGetTxsSentToAddressAfterHeight_AddressError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -214,20 +203,19 @@ func TestGetTxsSentToAddressAfterHeight_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  true,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -258,20 +246,19 @@ func TestGetTxsSentToAddressAfterHeight_GRPC_MultiPages(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  true,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -323,20 +310,19 @@ func TestGetTxsSentToAddressAfterHeight_GRPC_Error(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  true,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -361,20 +347,19 @@ func TestGetTxsSentToAddressAfterHeight_GRPC_Error(t *testing.T) {
 func TestGetTxsSentToAddressAfterHeight(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -395,20 +380,19 @@ func TestGetTxsSentToAddressAfterHeight(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight_AddressError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -425,20 +409,19 @@ func TestGetTxsSentFromAddressAfterHeight_AddressError(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -459,20 +442,19 @@ func TestGetTxsSentFromAddressAfterHeight(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight_GetBlocksError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -500,20 +482,19 @@ func TestGetTxsSentFromAddressAfterHeight_GetBlocksError(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight_FormatError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -557,20 +538,19 @@ func TestGetTxsSentFromAddressAfterHeight_FormatError(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight_SearchError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -597,20 +577,19 @@ func TestGetAccount_AddressError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  true,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -633,20 +612,19 @@ func TestGetAccount_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  true,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -674,20 +652,19 @@ func TestGetAccount_GRPC_ClientError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  true,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -712,20 +689,19 @@ func TestGetAccount_GRPC_UnmarshalError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  true,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -744,20 +720,19 @@ func TestGetAccount_GRPC_UnmarshalError(t *testing.T) {
 func TestGetAccount_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -789,20 +764,19 @@ func TestGetAccount_RPC(t *testing.T) {
 func TestGetAccount_RPC_RequestFailed(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -834,20 +808,19 @@ func TestGetAccount_RPC_RequestFailed(t *testing.T) {
 func TestGetAccount_RPC_ClientError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -872,20 +845,19 @@ func TestGetAccount_RPC_ClientError(t *testing.T) {
 func TestGetAccount_RPC_ResponseUnmarshalError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -910,20 +882,19 @@ func TestGetAccount_RPC_ResponseUnmarshalError(t *testing.T) {
 func TestGetAccount_RPC_AccountUnmarshalError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled:  false,
-		TimeoutMS:    5000,
-		Bech32Prefix: "cosmos",
-		ChainName:    "TestChain",
-		ChainID:      "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+		Bech32Prefix:     "cosmos",
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		bech32Prefix:  config.Bech32Prefix,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -958,18 +929,17 @@ func TestBroadcastTx_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -992,18 +962,17 @@ func TestBroadcastTx_GRPC_ClientError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -1026,18 +995,17 @@ func TestBroadcastTx_GRPC_TxFailed(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -1054,18 +1022,17 @@ func TestBroadcastTx_GRPC_TxFailed(t *testing.T) {
 func TestBroadcastTx_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -1083,18 +1050,17 @@ func TestBroadcastTx_RPC(t *testing.T) {
 func TestBroadcastTx_RPC_ClientError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -1112,18 +1078,17 @@ func TestBroadcastTx_RPC_ClientError(t *testing.T) {
 func TestBroadcastTx_RPC_TxFailed(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -1147,18 +1112,17 @@ func TestGetTx_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -1182,18 +1146,17 @@ func TestGetTx_GRPC_Error(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		logger:        log.NewEntry(log.New()),
 	}
 
@@ -1210,18 +1173,17 @@ func TestGetTx_GRPC_Error(t *testing.T) {
 func TestGetTx_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -1244,18 +1206,17 @@ func TestGetTx_RPC(t *testing.T) {
 func TestGetTx_RPC_DecodeError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -1272,18 +1233,17 @@ func TestGetTx_RPC_DecodeError(t *testing.T) {
 func TestGetTx_RPC_ClientError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -1305,18 +1265,17 @@ func TestGetTx_RPC_ClientError(t *testing.T) {
 func TestGetTx_RPC_BlockError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -1340,18 +1299,17 @@ func TestGetTx_RPC_BlockError(t *testing.T) {
 func TestGetTx_RPC_FormatError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
 	}
@@ -1394,18 +1352,17 @@ func TestGetChainID_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
@@ -1432,18 +1389,17 @@ func TestGetChainID_GRPC_Error(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
@@ -1461,18 +1417,17 @@ func TestGetChainID_GRPC_Error(t *testing.T) {
 func TestGetChainID_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
@@ -1491,18 +1446,17 @@ func TestGetChainID_RPC(t *testing.T) {
 func TestGetChainID_RPC_Error(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
@@ -1527,20 +1481,19 @@ func TestValidateNetwork(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+		ChainID:          "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		logger:        log.NewEntry(log.New()),
+		config:        config,
 	}
 
 	block := &cmtservice.Block{Header: cmtservice.Header{Height: 100, ChainID: config.ChainID}}
@@ -1563,21 +1516,21 @@ func TestValidateNetwork_ErrorGetChainID(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
+		config:        config,
 	}
 
 	mockGRPCClient.On("GetLatestBlock", mock.Anything, mock.Anything).Return(nil, errors.New("error getting chain id"))
@@ -1600,21 +1553,21 @@ func TestValidateNetwork_InvalidChainID(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client := &cosmosClient{
 		grpcEnabled:   config.GRPCEnabled,
-		confirmations: config.Confirmations,
-		timeout:       time.Duration(config.TimeoutMS) * time.Millisecond,
-		chain:         models.Chain{ChainID: config.ChainID, ChainName: config.ChainName},
+		confirmations: uint64(config.Confirmations),
+		timeout:       time.Duration(config.RPCTimeoutMillis) * time.Millisecond,
 		grpcConn:      nil,
 		rpcClient:     mockHTTPClient,
 		logger:        log.NewEntry(log.New()),
+		config:        config,
 	}
 
 	block := &cmtservice.Block{Header: cmtservice.Header{Height: 100, ChainID: "InvalidChainID"}}
@@ -1628,11 +1581,11 @@ func TestValidateNetwork_InvalidChainID(t *testing.T) {
 }
 
 func TestNewClient(t *testing.T) {
-	originalGRPCDial := grpcDial
-	grpcDial = func(target string, opts ...goGRPC.DialOption) (*goGRPC.ClientConn, error) {
+	originalGRPCNewClient := grpcNewClient
+	grpcNewClient = func(target string, opts ...goGRPC.DialOption) (*goGRPC.ClientConn, error) {
 		return nil, nil
 	}
-	defer func() { grpcDial = originalGRPCDial }()
+	defer func() { grpcNewClient = originalGRPCNewClient }()
 
 	originalCmtserviceNewServiceClient := cmtserviceNewServiceClient
 	defer func() { cmtserviceNewServiceClient = originalCmtserviceNewServiceClient }()
@@ -1643,11 +1596,11 @@ func TestNewClient(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	block := &cmtservice.Block{Header: cmtservice.Header{Height: 100, ChainID: config.ChainID}}
@@ -1661,11 +1614,11 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestNewClient_ValidateError(t *testing.T) {
-	originalGRPCDial := grpcDial
-	grpcDial = func(target string, opts ...goGRPC.DialOption) (*goGRPC.ClientConn, error) {
+	originalGRPCNewClient := grpcNewClient
+	grpcNewClient = func(target string, opts ...goGRPC.DialOption) (*goGRPC.ClientConn, error) {
 		return nil, nil
 	}
-	defer func() { grpcDial = originalGRPCDial }()
+	defer func() { grpcNewClient = originalGRPCNewClient }()
 
 	originalCmtserviceNewServiceClient := cmtserviceNewServiceClient
 	defer func() { cmtserviceNewServiceClient = originalCmtserviceNewServiceClient }()
@@ -1676,11 +1629,11 @@ func TestNewClient_ValidateError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	mockGRPCClient.On("GetLatestBlock", mock.Anything, mock.Anything).Return(nil, errors.New("error"))
@@ -1694,17 +1647,17 @@ func TestNewClient_ValidateError(t *testing.T) {
 }
 
 func TestNewClient_GRPCERror(t *testing.T) {
-	originalGRPCDial := grpcDial
-	grpcDial = func(target string, opts ...goGRPC.DialOption) (*goGRPC.ClientConn, error) {
+	originalGRPCNewClient := grpcNewClient
+	grpcNewClient = func(target string, opts ...goGRPC.DialOption) (*goGRPC.ClientConn, error) {
 		return nil, errors.New("error")
 	}
-	defer func() { grpcDial = originalGRPCDial }()
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: true,
-		GRPCHost:    "invalid",
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	defer func() { grpcNewClient = originalGRPCNewClient }()
+	config := models.PocketConfig{
+		GRPCEnabled:      true,
+		GRPCHost:         "invalid",
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client, err := NewClient(config)
@@ -1713,12 +1666,12 @@ func TestNewClient_GRPCERror(t *testing.T) {
 }
 
 func TestNewClient_RPCError(t *testing.T) {
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		RPCURL:      "invalid",
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCURL:           "invalid",
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client, err := NewClient(config)
@@ -1726,19 +1679,19 @@ func TestNewClient_RPCError(t *testing.T) {
 	assert.Nil(t, client)
 }
 
-func TestNewClient_RPCDialError(t *testing.T) {
+func TestNewClient_RPCNewClientError(t *testing.T) {
 	originalrpchttpNew := rpchttpNew
 	defer func() { rpchttpNew = originalrpchttpNew }()
 	rpchttpNew = func(url string, endpoint string) (CosmosHTTPClient, error) {
 		return nil, errors.New("error")
 	}
 
-	config := models.CosmosNetworkConfig{
-		GRPCEnabled: false,
-		RPCURL:      "invalid",
-		TimeoutMS:   5000,
-		ChainName:   "TestChain",
-		ChainID:     "TestChainID",
+	config := models.PocketConfig{
+		GRPCEnabled:      false,
+		RPCURL:           "invalid",
+		RPCTimeoutMillis: 5000,
+
+		ChainID: "TestChainID",
 	}
 
 	client, err := NewClient(config)
