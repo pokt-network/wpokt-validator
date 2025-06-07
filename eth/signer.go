@@ -154,11 +154,7 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, errors.New("Transaction not found")
 	}
 
-	result, err := cosmosUtil.ValidateTxToCosmosMultisig(tx, app.Config.Pocket, uint64(x.poktHeight))
-	if err != nil {
-		log.WithError(err).Errorf("Error validating tx")
-		return false, nil
-	}
+	result := cosmosUtil.ValidateTxToCosmosMultisig(tx, app.Config.Pocket, uint64(x.poktHeight))
 
 	if result.NeedsRefund || result.TxStatus == models.TransactionStatusFailed {
 		return false, nil
