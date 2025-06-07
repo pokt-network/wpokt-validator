@@ -5,13 +5,13 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/dan13ram/wpokt-validator/app"
 	cosmos "github.com/dan13ram/wpokt-validator/cosmos/client"
 	cosmosUtil "github.com/dan13ram/wpokt-validator/cosmos/util"
@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
+	"math/big"
 )
 
 const (
@@ -43,8 +44,8 @@ type MintSignerRunner struct {
 	poktClient             cosmos.CosmosClient
 	ethClient              eth.EthereumClient
 	poktHeight             int64
-	minimumAmount          *big.Int
-	maximumAmount          *big.Int
+	minimumAmount          math.Int
+	maximumAmount          math.Int
 }
 
 func (x *MintSignerRunner) Run() {
@@ -141,6 +142,8 @@ func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
 	return nonce, nil
 }
 
+var cosmosUtilValidateTxToCosmosMultisig = cosmosUtil.ValidateTxToCosmosMultisig
+
 func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 	log.Debug("[MINT SIGNER] Validating mint: ", mint.TransactionHash)
 
@@ -154,7 +157,7 @@ func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 		return false, errors.New("Transaction not found")
 	}
 
-	result := cosmosUtil.ValidateTxToCosmosMultisig(tx, app.Config.Pocket, uint64(x.poktHeight))
+	result := cosmosUtilValidateTxToCosmosMultisig(tx, app.Config.Pocket, uint64(x.poktHeight), x.minimumAmount, x.maximumAmount)
 
 	if result.NeedsRefund || result.TxStatus == models.TransactionStatusFailed {
 		return false, nil
@@ -380,7 +383,7 @@ func (x *MintSignerRunner) UpdateMaxMintLimit() {
 		return
 	}
 	log.Debug("[MINT SIGNER] Fetched mint controller max mint limit")
-	x.maximumAmount = mintLimit
+	x.maximumAmount = math.NewIntFromBigInt(mintLimit)
 }
 
 var cosmosNewClient = cosmos.NewClient
@@ -433,7 +436,7 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 		mintControllerContract: eth.NewMintControllerContract(mintControllerContract),
 		ethClient:              ethClient,
 		poktClient:             cosmosClient,
-		minimumAmount:          big.NewInt(app.Config.Pocket.TxFee),
+		minimumAmount:          math.NewIntFromUint64(uint64(app.Config.Pocket.TxFee)),
 	}
 
 	x.UpdateBlocks()
@@ -468,8 +471,8 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 
 	x.UpdateMaxMintLimit()
 
-	if x.maximumAmount == nil || x.maximumAmount.Cmp(x.minimumAmount) != 1 {
-		log.Fatal("[MINT SIGNER] Invalid max mint limit")
+	if x.maximumAmount.LT(x.minimumAmount) {
+		log.Fatal("[MINT MONITOR] Invalid max mint limit")
 	}
 
 	log.Info("[MINT SIGNER] Initialized mint signer")

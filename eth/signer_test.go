@@ -3,6 +3,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io"
 	"math/big"
 	"strings"
@@ -11,18 +12,25 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/dan13ram/wpokt-validator/app"
 	appMocks "github.com/dan13ram/wpokt-validator/app/mocks"
+	"github.com/dan13ram/wpokt-validator/common"
 	cosmosMocks "github.com/dan13ram/wpokt-validator/cosmos/client/mocks"
 	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	ethMocks "github.com/dan13ram/wpokt-validator/eth/client/mocks"
 	"github.com/dan13ram/wpokt-validator/models"
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+
+	"cosmossdk.io/math"
+	abci "github.com/cometbft/cometbft/abci/types"
+	cosmosUtil "github.com/dan13ram/wpokt-validator/cosmos/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -38,11 +46,12 @@ func NewTestMintSigner(t *testing.T, mockWrappedPocketContract *ethMocks.MockWra
 	address := crypto.PubkeyToAddress(pk.PublicKey).Hex()
 
 	x := &MintSignerRunner{
-		address:        strings.ToLower(address),
-		privateKey:     pk,
-		vaultAddress:   "vaultAddress",
-		wpoktAddress:   "wpoktAddress",
-		validatorCount: 3,
+		address:         strings.ToLower(address),
+		privateKey:      pk,
+		vaultAddress:    "vaultAddress",
+		wpoktAddress:    "wpoktAddress",
+		validatorCount:  3,
+		signerThreshold: 2,
 		domain: eth.DomainData{
 			Name:              "Test",
 			Version:           "1",
@@ -54,8 +63,8 @@ func NewTestMintSigner(t *testing.T, mockWrappedPocketContract *ethMocks.MockWra
 		ethClient:              mockEthClient,
 		poktClient:             mockPoktClient,
 		poktHeight:             100,
-		minimumAmount:          big.NewInt(10000),
-		maximumAmount:          big.NewInt(1000000),
+		minimumAmount:          math.NewInt(10000),
+		maximumAmount:          math.NewInt(1000000),
 	}
 	return x
 }
@@ -195,7 +204,7 @@ func TestMintSignerUpdateMaxMintLimit(t *testing.T) {
 
 		x.UpdateMaxMintLimit()
 
-		assert.Equal(t, x.maximumAmount, big.NewInt(500000))
+		assert.Equal(t, x.maximumAmount, math.NewInt(500000))
 	})
 
 	t.Run("With Error", func(t *testing.T) {
@@ -209,7 +218,7 @@ func TestMintSignerUpdateMaxMintLimit(t *testing.T) {
 
 		x.UpdateMaxMintLimit()
 
-		assert.Equal(t, x.maximumAmount, big.NewInt(1000000))
+		assert.Equal(t, x.maximumAmount, math.NewInt(1000000))
 	})
 
 }
@@ -419,7 +428,26 @@ func TestValidateMint(t *testing.T) {
 
 	})
 
-	t.Run("Invalid transaction code", func(t *testing.T) {
+	t.Run("Nil transaction", func(t *testing.T) {
+
+		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
+		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
+
+		mint := &models.Mint{}
+
+		mockPoktClient.EXPECT().GetTx("").Return(nil, nil)
+
+		valid, err := x.ValidateMint(mint)
+
+		assert.False(t, valid)
+		assert.Error(t, err)
+
+	})
+
+	t.Run("Failed transaction", func(t *testing.T) {
 
 		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
 		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
@@ -433,6 +461,20 @@ func TestValidateMint(t *testing.T) {
 
 		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
 
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus: models.TransactionStatusFailed,
+			}
+		}
+
 		valid, err := x.ValidateMint(mint)
 
 		assert.False(t, valid)
@@ -440,7 +482,7 @@ func TestValidateMint(t *testing.T) {
 
 	})
 
-	t.Run("Invalid transaction msg type", func(t *testing.T) {
+	t.Run("Needs refund transaction", func(t *testing.T) {
 
 		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
 		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
@@ -450,377 +492,24 @@ func TestValidateMint(t *testing.T) {
 
 		mint := &models.Mint{}
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code: 0,
-			},
-		}
+		tx := &sdk.TxResponse{}
 
 		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
 
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-
-	t.Run("Invalid transaction msg to address", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		ZERO_ADDRESS := "0000000000000000000000000000000000000000"
-
-		mint := &models.Mint{}
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress: ZERO_ADDRESS,
-					},
-				},
-			},
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus:    models.TransactionStatusPending,
+				NeedsRefund: true,
+			}
 		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
-
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-
-	t.Run("Incorrect transaction msg to address", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		mint := &models.Mint{}
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress: "abcd",
-					},
-				},
-			},
-		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
-
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-
-	t.Run("Invalid transaction msg from address", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		ZERO_ADDRESS := "0x0000000000000000000000000000000000000000"
-
-		mint := &models.Mint{}
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: ZERO_ADDRESS,
-					},
-				},
-			},
-		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
-
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-
-	t.Run("Invalid transaction msg amount too low", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		mint := &models.Mint{
-			SenderAddress: "abcd",
-			Amount:        "100",
-		}
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "100",
-					},
-				},
-			},
-		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
-
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-	t.Run("Invalid transaction msg amount too high", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		mint := &models.Mint{
-			SenderAddress: "abcd",
-			Amount:        "2000000",
-		}
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "2000000",
-					},
-				},
-			},
-		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
-
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-
-	t.Run("Invalid transaction msg amount mismatch", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		mint := &models.Mint{
-			SenderAddress: "abcd",
-			Amount:        "20000",
-		}
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "10500",
-					},
-				},
-			},
-		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
-
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-
-	t.Run("Invalid transaction memo", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		mint := &models.Mint{
-			SenderAddress: "abcd",
-			Amount:        "20000",
-		}
-
-		app.Config.Ethereum.ChainID = "31337"
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
-					},
-				},
-				Memo: `{ "address": "0x0000000000000000000000000000000000000000", "chain_id": "31337" }`,
-			},
-		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
-
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-
-	t.Run("Invalid transaction memo address", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		address := common.HexToAddress("0x1234").Hex()
-
-		mint := &models.Mint{
-			SenderAddress: "abcd",
-			Amount:        "20000",
-		}
-
-		app.Config.Ethereum.ChainID = "31337"
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
-					},
-				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
-			},
-		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
-
-		valid, err := x.ValidateMint(mint)
-
-		assert.False(t, valid)
-		assert.Nil(t, err)
-
-	})
-
-	t.Run("Invalid transaction memo chainId", func(t *testing.T) {
-
-		mockWrappedPocketContract := ethMocks.NewMockWrappedPocketContract(t)
-		mockMintControllerContract := ethMocks.NewMockMintControllerContract(t)
-		mockEthClient := ethMocks.NewMockEthereumClient(t)
-		mockPoktClient := cosmosMocks.NewMockCosmosClient(t)
-		x := NewTestMintSigner(t, mockWrappedPocketContract, mockMintControllerContract, mockEthClient, mockPoktClient)
-
-		address := common.HexToAddress("0x1234").Hex()
-
-		mint := &models.Mint{
-			SenderAddress:    "abcd",
-			RecipientAddress: address,
-			Amount:           "20000",
-		}
-
-		app.Config.Ethereum.ChainID = "31337"
-
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
-					},
-				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
-			},
-		}
-
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
 
 		valid, err := x.ValidateMint(mint)
 
@@ -848,26 +537,24 @@ func TestValidateMint(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
-					},
-				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
-			},
-		}
+		tx := &sdk.TxResponse{}
 
 		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus:    models.TransactionStatusPending,
+				NeedsRefund: false,
+			}
+		}
 
 		valid, err := x.ValidateMint(mint)
 
@@ -1027,24 +714,7 @@ func TestMintSignerHandleMint(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        10,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
-					},
-				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
-			},
-		}
+		tx := &sdk.TxResponse{}
 
 		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
 
@@ -1064,6 +734,20 @@ func TestMintSignerHandleMint(t *testing.T) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["updated_at"] = update["$set"].(bson.M)["updated_at"]
 				assert.Equal(t, update, gotUpdate)
 			}).Return(primitive.NewObjectID(), nil)
+
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus: models.TransactionStatusFailed,
+			}
+		}
 
 		success := x.HandleMint(mint)
 
@@ -1098,23 +782,19 @@ func TestMintSignerHandleMint(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
-					},
-				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
-			},
+		tx := &sdk.TxResponse{}
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus: models.TransactionStatusPending,
+			}
 		}
 
 		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
@@ -1174,23 +854,19 @@ func TestMintSignerHandleMint(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
-					},
-				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
-			},
+		tx := &sdk.TxResponse{}
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus: models.TransactionStatusConfirmed,
+			}
 		}
 
 		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
@@ -1228,26 +904,48 @@ func TestMintSignerHandleMint(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
+		bech32Prefix := "pokt"
+
+		multisigAddress := ethcommon.BytesToAddress([]byte("pokt1multisig"))
+		multisigBech32, err := common.Bech32FromBytes(bech32Prefix, multisigAddress.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		senderAddress := ethcommon.BytesToAddress([]byte("pokt1sender"))
+		senderBech32, err := common.Bech32FromBytes(bech32Prefix, senderAddress.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txResponse := &sdk.TxResponse{
+			TxHash: "0x123",
+			Height: 90,
+			Code:   0,
+			Events: []abci.Event{
+				{
+					Type: "transfer",
+					Attributes: []abci.EventAttribute{
+						{Key: "sender", Value: senderBech32},
+						{Key: "recipient", Value: multisigBech32},
+						{Key: "amount", Value: "20000upokt"},
 					},
 				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
 			},
 		}
 
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+		tx := &tx.Tx{
+			Body: &tx.TxBody{
+				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
+			},
+		}
+		txValue, err := tx.Marshal()
+		if err != nil {
+			t.Fatal(err)
+		}
+		txResponse.Tx = &codectypes.Any{Value: txValue}
+
+		mockPoktClient.EXPECT().GetTx("").Return(txResponse, nil)
 
 		filter := bson.M{
 			"_id":    mint.Id,
@@ -1275,6 +973,20 @@ func TestMintSignerHandleMint(t *testing.T) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["signatures"] = update["$set"].(bson.M)["signatures"]
 				assert.Equal(t, update, gotUpdate)
 			}).Return(primitive.NewObjectID(), errors.New("error"))
+
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus: models.TransactionStatusConfirmed,
+			}
+		}
 
 		success := x.HandleMint(mint)
 
@@ -1308,27 +1020,48 @@ func TestMintSignerHandleMint(t *testing.T) {
 		}
 
 		app.Config.Ethereum.ChainID = "31337"
+		bech32Prefix := "pokt"
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
+		multisigAddress := ethcommon.BytesToAddress([]byte("pokt1multisig"))
+		multisigBech32, err := common.Bech32FromBytes(bech32Prefix, multisigAddress.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		senderAddress := ethcommon.BytesToAddress([]byte("pokt1sender"))
+		senderBech32, err := common.Bech32FromBytes(bech32Prefix, senderAddress.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txResponse := &sdk.TxResponse{
+			TxHash: "0x123",
+			Height: 90,
+			Code:   0,
+			Events: []abci.Event{
+				{
+					Type: "transfer",
+					Attributes: []abci.EventAttribute{
+						{Key: "sender", Value: senderBech32},
+						{Key: "recipient", Value: multisigBech32},
+						{Key: "amount", Value: "20000upokt"},
 					},
 				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
 			},
 		}
 
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+		tx := &tx.Tx{
+			Body: &tx.TxBody{
+				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
+			},
+		}
+		txValue, err := tx.Marshal()
+		if err != nil {
+			t.Fatal(err)
+		}
+		txResponse.Tx = &codectypes.Any{Value: txValue}
+
+		mockPoktClient.EXPECT().GetTx("").Return(txResponse, nil)
 
 		filter := bson.M{
 			"_id":    mint.Id,
@@ -1356,6 +1089,20 @@ func TestMintSignerHandleMint(t *testing.T) {
 				gotUpdate.(bson.M)["$set"].(bson.M)["signatures"] = update["$set"].(bson.M)["signatures"]
 				assert.Equal(t, update, gotUpdate)
 			}).Return(primitive.NewObjectID(), nil)
+
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus: models.TransactionStatusConfirmed,
+			}
+		}
 
 		success := x.HandleMint(mint)
 
@@ -1478,26 +1225,48 @@ func TestMintSignerSyncTxs(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
+		bech32Prefix := "pokt"
+
+		multisigAddress := ethcommon.BytesToAddress([]byte("pokt1multisig"))
+		multisigBech32, err := common.Bech32FromBytes(bech32Prefix, multisigAddress.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		senderAddress := ethcommon.BytesToAddress([]byte("pokt1sender"))
+		senderBech32, err := common.Bech32FromBytes(bech32Prefix, senderAddress.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txResponse := &sdk.TxResponse{
+			TxHash: "0x123",
+			Height: 90,
+			Code:   0,
+			Events: []abci.Event{
+				{
+					Type: "transfer",
+					Attributes: []abci.EventAttribute{
+						{Key: "sender", Value: senderBech32},
+						{Key: "recipient", Value: multisigBech32},
+						{Key: "amount", Value: "20000upokt"},
 					},
 				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
 			},
 		}
 
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+		tx := &tx.Tx{
+			Body: &tx.TxBody{
+				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
+			},
+		}
+		txValue, err := tx.Marshal()
+		if err != nil {
+			t.Fatal(err)
+		}
+		txResponse.Tx = &codectypes.Any{Value: txValue}
+
+		mockPoktClient.EXPECT().GetTx("").Return(txResponse, nil)
 
 		filterUpdate := bson.M{
 			"_id":    mint.Id,
@@ -1537,6 +1306,19 @@ func TestMintSignerSyncTxs(t *testing.T) {
 		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
 		mockDB.EXPECT().Unlock("lockId").Return(errors.New("error"))
 
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus: models.TransactionStatusConfirmed,
+			}
+		}
 		success := x.SyncTxs()
 
 		assert.False(t, success)
@@ -1576,26 +1358,48 @@ func TestMintSignerSyncTxs(t *testing.T) {
 
 		app.Config.Ethereum.ChainID = "31337"
 
-		tx := &sdk.TxResponse{
-			Tx: "abcd",
-			TxResult: sdk.TxResult{
-				Code:        0,
-				MessageType: "send",
-			},
-			StdTx: sdk.StdTx{
-				Msg: sdk.Msg{
-					Type: "pos/Send",
-					Value: sdk.Value{
-						ToAddress:   x.vaultAddress,
-						FromAddress: "abcd",
-						Amount:      "20000",
+		bech32Prefix := "pokt"
+
+		multisigAddress := ethcommon.BytesToAddress([]byte("pokt1multisig"))
+		multisigBech32, err := common.Bech32FromBytes(bech32Prefix, multisigAddress.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		senderAddress := ethcommon.BytesToAddress([]byte("pokt1sender"))
+		senderBech32, err := common.Bech32FromBytes(bech32Prefix, senderAddress.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txResponse := &sdk.TxResponse{
+			TxHash: "0x123",
+			Height: 90,
+			Code:   0,
+			Events: []abci.Event{
+				{
+					Type: "transfer",
+					Attributes: []abci.EventAttribute{
+						{Key: "sender", Value: senderBech32},
+						{Key: "recipient", Value: multisigBech32},
+						{Key: "amount", Value: "20000upokt"},
 					},
 				},
-				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
 			},
 		}
 
-		mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+		tx := &tx.Tx{
+			Body: &tx.TxBody{
+				Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
+			},
+		}
+		txValue, err := tx.Marshal()
+		if err != nil {
+			t.Fatal(err)
+		}
+		txResponse.Tx = &codectypes.Any{Value: txValue}
+
+		mockPoktClient.EXPECT().GetTx("").Return(txResponse, nil)
 
 		filterUpdate := bson.M{
 			"_id":    mint.Id,
@@ -1635,6 +1439,19 @@ func TestMintSignerSyncTxs(t *testing.T) {
 		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
 		mockDB.EXPECT().Unlock("lockId").Return(nil)
 
+		oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+		cosmosUtilValidateTxToCosmosMultisig = func(
+			txResponse *sdk.TxResponse,
+			config models.PocketConfig,
+			currentCosmosBlockHeight uint64,
+			minAmount math.Int,
+			maxAmount math.Int,
+		) *cosmosUtil.ValidateTxResult {
+			return &cosmosUtil.ValidateTxResult{
+				TxStatus: models.TransactionStatusConfirmed,
+			}
+		}
 		success := x.SyncTxs()
 
 		assert.True(t, success)
@@ -1677,26 +1494,48 @@ func TestMintSignerRun(t *testing.T) {
 
 	app.Config.Ethereum.ChainID = "31337"
 
-	tx := &sdk.TxResponse{
-		Tx: "abcd",
-		TxResult: sdk.TxResult{
-			Code:        0,
-			MessageType: "send",
-		},
-		StdTx: sdk.StdTx{
-			Msg: sdk.Msg{
-				Type: "pos/Send",
-				Value: sdk.Value{
-					ToAddress:   x.vaultAddress,
-					FromAddress: "abcd",
-					Amount:      "20000",
+	bech32Prefix := "pokt"
+
+	multisigAddress := ethcommon.BytesToAddress([]byte("pokt1multisig"))
+	multisigBech32, err := common.Bech32FromBytes(bech32Prefix, multisigAddress.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	senderAddress := ethcommon.BytesToAddress([]byte("pokt1sender"))
+	senderBech32, err := common.Bech32FromBytes(bech32Prefix, senderAddress.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txResponse := &sdk.TxResponse{
+		TxHash: "0x123",
+		Height: 90,
+		Code:   0,
+		Events: []abci.Event{
+			{
+				Type: "transfer",
+				Attributes: []abci.EventAttribute{
+					{Key: "sender", Value: senderBech32},
+					{Key: "recipient", Value: multisigBech32},
+					{Key: "amount", Value: "20000upokt"},
 				},
 			},
-			Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
 		},
 	}
 
-	mockPoktClient.EXPECT().GetTx("").Return(tx, nil)
+	tx := &tx.Tx{
+		Body: &tx.TxBody{
+			Memo: fmt.Sprintf(`{ "address": "%s", "chain_id": "31337" }`, address),
+		},
+	}
+	txValue, err := tx.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	txResponse.Tx = &codectypes.Any{Value: txValue}
+
+	mockPoktClient.EXPECT().GetTx("").Return(txResponse, nil)
 
 	filterUpdate := bson.M{
 		"_id":    mint.Id,
@@ -1741,6 +1580,20 @@ func TestMintSignerRun(t *testing.T) {
 	mockMintControllerContract.EXPECT().ValidatorCount(mock.Anything).Return(big.NewInt(3), nil)
 
 	mockMintControllerContract.EXPECT().MaxMintLimit(mock.Anything).Return(big.NewInt(1000000), nil)
+
+	oldCosmosUtilValidateTxToCosmosMultisig := cosmosUtilValidateTxToCosmosMultisig
+	defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
+	cosmosUtilValidateTxToCosmosMultisig = func(
+		txResponse *sdk.TxResponse,
+		config models.PocketConfig,
+		currentCosmosBlockHeight uint64,
+		minAmount math.Int,
+		maxAmount math.Int,
+	) *cosmosUtil.ValidateTxResult {
+		return &cosmosUtil.ValidateTxResult{
+			TxStatus: models.TransactionStatusConfirmed,
+		}
+	}
 
 	x.Run()
 

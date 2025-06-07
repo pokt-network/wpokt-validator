@@ -1,7 +1,8 @@
 package cosmos
 
 import (
-	"math/big"
+	"context"
+	"cosmossdk.io/math"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,10 +12,15 @@ import (
 	"github.com/dan13ram/wpokt-validator/app"
 	cosmos "github.com/dan13ram/wpokt-validator/cosmos/client"
 	"github.com/dan13ram/wpokt-validator/cosmos/util"
+	eth "github.com/dan13ram/wpokt-validator/eth/client"
 	"github.com/dan13ram/wpokt-validator/models"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"github.com/dan13ram/wpokt-validator/eth/autogen"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const (
@@ -22,12 +28,15 @@ const (
 )
 
 type MintMonitorRunner struct {
-	client        cosmos.CosmosClient
-	wpoktAddress  string
-	vaultAddress  string
-	startHeight   int64
-	currentHeight int64
-	minimumAmount *big.Int
+	client                 cosmos.CosmosClient
+	ethClient              eth.EthereumClient
+	mintControllerContract eth.MintControllerContract
+	wpoktAddress           string
+	vaultAddress           string
+	startHeight            int64
+	currentHeight          int64
+	minimumAmount          math.Int
+	maximumAmount          math.Int
 }
 
 func (x *MintMonitorRunner) Run() {
@@ -155,7 +164,7 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 	var success bool = true
 	for _, txResponse := range txResponses {
 
-		result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.currentHeight))
+		result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.currentHeight), x.minimumAmount, x.maximumAmount)
 
 		if result.TxStatus == models.TransactionStatusFailed {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", result.TxHash)
@@ -198,6 +207,21 @@ func (x *MintMonitorRunner) InitStartHeight(lastHealth models.ServiceHealth) {
 	log.Info("[MINT MONITOR] Start height: ", x.startHeight)
 }
 
+func (x *MintMonitorRunner) UpdateMaxMintLimit() {
+	log.Debug("[MINT MONITOR] Fetching mint controller max mint limit")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(app.Config.Ethereum.RPCTimeoutMillis)*time.Millisecond)
+	defer cancel()
+	opts := &bind.CallOpts{Context: ctx, Pending: false}
+	mintLimit, err := x.mintControllerContract.MaxMintLimit(opts)
+
+	if err != nil {
+		log.Error("[MINT MONITOR] Error fetching mint controller max mint limit: ", err)
+		return
+	}
+	log.Debug("[MINT MONITOR] Fetched mint controller max mint limit")
+	x.maximumAmount = math.NewIntFromBigInt(mintLimit)
+}
+
 func NewMintMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Service {
 	if !app.Config.MintMonitor.Enabled {
 		log.Debug("[MINT MONITOR] Disabled")
@@ -213,21 +237,41 @@ func NewMintMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 
 	client, err := cosmosNewClient(app.Config.Pocket)
 	if err != nil {
-		log.Fatalf("Error creating pokt client: %s", err)
+		log.Fatalf("[MINT MONITOR] Error creating pokt client: %s", err)
 	}
 
+	ethClient, err := eth.NewClient()
+	if err != nil {
+		log.Fatal("[MINT MONITOR] Error initializing ethereum client: ", err)
+	}
+
+	log.Debug("[MINT MONITOR] Connecting to mint controller contract at: ", app.Config.Ethereum.MintControllerAddress)
+	mintControllerContract, err := autogen.NewMintController(common.HexToAddress(app.Config.Ethereum.MintControllerAddress), ethClient.GetClient())
+	if err != nil {
+		log.Fatal("[MINT MONITOR] Error initializing Mint Controller contract", err)
+	}
+	log.Debug("[MINT MONITOR] Connected to mint controller contract")
+
 	x := &MintMonitorRunner{
-		vaultAddress:  signer.MultisigAddress,
-		wpoktAddress:  strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
-		startHeight:   0,
-		currentHeight: 0,
-		client:        client,
-		minimumAmount: big.NewInt(app.Config.Pocket.TxFee),
+		vaultAddress:           signer.MultisigAddress,
+		wpoktAddress:           strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
+		startHeight:            0,
+		currentHeight:          0,
+		client:                 client,
+		ethClient:              ethClient,
+		minimumAmount:          math.NewIntFromUint64(uint64(app.Config.Pocket.TxFee)),
+		mintControllerContract: eth.NewMintControllerContract(mintControllerContract),
 	}
 
 	x.UpdateCurrentHeight()
 
 	x.InitStartHeight(lastHealth)
+
+	x.UpdateMaxMintLimit()
+
+	if x.maximumAmount.LT(x.minimumAmount) {
+		log.Fatal("[MINT MONITOR] Invalid max mint limit")
+	}
 
 	log.Info("[MINT MONITOR] Initialized")
 
