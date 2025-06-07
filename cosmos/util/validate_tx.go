@@ -27,6 +27,8 @@ func ValidateTxToCosmosMultisig(
 	txResponse *sdk.TxResponse,
 	config models.PocketConfig,
 	currentCosmosBlockHeight uint64,
+	minAmount math.Int,
+	maxAmount math.Int,
 ) *ValidateTxResult {
 	logger := log.
 		WithField("operation", "validateTxToCosmosMultisig").
@@ -69,7 +71,7 @@ func ValidateTxToCosmosMultisig(
 		return &result
 	}
 
-	if result.Amount.Amount.LTE(math.NewIntFromUint64(uint64(config.TxFee))) {
+	if result.Amount.Amount.LTE(minAmount) {
 		logger.Debugf("Found tx transfer with amount too low")
 		return &result
 	}
@@ -97,6 +99,13 @@ func ValidateTxToCosmosMultisig(
 
 	logger.WithField("memo", memo).Debugf("Found valid memo")
 	result.Memo = memo
+
+	if result.Amount.Amount.GT(maxAmount) {
+		// refund any transactions that are too large since they can't be processed on ethereum due to the max mint limit
+		logger.Debugf("Found tx transfer with amount too high")
+		result.NeedsRefund = true
+		return &result
+	}
 
 	return &result
 }
