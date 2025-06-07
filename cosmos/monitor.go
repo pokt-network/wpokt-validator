@@ -155,12 +155,7 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 	var success bool = true
 	for _, txResponse := range txResponses {
 
-		result, err := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.currentHeight))
-		if err != nil {
-			log.WithError(err).Errorf("Error validating tx")
-			success = false
-			continue
-		}
+		result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.currentHeight))
 
 		if result.TxStatus == models.TransactionStatusFailed {
 			log.Info("[MINT MONITOR] Found failed mint tx: ", result.TxHash)

@@ -80,13 +80,10 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 	}
 
 	if txResponse == nil {
-		return false, errors.New("Transaction not found")
+		return false, errors.New("transaction not found")
 	}
-	result, err := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.poktHeight))
-	if err != nil {
-		log.WithError(err).Errorf("Error validating tx")
-		return false, nil
-	}
+	result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.poktHeight))
+
 	if result.TxStatus == models.TransactionStatusFailed {
 		log.Debug("[BURN SIGNER] Invalid Mint Transaction is failed")
 		return false, nil

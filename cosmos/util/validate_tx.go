@@ -27,7 +27,7 @@ func ValidateTxToCosmosMultisig(
 	txResponse *sdk.TxResponse,
 	config models.PocketConfig,
 	currentCosmosBlockHeight uint64,
-) (*ValidateTxResult, error) {
+) *ValidateTxResult {
 	logger := log.
 		WithField("operation", "validateTxToCosmosMultisig").
 		WithField("tx_hash", txResponse.TxHash)
@@ -45,19 +45,19 @@ func ValidateTxToCosmosMultisig(
 	if txResponse.Code != 0 {
 		logger.Debugf("Found tx with non-zero code")
 		result.TxStatus = models.TransactionStatusFailed
-		return &result, nil
+		return &result
 	}
 
 	transfers, err := ParseTransferEvents(txResponse.Events,
 		config.MultisigAddress, config.CoinDenom)
 	if err != nil {
 		logger.WithError(err).Debugf("Error parsing transfer events")
-		return &result, nil
+		return &result
 	}
 
 	if len(transfers) != 1 {
 		logger.Debugf("Found tx with invalid transfers, expected 1, got %d", len(transfers))
-		return &result, nil
+		return &result
 	}
 
 	result.SenderAddress = transfers[0].Sender
@@ -66,19 +66,19 @@ func ValidateTxToCosmosMultisig(
 
 	if result.Amount.IsZero() {
 		logger.Debugf("Found tx transfer with zero coins")
-		return &result, nil
+		return &result
 	}
 
 	if result.Amount.Amount.LTE(math.NewIntFromUint64(uint64(config.TxFee))) {
 		logger.Debugf("Found tx transfer with amount too low")
-		return &result, nil
+		return &result
 	}
 
 	tx := &tx.Tx{}
 	err = tx.Unmarshal(txResponse.Tx.Value)
 	if err != nil {
 		logger.WithError(err).Errorf("Error unmarshalling tx")
-		return &result, nil
+		return &result
 	}
 	result.Tx = tx
 
@@ -92,11 +92,11 @@ func ValidateTxToCosmosMultisig(
 		logger.WithError(err).WithField("memo", tx.Body.Memo).Debugf("Found invalid memo")
 		// refund
 		result.NeedsRefund = true
-		return &result, nil
+		return &result
 	}
 
 	logger.WithField("memo", memo).Debugf("Found valid memo")
 	result.Memo = memo
 
-	return &result, nil
+	return &result
 }
