@@ -3,9 +3,9 @@
 package mocks
 
 import (
-	time "time"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	mock "github.com/stretchr/testify/mock"
+	time "time"
 
 	proto "github.com/cosmos/gogoproto/proto"
 
@@ -13,8 +13,7 @@ import (
 
 	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 
-signing "github.com/cosmos/cosmos-sdk/x/auth/signing"
-
+	signing "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
 	types "github.com/cosmos/cosmos-sdk/types"
 )

@@ -66,7 +66,9 @@ func main() {
 		pKeys = append(pKeys, pKey)
 		fmt.Printf("public key %d: %v\n", i, key)
 		address, _ := common.Bech32FromBytes(DefaultBech32Prefix, pKey.Address().Bytes())
-		fmt.Printf("address: %s\n", address)
+		addressHex := "0x" + hex.EncodeToString(pKey.Address().Bytes())
+		fmt.Printf("address hex: %s\n", addressHex)
+		fmt.Printf("address bech32: %s\n", address)
 	}
 
 	sort.Slice(pKeys, func(i, j int) bool {
@@ -76,7 +78,7 @@ func main() {
 	fmt.Printf("threshold: %v\n", threshold)
 	pk := multisig.NewLegacyAminoPubKey(threshold, pKeys)
 
-	fmt.Printf("multisig address: %v\n", strings.ToLower(pk.Address().String()))
+	fmt.Printf("multisig address hex: %v\n", "0x"+strings.ToLower(pk.Address().String()))
 
 	bech32, err := common.Bech32FromBytes(DefaultBech32Prefix, pk.Address().Bytes())
 	if err != nil {

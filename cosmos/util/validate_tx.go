@@ -13,11 +13,10 @@ import (
 )
 
 type ValidateTxResult struct {
-	Memo          models.MintMemo
-	Confirmations uint64
-	TxStatus      models.TransactionStatus
+	TxValid       bool
 	Tx            *tx.Tx
 	TxHash        string
+	Memo          models.MintMemo
 	Amount        sdk.Coin
 	SenderAddress string
 	NeedsRefund   bool
@@ -25,8 +24,7 @@ type ValidateTxResult struct {
 
 func ValidateTxToCosmosMultisig(
 	txResponse *sdk.TxResponse,
-	config models.PocketConfig,
-	currentCosmosBlockHeight uint64,
+	config models.CosmosConfig,
 	minAmount math.Int,
 	maxAmount math.Int,
 ) *ValidateTxResult {
@@ -35,23 +33,26 @@ func ValidateTxToCosmosMultisig(
 		WithField("tx_hash", txResponse.TxHash)
 
 	result := ValidateTxResult{
-		Memo:          models.MintMemo{},
-		TxStatus:      models.TransactionStatusFailed,
+		TxValid:       false,
 		Tx:            nil,
 		TxHash:        common.Ensure0xPrefix(txResponse.TxHash),
 		Amount:        sdk.Coin{},
+		Memo:          models.MintMemo{},
 		SenderAddress: "",
 		NeedsRefund:   false,
 	}
 
 	if txResponse.Code != 0 {
 		logger.Debugf("Found tx with non-zero code")
-		result.TxStatus = models.TransactionStatusFailed
 		return &result
 	}
 
-	transfers, err := ParseTransferEvents(txResponse.Events,
-		config.MultisigAddress, config.CoinDenom)
+	transfers, err := ParseTransferEvents(
+		txResponse.Events,
+		config.MultisigAddress,
+		config.CoinDenom,
+	)
+
 	if err != nil {
 		logger.WithError(err).Debugf("Error parsing transfer events")
 		return &result
@@ -64,7 +65,6 @@ func ValidateTxToCosmosMultisig(
 
 	result.SenderAddress = transfers[0].Sender
 	result.Amount = transfers[0].Amount
-	result.Confirmations = currentCosmosBlockHeight - uint64(txResponse.Height)
 
 	if result.Amount.IsZero() {
 		logger.Debugf("Found tx transfer with zero coins")
@@ -83,11 +83,7 @@ func ValidateTxToCosmosMultisig(
 		return &result
 	}
 	result.Tx = tx
-
-	result.TxStatus = models.TransactionStatusPending
-	if result.Confirmations >= uint64(config.Confirmations) {
-		result.TxStatus = models.TransactionStatusConfirmed
-	}
+	result.TxValid = true
 
 	memo, err := ValidateMemo(tx.Body.Memo)
 	if err != nil {

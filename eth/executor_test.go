@@ -113,7 +113,7 @@ func TestMintExecutorHandleMintEvent(t *testing.T) {
 			"amount":            event.Amount.String(),
 			"nonce":             event.Nonce.String(),
 			"status": bson.M{
-				"$in": []string{models.StatusConfirmed, models.StatusSigned},
+				"$in": []string{models.StatusConfirmed, models.StatusSigned, models.StatusSuccess},
 			},
 		}
 

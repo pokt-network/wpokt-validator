@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	maxPageDepth = 100
+	maxPageDepth = 500
 )
 
 type CosmosClient interface {
@@ -62,7 +62,7 @@ type cosmosClient struct {
 	confirmations uint64
 
 	timeout      time.Duration
-	config       models.PocketConfig
+	config       models.CosmosConfig
 	bech32Prefix string
 	coinDenom    string
 
@@ -170,7 +170,7 @@ func (c *cosmosClient) getTxsByEventsPerPageRPC(query string, page uint64) ([]*s
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	limit := 50
+	limit := 100
 	pageint := int(page)
 
 	resTxs, err := c.rpcClient.TxSearch(ctx, query, false, &pageint, &limit, "asc")
@@ -446,7 +446,7 @@ func (c *cosmosClient) GetChainID() (string, error) {
 }
 
 func (c *cosmosClient) ValidateNetwork() error {
-	c.logger.Debugf("Validating network")
+	c.logger.Debugf("[POKT] Validating network")
 	chainID, err := c.GetChainID()
 	if err != nil {
 		return err
@@ -454,7 +454,7 @@ func (c *cosmosClient) ValidateNetwork() error {
 	if chainID != c.config.ChainID {
 		return fmt.Errorf("expected chain id %s, got %s", c.config.ChainID, chainID)
 	}
-	c.logger.Debugf("Validated network")
+	c.logger.Debugf("[POKT] Validated network")
 	return nil
 }
 
@@ -463,7 +463,7 @@ var rpchttpNew = func(url, endpoint string) (CosmosHTTPClient, error) {
 	return rpchttp.New(url, endpoint)
 }
 
-func NewClient(config models.PocketConfig) (CosmosClient, error) {
+func NewClient(config models.CosmosConfig) (CosmosClient, error) {
 	var connection *grpc.ClientConn
 	var client CosmosHTTPClient
 
@@ -476,7 +476,7 @@ func NewClient(config models.PocketConfig) (CosmosClient, error) {
 		grpcURL := fmt.Sprintf("%s:%d", config.GRPCHost, config.GRPCPort)
 		conn, err := grpcNewClient(grpcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			logger.WithError(err).Error("failed to connect to grpc")
+			logger.WithError(err).Error("[POKT] failed to connect to grpc")
 			return nil, fmt.Errorf("failed to connect to grpc")
 		}
 		connection = conn
@@ -484,7 +484,7 @@ func NewClient(config models.PocketConfig) (CosmosClient, error) {
 	} else {
 		c, err := rpchttpNew(config.RPCURL, "/websocket")
 		if err != nil {
-			logger.WithError(err).Error("failed to connect to rpc")
+			logger.WithError(err).Error("[POKT] failed to connect to rpc")
 			return nil, fmt.Errorf("failed to connect to rpc")
 		}
 		client = c
@@ -509,7 +509,7 @@ func NewClient(config models.PocketConfig) (CosmosClient, error) {
 
 	err := c.ValidateNetwork()
 	if err != nil {
-		logger.WithError(err).Error("failed to validate network")
+		logger.WithError(err).Error("[POKT] failed to validate network")
 		return nil, fmt.Errorf("failed to validate network")
 	}
 

@@ -19,6 +19,8 @@ import (
 	multisigtypes "github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
+
+	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 )
 
 const (
@@ -42,6 +44,15 @@ func (x *BurnExecutorRunner) Status() models.RunnerStatus {
 
 var utilValidateSignature = util.ValidateSignature
 var multisigtypesAddSignatureV2 = multisigtypes.AddSignatureV2
+
+func pubKeyExists(key crypto.PubKey, keys []crypto.PubKey) bool {
+	for _, k := range keys {
+		if k.Equals(key) {
+			return true
+		}
+	}
+	return false
+}
 
 func (x *BurnExecutorRunner) ValidateSignaturesAndAddMultiSignatureToTxConfig(
 	originTxHash string,
@@ -75,8 +86,20 @@ func (x *BurnExecutorRunner) ValidateSignaturesAndAddMultiSignatureToTxConfig(
 
 	multisigSig := multisigtypes.NewMultisig(len(x.signer.Multisig.GetPubKeys()))
 
+	uniquePubKeys := make(map[string]bool)
+
 	// read each signature and add it to the multisig if valid
 	for _, sig := range sigV2s {
+		if !uniquePubKeys[string(sig.PubKey.Bytes())] {
+			uniquePubKeys[string(sig.PubKey.Bytes())] = true
+		} else {
+			logger.Errorf("Duplicate signature pubkey")
+			return false
+		}
+		if !pubKeyExists(sig.PubKey, x.signer.Multisig.GetPubKeys()) {
+			logger.Errorf("Invalid signature pubkey")
+			return false
+		}
 		if err := utilValidateSignature(app.Config.Pocket, &sig, account.AccountNumber, sequence, txCfg, txBuilder); err != nil {
 			logger.WithError(err).Error("Error validating signature")
 			return false
@@ -226,7 +249,7 @@ func (x *BurnExecutorRunner) HandleBurn(doc *models.Burn) bool {
 		{
 			log.Debug("[BURN EXECUTOR] Submitting burn")
 
-			txBuilder, txCfg, err := util.WrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
+			txBuilder, txCfg, err := utilWrapTxBuilder(app.Config.Pocket.Bech32Prefix, doc.ReturnTransactionBody)
 			if err != nil {
 				log.WithError(err).Errorf("Error wrapping tx builder")
 				return false

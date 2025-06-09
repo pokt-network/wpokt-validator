@@ -39,7 +39,7 @@ func isTxSigner(user []byte, signers [][]byte) bool {
 
 func SignTx(
 	signer common.Signer,
-	config models.PocketConfig,
+	config models.CosmosConfig,
 	client cosmos.CosmosClient,
 	sequence uint64,
 	signatures []models.Signature,

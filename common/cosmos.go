@@ -22,33 +22,23 @@ func CosmosPrivateKeyFromMnemonic(mnemonic string) (crypto.PrivKey, error) {
 		return nil, err
 	}
 
-	privKey := defaultAlgo.Generate()(derivedPriv)
-
-	return privKey, nil
+	return defaultAlgo.Generate()(derivedPriv), nil
 }
 
 func CosmosPublicKeyFromMnemonic(mnemonic string) (crypto.PubKey, error) {
-	derivedPriv, err := defaultAlgo.Derive()(mnemonic, DefaultBIP39Passphrase, DefaultCosmosHDPath)
+	privKey, err := CosmosPrivateKeyFromMnemonic(mnemonic)
 	if err != nil {
 		return nil, err
 	}
 
-	privKey := defaultAlgo.Generate()(derivedPriv)
-
-	pubKey := privKey.PubKey()
-
-	return pubKey, nil
+	return privKey.PubKey(), nil
 }
 
 func CosmosPublicKeyHexFromMnemonic(mnemonic string) (string, error) {
-	derivedPriv, err := defaultAlgo.Derive()(mnemonic, DefaultBIP39Passphrase, DefaultCosmosHDPath)
+	pubKey, err := CosmosPublicKeyFromMnemonic(mnemonic)
 	if err != nil {
 		return "", err
 	}
-
-	privKey := defaultAlgo.Generate()(derivedPriv)
-
-	pubKey := privKey.PubKey()
 
 	return hex.EncodeToString(pubKey.Bytes()), nil
 }

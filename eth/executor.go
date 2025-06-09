@@ -71,7 +71,7 @@ func (x *MintExecutorRunner) HandleMintEvent(event *autogen.WrappedPocketMinted)
 		"amount":            event.Amount.String(),
 		"nonce":             event.Nonce.String(),
 		"status": bson.M{
-			"$in": []string{models.StatusConfirmed, models.StatusSigned},
+			"$in": []string{models.StatusConfirmed, models.StatusSigned, models.StatusSuccess},
 		},
 	}
 
@@ -86,7 +86,7 @@ func (x *MintExecutorRunner) HandleMintEvent(event *autogen.WrappedPocketMinted)
 	_, err := app.DB.UpdateOne(models.CollectionMints, filter, update)
 
 	if err != nil {
-		log.Error("[MINT EXECUTOR] Error while updating mint: ", err)
+		log.Error("[MINT EXECUTOR] Error while marking mint: ", err)
 		return false
 	}
 

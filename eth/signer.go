@@ -41,9 +41,9 @@ type MintSignerRunner struct {
 	validatorCount         int64
 	signerThreshold        int64
 	domain                 eth.DomainData
-	poktClient             cosmos.CosmosClient
+	cosmosClient           cosmos.CosmosClient
 	ethClient              eth.EthereumClient
-	poktHeight             int64
+	cosmosHeight           int64
 	minimumAmount          math.Int
 	maximumAmount          math.Int
 }
@@ -57,18 +57,18 @@ func (x *MintSignerRunner) Run() {
 
 func (x *MintSignerRunner) Status() models.RunnerStatus {
 	return models.RunnerStatus{
-		PoktHeight: strconv.FormatInt(x.poktHeight, 10),
+		PoktHeight: strconv.FormatInt(x.cosmosHeight, 10),
 	}
 }
 
 func (x *MintSignerRunner) UpdateBlocks() {
 	log.Debug("[MINT SIGNER] Updating blocks")
-	poktHeight, err := x.poktClient.GetLatestBlockHeight()
+	poktHeight, err := x.cosmosClient.GetLatestBlockHeight()
 	if err != nil {
 		log.Error("[MINT SIGNER] Error fetching pokt block height: ", err)
 		return
 	}
-	x.poktHeight = poktHeight
+	x.cosmosHeight = poktHeight
 }
 
 func (x *MintSignerRunner) FindNonce(mint *models.Mint) (*big.Int, error) {
@@ -147,23 +147,58 @@ var cosmosUtilValidateTxToCosmosMultisig = cosmosUtil.ValidateTxToCosmosMultisig
 func (x *MintSignerRunner) ValidateMint(mint *models.Mint) (bool, error) {
 	log.Debug("[MINT SIGNER] Validating mint: ", mint.TransactionHash)
 
-	tx, err := x.poktClient.GetTx(mint.TransactionHash)
+	tx, err := x.cosmosClient.GetTx(mint.TransactionHash)
 	if err != nil {
 		return false, errors.New("Error fetching transaction: " + err.Error())
 	}
 
 	if tx == nil {
 		log.Debug("[MINT SIGNER] Transaction not found")
+
 		return false, errors.New("transaction not found")
 	}
 
-	result := cosmosUtilValidateTxToCosmosMultisig(tx, app.Config.Pocket, uint64(x.poktHeight), x.minimumAmount, x.maximumAmount)
+	result := cosmosUtilValidateTxToCosmosMultisig(tx, app.Config.Pocket, x.minimumAmount, x.maximumAmount)
 
-	if result.NeedsRefund || result.TxStatus == models.TransactionStatusFailed {
+	if result.NeedsRefund || !result.TxValid {
+		log.Debug("[MINT SIGNER] Transaction needs refund or failed")
+
+		return false, nil
+	}
+
+	if !strings.EqualFold(result.SenderAddress, mint.SenderAddress) {
+		log.Debug("[MINT SIGNER] Transaction sender matches mint sender")
+
+		return false, nil
+	}
+
+	if !strings.EqualFold(result.Memo.Address, mint.RecipientAddress) {
+		log.Debug("[MINT SIGNER] Transaction recipient matches mint recipient")
+
+		return false, nil
+	}
+
+	if !strings.EqualFold(result.Memo.ChainID, mint.RecipientChainID) {
+		log.Debug("[MINT SIGNER] Transaction chain ID matches mint chain ID")
+
+		return false, nil
+	}
+
+	amount, ok := math.NewIntFromString(mint.Amount)
+	if !ok {
+		log.Error("[MINT SIGNER] Error parsing mint amount")
+
+		return false, nil
+	}
+
+	if !result.Amount.Amount.Equal(amount) {
+		log.Debug("[MINT SIGNER] Transaction amount matches mint amount")
+
 		return false, nil
 	}
 
 	log.Debug("[MINT SIGNER] Mint validated")
+
 	return true, nil
 }
 
@@ -201,7 +236,7 @@ func (x *MintSignerRunner) HandleMint(mint *models.Mint) bool {
 		Nonce:     nonce,
 	}
 
-	mint, err = util.UpdateStatusAndConfirmationsForMint(mint, x.poktHeight)
+	mint, err = util.UpdateStatusAndConfirmationsForMint(mint, x.cosmosHeight)
 	if err != nil {
 		log.Error("[MINT SIGNER] Error updating status and confirmations for mint: ", err)
 		return false
@@ -435,13 +470,13 @@ func NewMintSigner(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Serv
 		wpoktContract:          eth.NewWrappedPocketContract(contract),
 		mintControllerContract: eth.NewMintControllerContract(mintControllerContract),
 		ethClient:              ethClient,
-		poktClient:             cosmosClient,
+		cosmosClient:           cosmosClient,
 		minimumAmount:          math.NewIntFromUint64(uint64(app.Config.Pocket.TxFee)),
 	}
 
 	x.UpdateBlocks()
 
-	if x.poktHeight == int64(0) {
+	if x.cosmosHeight == int64(0) {
 		log.Fatal("[MINT SIGNER] Invalid block height")
 	}
 
