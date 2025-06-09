@@ -14,6 +14,9 @@ beta-two :; go run . --config ./config/config.beta.two.yml
 .PHONY: beta-three
 beta-three :; go run . --config ./config/config.beta.three.yml
 
+.PHONY: main
+main :; go run . --config ./config/defaults.mainnet.yml
+
 .PHONY: clean
 clean : go clean && go mod tidy
 
@@ -32,35 +35,23 @@ test :; go test -v ./...
 .PHONY: test_coverage
 test_coverage :; bash ./coverage.sh 
 
-.PHONY: test_coverage_html
+.PHONY: open_test_coverage
 open_test_coverage :; bash ./coverage.sh && open ./coverage.html
 
 .PHONY: build
 build :; go build -o wpokt-validator .
 
+.PHONY: docker_build_beta
+docker_build_beta :; docker buildx build . -t dan13ram/wpokt-validator-beta:v0.2.4 --file ./docker/Dockerfile.beta
+
+.PHONY: docker_push_beta
+docker_push_beta :; docker push dan13ram/wpokt-validator-beta:v0.2.4
+
 .PHONY: docker_build
-docker_build :; docker buildx build . -t dan13ram/wpokt-validator:v0.2.0 --file ./Dockerfile
+docker_build :; docker buildx build . -t dan13ram/wpokt-validator:v0.2.4 --file ./docker/Dockerfile.mainnet
 
 .PHONY: docker_push
-docker_push :; docker push dan13ram/wpokt-validator:v0.2.0
-
-.PHONY: docker_dev
-docker_dev : docker_one
-
-.PHONY: docker_one
-docker_one :; SIGNER_MNEMONIC="infant apart enroll relief kangaroo patch awesome wagon trap feature armor approve" YAML_FILE=/app/defaults/config.local.yml docker compose -f docker/docker-compose.yml up --force-recreate
-
-.PHONY: docker_two
-docker_two :; SIGNER_MNEMONIC="shy smile praise educate custom fashion gun enjoy zero powder garden second" YAML_FILE=/app/defaults/config.local.yml docker compose -f docker/docker-compose.yml up --force-recreate
-
-.PHONY: docker_three
-docker_three :; SIGNER_MNEMONIC="wink giant track dwarf visa feed visual drip play grant royal noise" YAML_FILE=/app/defaults/config.local.yml docker compose -f docker/docker-compose.yml up --force-recreate
-
-.PHONY: localnet_up
-localnet_up :; docker compose -f e2e/docker-compose.yml up --force-recreate
-
-.PHONY: localnet_up_gcp
-localnet_up_gcp :; GCP_KEY_ONE=${GCP_KEY_ONE} GCP_KEY_TWO=${GCP_KEY_TWO} GCP_KEY_THREE=${GCP_KEY_THREE} docker compose -f e2e/docker-compose-gcp.yml up --force-recreate
+docker_push :; docker push dan13ram/wpokt-validator:v0.2.4
 
 .PHONY: prompt_user
 prompt_user :
@@ -87,15 +78,3 @@ generate_multisig :; go run scripts/generate_multisig/main.go --publickeys "${pu
 
 .PHONY: gcp_kms
 gcp_kms :; GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} GCP_KMS_KEY_NAME=${GCP_KMS_KEY_NAME} go run scripts/gcp_kms/main.go
-
-.PHONY: gcp_dev_one
-gcp_dev_one :; GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} SIGNER_GCP_KMS_KEY_NAME=${GCP_KEY_ONE} go run . --yaml ./defaults/config.local.gcp.yml
-
-.PHONY: gcp_dev_two
-gcp_dev_two :; GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} SIGNER_GCP_KMS_KEY_NAME=${GCP_KEY_TWO} go run . --yaml ./defaults/config.local.gcp.yml
-
-.PHONY: gcp_dev_three
-gcp_dev_three :; GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} SIGNER_GCP_KMS_KEY_NAME=${GCP_KEY_THREE} go run . --yaml ./defaults/config.local.gcp.yml
-
-.PHONY: gcp_dev
-gcp_dev : gcp_dev_one

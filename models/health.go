@@ -25,6 +25,7 @@ type Health struct {
 	CreatedAt        time.Time           `bson:"created_at" json:"created_at"`
 	UpdatedAt        time.Time           `bson:"updated_at" json:"updated_at"`
 	ServiceHealths   []ServiceHealth     `bson:"service_healths" json:"service_healths"`
+	MintDisabled     bool                `bson:"mint_disabled" json:"mint_disabled"`
 }
 
 type ServiceHealth struct {

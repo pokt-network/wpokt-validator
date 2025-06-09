@@ -64,7 +64,9 @@ func readKeysFromGSM() {
 
 	}
 
-	if Config.Pocket.Mnemonic == "" && Config.GoogleSecretManager.PoktSecretName == "" {
+	if Config.Pocket.Mnemonic == "" &&
+		Config.Pocket.GcpKmsKeyName == "" &&
+		Config.GoogleSecretManager.PoktSecretName == "" {
 		log.Fatalf("[GSM] Pocket secret name is empty")
 	}
 

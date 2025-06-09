@@ -83,6 +83,7 @@ func (x *HealthCheckRunner) PostHealth() bool {
 	}
 
 	onUpdate := bson.M{
+		"mint_disabled":   Config.Pocket.MintDisabled,
 		"healthy":         true,
 		"service_healths": x.ServiceHealths(),
 		"updated_at":      time.Now(),

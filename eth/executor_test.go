@@ -119,9 +119,9 @@ func TestMintExecutorHandleMintEvent(t *testing.T) {
 
 		update := bson.M{
 			"$set": bson.M{
-				"status":       models.StatusSuccess,
-				"mint_tx_hash": strings.ToLower(event.Raw.TxHash.String()),
-				"updated_at":   time.Now(),
+				"status":                models.StatusSuccess,
+				"mint_transaction_hash": strings.ToLower(event.Raw.TxHash.String()),
+				"updated_at":            time.Now(),
 			},
 		}
 
