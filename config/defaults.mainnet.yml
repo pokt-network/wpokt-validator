@@ -1,0 +1,84 @@
+mongodb:
+  uri: ""
+  database: ""
+  timeout_ms: 30000
+
+ethereum:
+  start_block_number: 22669100
+  confirmations: 32
+  private_key: ""
+  rpc_url: "https://1rpc.io/eth"
+  chain_id: "1"
+  rpc_timeout_ms: 30000
+  wrapped_pocket_address: "0x67F4C72a50f8Df6487720261E188F2abE83F57D7"
+  mint_controller_address: "0x0d006D9e862B362180eb602e5973Fd1fdb6f78dd"
+  validator_addresses:
+    - "0xBE9210d6b7A96AabcBA54ced1dC34dA7DdC4c931"
+    - "0xDD1A209a52dA5a98F61c85e7Add9f4f2AAfa4d37"
+    - "0x96383b08dAFD38e05566Cd6941881a503aFBFc85"
+    - "0x974AF2Ea43b329ef27BEe5A9D8e5AF02bF4D58fB"
+    - "0x754fFD7817E391A16c8d141029823a18e025404C"
+    - "0x12E08268e155756012BD10163417BD04ECd22b3b"
+    - "0x7Bf50970669D5c9fD3a8F7079C495D1Cc1C157aD"
+
+pocket:
+  start_height: 113200
+  confirmations: 1
+  mnemonic: ""
+  rpc_url: "https://shannon-grove-rpc.mainnet.poktroll.com"
+  rpc_timeout_ms: 30000
+  tx_fee: 10000
+  grpc_enabled: false
+  grpc_host: ""
+  grpc_port: 0
+  chain_id: "pocket"
+  bech32_prefix: "pokt"
+  coin_denom: "upokt"
+  multisig_address: "pokt14q8l4hlsdf2fqws7n6q6ck3xg5yt2qvgyynnll"
+  multisig_public_keys:
+    - "03e3c9fdb44c50813412d3ec18f0373fc77a9737aef26d36486ae2cfe275529f80"
+    - "0389b38ae2f24ffda2dd7f209159d0af2f8e66d922686335093a520370c6ca67c8"
+    - "023ac4d1e5d563776c8bf18c60868a51fe7caedbb6fe64ead9aa7e32819c1d3cee"
+    - "0331a1d9b78a99cdfc0935c4b51dd6f986b53bcab24aa8bf3b6a9940231eddd036"
+    - "02f439b5a145e562633508d4dec88768d30bc3960bf9c4b5c25c13bcaaf6f81b3c"
+    - "03ebfc4096e52de5035dcc05c296720e81478614f6206f701362780b02504750b7"
+    - "039de7046727107f343dbf54458e91b03e7fe391d9f75150119bbabcf7571dc3f5"
+  multisig_threshold: 5
+  mint_disabled: true
+
+mint_monitor:
+  enabled: true
+  interval_ms: 30000
+
+mint_signer:
+  enabled: false
+  interval_ms: 30000
+
+mint_executor:
+  enabled: false
+  interval_ms: 30000
+
+burn_monitor:
+  enabled: true
+  interval_ms: 30000
+
+burn_signer:
+  enabled: true
+  interval_ms: 30000
+
+burn_executor:
+  enabled: true
+  interval_ms: 30000
+
+health_check:
+  interval_ms: 30000
+  read_last_health: true
+
+logger:
+  level: "info"
+
+google_secret_manager:
+  enabled: false
+  mongo_secret_name: ""
+  pokt_secret_name: ""
+  eth_secret_name: ""

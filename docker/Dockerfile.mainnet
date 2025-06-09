@@ -12,7 +12,7 @@ COPY cosmos ./cosmos
 COPY common ./common
 COPY models ./models
 COPY main.go ./
-COPY defaults.yml ./
+COPY config/defaults.mainnet.yml ./defaults.yml
 
 # build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/validator

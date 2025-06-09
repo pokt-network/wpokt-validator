@@ -170,6 +170,7 @@ func TestPostHealth(t *testing.T) {
 		}
 
 		onUpdate := bson.M{
+			"mint_disabled":   false,
 			"healthy":         true,
 			"service_healths": []models.ServiceHealth{},
 			"updated_at":      nil,
