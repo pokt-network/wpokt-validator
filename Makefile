@@ -2,14 +2,17 @@
 
 all : clean install test build
 
+export GOOGLE_APPLICATION_CREDENTIALS=./credentials.json
+export LOG_LEVEL=debug
+
 .PHONY: beta-one
-beta-one :; LOG_LEVEL=debug go run . --config ./config/config.beta.one.yml
+beta-one :; go run . --config ./config/config.beta.one.yml
 
 .PHONY: beta-two
-beta-two :; LOG_LEVEL=debug go run . --config ./config/config.beta.two.yml
+beta-two :; go run . --config ./config/config.beta.two.yml
 
 .PHONY: beta-three
-beta-three :; LOG_LEVEL=debug go run . --config ./config/config.beta.three.yml
+beta-three :; go run . --config ./config/config.beta.three.yml
 
 .PHONY: clean
 clean : go clean && go mod tidy

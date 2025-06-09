@@ -35,7 +35,7 @@ func TestCosmosSignTx(t *testing.T) {
 
 	recipientAddr := ethcommon.BytesToAddress([]byte("recipient"))
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -121,7 +121,7 @@ func TestCosmosSignTx_InvalidSigner(t *testing.T) {
 		},
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -168,7 +168,7 @@ func TestCosmosSignTx_AlreadySigned(t *testing.T) {
 		},
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -205,7 +205,7 @@ func TestCosmosSignTx_InvalidMultisigAddress(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -245,7 +245,7 @@ func TestCosmosSignTx_ErrorNewTx(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -289,7 +289,7 @@ func TestCosmosSignTx_WrapError(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -338,7 +338,7 @@ func TestCosmosSignTx_ErrorGetSigners(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -395,7 +395,7 @@ func TestCosmosSignTx_MultisigIsNotSigner(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -455,7 +455,7 @@ func TestCosmosSignTx_AccountError(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -530,7 +530,7 @@ func TestCosmosSignTx_ErrorSigning(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -609,7 +609,7 @@ func TestCosmosSignTx_ErrorGettingSignatures(t *testing.T) {
 		Signature: "0xsignature",
 	}}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -684,7 +684,7 @@ func TestCosmosSignTx_ErrorSettingSignatures(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -758,7 +758,7 @@ func TestCosmosSignTx_ErrorEncoding(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",
@@ -839,7 +839,7 @@ func TestCosmosSignTx_TransactionBodyNonEmpty(t *testing.T) {
 
 	signatures := []models.Signature{}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:         "chain-id",
 		CoinDenom:       "upokt",
 		Bech32Prefix:    "pokt",

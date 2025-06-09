@@ -32,8 +32,8 @@ const (
 type BurnSignerRunner struct {
 	signer                 *app.PocketSigner
 	ethClient              eth.EthereumClient
-	poktClient             cosmosClient.CosmosClient
-	poktHeight             int64
+	cosmosClient           cosmosClient.CosmosClient
+	cosmosHeight           int64
 	ethBlockNumber         int64
 	vaultAddress           string
 	wpoktAddress           string
@@ -49,7 +49,7 @@ func (x *BurnSignerRunner) Run() {
 }
 func (x *BurnSignerRunner) Status() models.RunnerStatus {
 	return models.RunnerStatus{
-		PoktHeight:     strconv.FormatInt(x.poktHeight, 10),
+		PoktHeight:     strconv.FormatInt(x.cosmosHeight, 10),
 		EthBlockNumber: strconv.FormatInt(x.ethBlockNumber, 10),
 	}
 }
@@ -57,12 +57,12 @@ func (x *BurnSignerRunner) Status() models.RunnerStatus {
 func (x *BurnSignerRunner) UpdateBlocks() {
 	log.Debug("[BURN SIGNER] Updating blocks")
 
-	poktHeight, err := x.poktClient.GetLatestBlockHeight()
+	poktHeight, err := x.cosmosClient.GetLatestBlockHeight()
 	if err != nil {
 		log.Error("[BURN SIGNER] Error fetching pokt block height: ", err)
 		return
 	}
-	x.poktHeight = poktHeight
+	x.cosmosHeight = poktHeight
 
 	ethBlockNumber, err := x.ethClient.GetBlockNumber()
 	if err != nil {
@@ -77,7 +77,7 @@ func (x *BurnSignerRunner) UpdateBlocks() {
 func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, error) {
 	log.Debug("[BURN SIGNER] Validating invalid mint: ", doc.TransactionHash)
 
-	txResponse, err := x.poktClient.GetTx(doc.TransactionHash)
+	txResponse, err := x.cosmosClient.GetTx(doc.TransactionHash)
 	if err != nil {
 		return false, errors.New("Error fetching transaction: " + err.Error())
 	}
@@ -85,16 +85,37 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 	if txResponse == nil {
 		return false, errors.New("transaction not found")
 	}
-	result := util.ValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.poktHeight), x.minimumAmount, x.maximumAmount)
+	result := utilValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, x.minimumAmount, x.maximumAmount)
 
-	if result.TxStatus == models.TransactionStatusFailed {
-		log.Debug("[BURN SIGNER] Invalid Mint Transaction is failed")
+	if !result.TxValid {
+		log.Debug("[BURN SIGNER] Invalid Mint Transaction is invalid")
 		return false, nil
 	}
 
 	// NOTE: If mint is disabled, we refund all txs
 	if !app.Config.Pocket.MintDisabled && !result.NeedsRefund {
 		log.Debug("[BURN SIGNER] Invalid Mint Transaction does not need refund")
+		return false, nil
+	}
+
+	if !strings.EqualFold(result.SenderAddress, doc.SenderAddress) {
+		log.Debug("[BURN SIGNER] Invalid Mint Transaction sender does not match")
+		return false, nil
+	}
+
+	amount, ok := math.NewIntFromString(doc.Amount)
+	if !ok {
+		log.Debug("[BURN SIGNER] Invalid Mint Transaction amount")
+		return false, nil
+	}
+
+	if !result.Amount.Amount.Equal(amount) {
+		log.Debug("[BURN SIGNER] Invalid Mint Transaction amount does not match")
+		return false, nil
+	}
+
+	if result.Tx.Body.Memo != doc.Memo {
+		log.Debug("[BURN SIGNER] Invalid Mint Transaction memo does not match")
 		return false, nil
 	}
 
@@ -114,7 +135,7 @@ func (x *BurnSignerRunner) FindMaxSequence() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	account, err := x.poktClient.GetAccount(x.signer.MultisigAddress)
+	account, err := x.cosmosClient.GetAccount(x.signer.MultisigAddress)
 	if err != nil {
 		return 0, err
 	}
@@ -146,10 +167,10 @@ func (x *BurnSignerRunner) Sign(
 		sequence = &gotSequence
 	}
 
-	txBody, finalSignatures, err := SignTx(
+	txBody, finalSignatures, err := CosmosSignTx(
 		x.signer.Signer,
 		app.Config.Pocket,
-		x.poktClient,
+		x.cosmosClient,
 		*sequence,
 		signatures,
 		transactionBody,
@@ -184,7 +205,7 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 	}
 	log.Debug("[BURN SIGNER] Handling invalid mint: ", doc.TransactionHash)
 
-	doc, err := util.UpdateStatusAndConfirmationsForInvalidMint(doc, x.poktHeight)
+	doc, err := util.UpdateStatusAndConfirmationsForInvalidMint(doc, x.cosmosHeight)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error getting invalid mint status: ", err)
 		return false
@@ -582,7 +603,7 @@ func NewBurnSigner(wg *sync.WaitGroup, health models.ServiceHealth) app.Service 
 	x := &BurnSignerRunner{
 		signer:                 signer,
 		ethClient:              ethClient,
-		poktClient:             poktClient,
+		cosmosClient:           poktClient,
 		vaultAddress:           signer.MultisigAddress,
 		wpoktAddress:           strings.ToLower(app.Config.Ethereum.WrappedPocketAddress),
 		wpoktContract:          eth.NewWrappedPocketContract(contract),

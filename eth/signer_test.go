@@ -61,8 +61,8 @@ func NewTestMintSigner(t *testing.T, mockWrappedPocketContract *ethMocks.MockWra
 		wpoktContract:          mockWrappedPocketContract,
 		mintControllerContract: mockMintControllerContract,
 		ethClient:              mockEthClient,
-		poktClient:             mockPoktClient,
-		poktHeight:             100,
+		cosmosClient:           mockPoktClient,
+		cosmosHeight:           100,
 		minimumAmount:          math.NewInt(10000),
 		maximumAmount:          math.NewInt(1000000),
 	}
@@ -94,7 +94,7 @@ func TestMintSignerUpdateBlocks(t *testing.T) {
 
 		x.UpdateBlocks()
 
-		assert.Equal(t, x.poktHeight, int64(200))
+		assert.Equal(t, x.cosmosHeight, int64(200))
 	})
 
 	t.Run("With Error", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestMintSignerUpdateBlocks(t *testing.T) {
 
 		x.UpdateBlocks()
 
-		assert.Equal(t, x.poktHeight, int64(100))
+		assert.Equal(t, x.cosmosHeight, int64(100))
 	})
 
 }
@@ -465,13 +465,12 @@ func TestValidateMint(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus: models.TransactionStatusFailed,
+				TxValid: false,
 			}
 		}
 
@@ -500,13 +499,13 @@ func TestValidateMint(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
+
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus:    models.TransactionStatusPending,
+				TxValid:     true,
 				NeedsRefund: true,
 			}
 		}
@@ -545,14 +544,19 @@ func TestValidateMint(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus:    models.TransactionStatusPending,
-				NeedsRefund: false,
+				TxValid:       true,
+				NeedsRefund:   false,
+				SenderAddress: "abcd",
+				Memo: models.MintMemo{
+					Address: address,
+					ChainID: "31337",
+				},
+				Amount: sdk.NewCoin("upokt", math.NewInt(20000)),
 			}
 		}
 
@@ -648,7 +652,6 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Nonce:            "1",
 			RecipientChainID: "31337",
 			Height:           "invalid",
-			Confirmations:    "invalid",
 		}
 
 		success := x.HandleMint(mint)
@@ -676,7 +679,6 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Nonce:            "1",
 			RecipientChainID: "31337",
 			Height:           "99",
-			Confirmations:    "invalid",
 		}
 
 		mockPoktClient.EXPECT().GetTx("").Return(nil, errors.New("error"))
@@ -709,7 +711,6 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Nonce:            "1",
 			RecipientChainID: "31337",
 			Height:           "99",
-			Confirmations:    "invalid",
 		}
 
 		app.Config.Ethereum.ChainID = "31337"
@@ -739,13 +740,13 @@ func TestMintSignerHandleMint(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
+
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus: models.TransactionStatusFailed,
+				TxValid: false,
 			}
 		}
 
@@ -777,7 +778,6 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Nonce:            "1",
 			RecipientChainID: "31337",
 			Height:           "99",
-			Confirmations:    "invalid",
 		}
 
 		app.Config.Ethereum.ChainID = "31337"
@@ -787,13 +787,20 @@ func TestMintSignerHandleMint(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
+
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus: models.TransactionStatusPending,
+				TxValid:       true,
+				NeedsRefund:   false,
+				SenderAddress: "abcd",
+				Memo: models.MintMemo{
+					Address: address,
+					ChainID: "31337",
+				},
+				Amount: sdk.NewCoin("upokt", math.NewInt(20000)),
 			}
 		}
 
@@ -849,7 +856,6 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Nonce:            "1",
 			RecipientChainID: "31337",
 			Height:           "99",
-			Confirmations:    "invalid",
 		}
 
 		app.Config.Ethereum.ChainID = "31337"
@@ -859,13 +865,20 @@ func TestMintSignerHandleMint(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
+
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus: models.TransactionStatusConfirmed,
+				TxValid:       true,
+				NeedsRefund:   false,
+				SenderAddress: "abcd",
+				Memo: models.MintMemo{
+					Address: address,
+					ChainID: "31337",
+				},
+				Amount: sdk.NewCoin("upokt", math.NewInt(20000)),
 			}
 		}
 
@@ -899,7 +912,6 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Nonce:            "1",
 			RecipientChainID: "31337",
 			Height:           "99",
-			Confirmations:    "invalid",
 		}
 
 		app.Config.Ethereum.ChainID = "31337"
@@ -978,13 +990,20 @@ func TestMintSignerHandleMint(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
+
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus: models.TransactionStatusConfirmed,
+				TxValid:       true,
+				NeedsRefund:   false,
+				SenderAddress: "abcd",
+				Memo: models.MintMemo{
+					Address: address,
+					ChainID: "31337",
+				},
+				Amount: sdk.NewCoin("upokt", math.NewInt(20000)),
 			}
 		}
 
@@ -1016,7 +1035,6 @@ func TestMintSignerHandleMint(t *testing.T) {
 			Nonce:            "1",
 			RecipientChainID: "31337",
 			Height:           "99",
-			Confirmations:    "invalid",
 		}
 
 		app.Config.Ethereum.ChainID = "31337"
@@ -1094,13 +1112,20 @@ func TestMintSignerHandleMint(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
+
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus: models.TransactionStatusConfirmed,
+				TxValid:       true,
+				NeedsRefund:   false,
+				SenderAddress: "abcd",
+				Memo: models.MintMemo{
+					Address: address,
+					ChainID: "31337",
+				},
+				Amount: sdk.NewCoin("upokt", math.NewInt(20000)),
 			}
 		}
 
@@ -1310,13 +1335,20 @@ func TestMintSignerSyncTxs(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
+
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus: models.TransactionStatusConfirmed,
+				TxValid:       true,
+				NeedsRefund:   false,
+				SenderAddress: "abcd",
+				Memo: models.MintMemo{
+					Address: address,
+					ChainID: "31337",
+				},
+				Amount: sdk.NewCoin("upokt", math.NewInt(20000)),
 			}
 		}
 		success := x.SyncTxs()
@@ -1443,13 +1475,20 @@ func TestMintSignerSyncTxs(t *testing.T) {
 		defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 		cosmosUtilValidateTxToCosmosMultisig = func(
 			txResponse *sdk.TxResponse,
-			config models.PocketConfig,
-			currentCosmosBlockHeight uint64,
+			config models.CosmosConfig,
+
 			minAmount math.Int,
 			maxAmount math.Int,
 		) *cosmosUtil.ValidateTxResult {
 			return &cosmosUtil.ValidateTxResult{
-				TxStatus: models.TransactionStatusConfirmed,
+				TxValid:       true,
+				NeedsRefund:   false,
+				SenderAddress: "abcd",
+				Memo: models.MintMemo{
+					Address: address,
+					ChainID: "31337",
+				},
+				Amount: sdk.NewCoin("upokt", math.NewInt(20000)),
 			}
 		}
 		success := x.SyncTxs()
@@ -1585,13 +1624,20 @@ func TestMintSignerRun(t *testing.T) {
 	defer func() { cosmosUtilValidateTxToCosmosMultisig = oldCosmosUtilValidateTxToCosmosMultisig }()
 	cosmosUtilValidateTxToCosmosMultisig = func(
 		txResponse *sdk.TxResponse,
-		config models.PocketConfig,
-		currentCosmosBlockHeight uint64,
+		config models.CosmosConfig,
+
 		minAmount math.Int,
 		maxAmount math.Int,
 	) *cosmosUtil.ValidateTxResult {
 		return &cosmosUtil.ValidateTxResult{
-			TxStatus: models.TransactionStatusConfirmed,
+			TxValid:       true,
+			NeedsRefund:   false,
+			SenderAddress: "abcd",
+			Memo: models.MintMemo{
+				Address: address,
+				ChainID: "31337",
+			},
+			Amount: sdk.NewCoin("upokt", math.NewInt(20000)),
 		}
 	}
 

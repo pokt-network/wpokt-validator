@@ -34,14 +34,13 @@ func TestValidateTxToCosmosMultisig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		Bech32Prefix:    bech32Prefix,
 		CoinDenom:       "upokt",
 		MultisigAddress: multisigBech32,
 		TxFee:           100,
 		Confirmations:   10,
 	}
-	currentCosmosBlockHeight := uint64(100)
 
 	txResponse := &sdk.TxResponse{
 		TxHash: "0x123",
@@ -73,10 +72,9 @@ func TestValidateTxToCosmosMultisig(t *testing.T) {
 	minimum := math.NewInt(100)
 	maximum := math.NewInt(10000)
 
-	result := ValidateTxToCosmosMultisig(txResponse, config, currentCosmosBlockHeight, minimum, maximum)
+	result := ValidateTxToCosmosMultisig(txResponse, config, minimum, maximum)
 
-	assert.Equal(t, models.TransactionStatusConfirmed, result.TxStatus)
-	assert.Equal(t, uint64(10), result.Confirmations)
+	assert.Equal(t, true, result.TxValid)
 	assert.Equal(t, strings.ToLower("0xAb5801a7D398351b8bE11C439e05C5b3259aec9B"), result.Memo.Address)
 	assert.Equal(t, "1", result.Memo.ChainID)
 	assert.Equal(t, sdk.NewCoin("upokt", math.NewInt(1000)), result.Amount)
@@ -104,18 +102,17 @@ func TestValidateTxToCosmosMultisig_TxWithNonZeroCode(t *testing.T) {
 			},
 		},
 	}
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		CoinDenom:    "upokt",
 		Bech32Prefix: "pokt",
 	}
-	currentCosmosBlockHeight := uint64(100)
 
 	minimum := math.NewInt(100)
 	maximum := math.NewInt(10000)
 
-	result := ValidateTxToCosmosMultisig(txResponse, config, currentCosmosBlockHeight, minimum, maximum)
+	result := ValidateTxToCosmosMultisig(txResponse, config, minimum, maximum)
 
-	assert.Equal(t, models.TransactionStatusFailed, result.TxStatus)
+	assert.Equal(t, false, result.TxValid)
 }
 
 func TestValidateTxToCosmosMultisig_ZeroCoins(t *testing.T) {
@@ -146,18 +143,17 @@ func TestValidateTxToCosmosMultisig_ZeroCoins(t *testing.T) {
 			},
 		},
 	}
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		Bech32Prefix:    "pokt",
 		CoinDenom:       "upokt",
 		MultisigAddress: multisigBech32,
 	}
-	currentCosmosBlockHeight := uint64(100)
 	minimum := math.NewInt(100)
 	maximum := math.NewInt(10000)
 
-	result := ValidateTxToCosmosMultisig(txResponse, config, currentCosmosBlockHeight, minimum, maximum)
+	result := ValidateTxToCosmosMultisig(txResponse, config, minimum, maximum)
 
-	assert.Equal(t, models.TransactionStatusFailed, result.TxStatus)
+	assert.Equal(t, false, result.TxValid)
 }
 
 func TestValidateTxToCosmosMultisig_AmountTooLow(t *testing.T) {
@@ -188,20 +184,19 @@ func TestValidateTxToCosmosMultisig_AmountTooLow(t *testing.T) {
 			},
 		},
 	}
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		Bech32Prefix:    "pokt",
 		CoinDenom:       "upokt",
 		MultisigAddress: multisigBech32,
 		TxFee:           100,
 	}
-	currentCosmosBlockHeight := uint64(100)
 
 	minimum := math.NewInt(100)
 	maximum := math.NewInt(10000)
 
-	result := ValidateTxToCosmosMultisig(txResponse, config, currentCosmosBlockHeight, minimum, maximum)
+	result := ValidateTxToCosmosMultisig(txResponse, config, minimum, maximum)
 
-	assert.Equal(t, models.TransactionStatusFailed, result.TxStatus)
+	assert.Equal(t, false, result.TxValid)
 }
 
 func TestValidateTxToCosmosMultisig_InvalidAmount(t *testing.T) {
@@ -235,17 +230,16 @@ func TestValidateTxToCosmosMultisig_InvalidAmount(t *testing.T) {
 	tx := &tx.Tx{}
 	txValue, _ := tx.Marshal()
 	txResponse.Tx = &codectypes.Any{Value: txValue}
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		Bech32Prefix:    "pokt",
 		CoinDenom:       "upokt",
 		MultisigAddress: multisigBech32,
 	}
-	currentCosmosBlockHeight := uint64(100)
 	minimum := math.NewInt(100)
 	maximum := math.NewInt(10000)
 
-	result := ValidateTxToCosmosMultisig(txResponse, config, currentCosmosBlockHeight, minimum, maximum)
-	assert.Equal(t, models.TransactionStatusFailed, result.TxStatus)
+	result := ValidateTxToCosmosMultisig(txResponse, config, minimum, maximum)
+	assert.Equal(t, false, result.TxValid)
 	assert.False(t, result.NeedsRefund)
 }
 
@@ -286,19 +280,18 @@ func TestValidateTxToCosmosMultisig_FailedMemo(t *testing.T) {
 	txValue, _ := tx.Marshal()
 	txResponse.Tx = &codectypes.Any{Value: txValue}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		Bech32Prefix:    "pokt",
 		CoinDenom:       "upokt",
 		MultisigAddress: multisigBech32,
 	}
-	currentCosmosBlockHeight := uint64(100)
 
 	minimum := math.NewInt(100)
 	maximum := math.NewInt(10000)
 
-	result := ValidateTxToCosmosMultisig(txResponse, config, currentCosmosBlockHeight, minimum, maximum)
+	result := ValidateTxToCosmosMultisig(txResponse, config, minimum, maximum)
 
-	assert.Equal(t, models.TransactionStatusConfirmed, result.TxStatus)
+	assert.Equal(t, true, result.TxValid)
 	assert.True(t, result.NeedsRefund)
 }
 
@@ -316,14 +309,12 @@ func TestValidateTxToCosmosMultisig_ErrorUnmarshallingTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		Bech32Prefix:    bech32Prefix,
 		CoinDenom:       "upokt",
 		MultisigAddress: multisigBech32,
 		TxFee:           100,
-		Confirmations:   10,
 	}
-	currentCosmosBlockHeight := uint64(100)
 
 	txResponse := &sdk.TxResponse{
 		TxHash: "0x123",
@@ -345,9 +336,9 @@ func TestValidateTxToCosmosMultisig_ErrorUnmarshallingTx(t *testing.T) {
 	minimum := math.NewInt(100)
 	maximum := math.NewInt(10000)
 
-	result := ValidateTxToCosmosMultisig(txResponse, config, currentCosmosBlockHeight, minimum, maximum)
+	result := ValidateTxToCosmosMultisig(txResponse, config, minimum, maximum)
 
-	assert.Equal(t, models.TransactionStatusFailed, result.TxStatus)
+	assert.Equal(t, false, result.TxValid)
 }
 
 func TestValidateTxToCosmosMultisig_AmountTooHigh(t *testing.T) {
@@ -365,14 +356,12 @@ func TestValidateTxToCosmosMultisig_AmountTooHigh(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		Bech32Prefix:    bech32Prefix,
 		CoinDenom:       "upokt",
 		MultisigAddress: multisigBech32,
 		TxFee:           100,
-		Confirmations:   10,
 	}
-	currentCosmosBlockHeight := uint64(100)
 
 	txResponse := &sdk.TxResponse{
 		TxHash: "0x123",
@@ -404,10 +393,9 @@ func TestValidateTxToCosmosMultisig_AmountTooHigh(t *testing.T) {
 	minimum := math.NewInt(100)
 	maximum := math.NewInt(10000)
 
-	result := ValidateTxToCosmosMultisig(txResponse, config, currentCosmosBlockHeight, minimum, maximum)
+	result := ValidateTxToCosmosMultisig(txResponse, config, minimum, maximum)
 
-	assert.Equal(t, models.TransactionStatusConfirmed, result.TxStatus)
-	assert.Equal(t, uint64(10), result.Confirmations)
+	assert.Equal(t, true, result.TxValid)
 	assert.Equal(t, strings.ToLower("0xAb5801a7D398351b8bE11C439e05C5b3259aec9B"), result.Memo.Address)
 	assert.Equal(t, "1", result.Memo.ChainID)
 	assert.Equal(t, sdk.NewCoin("upokt", math.NewInt(1000000)), result.Amount)

@@ -47,7 +47,7 @@ func TestGetLatestBlockHeight_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -84,7 +84,7 @@ func TestGetLatestBlockHeight_GRPC_Error(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -113,7 +113,7 @@ func TestGetLatestBlockHeight_GRPC_Error(t *testing.T) {
 func TestGetLatestBlockHeight_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -141,7 +141,7 @@ func TestGetLatestBlockHeight_RPC(t *testing.T) {
 func TestGetLatestBlockHeight_RPC_Error(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -168,7 +168,7 @@ func TestGetLatestBlockHeight_RPC_Error(t *testing.T) {
 func TestGetTxsSentToAddressAfterHeight_AddressError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -203,7 +203,7 @@ func TestGetTxsSentToAddressAfterHeight_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -246,7 +246,7 @@ func TestGetTxsSentToAddressAfterHeight_GRPC_MultiPages(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -310,7 +310,7 @@ func TestGetTxsSentToAddressAfterHeight_GRPC_Error(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -347,7 +347,7 @@ func TestGetTxsSentToAddressAfterHeight_GRPC_Error(t *testing.T) {
 func TestGetTxsSentToAddressAfterHeight(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -380,7 +380,7 @@ func TestGetTxsSentToAddressAfterHeight(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight_AddressError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -409,7 +409,7 @@ func TestGetTxsSentFromAddressAfterHeight_AddressError(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -442,7 +442,7 @@ func TestGetTxsSentFromAddressAfterHeight(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight_GetBlocksError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -482,7 +482,7 @@ func TestGetTxsSentFromAddressAfterHeight_GetBlocksError(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight_FormatError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -538,7 +538,7 @@ func TestGetTxsSentFromAddressAfterHeight_FormatError(t *testing.T) {
 func TestGetTxsSentFromAddressAfterHeight_SearchError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -577,7 +577,7 @@ func TestGetAccount_AddressError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -612,7 +612,7 @@ func TestGetAccount_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -652,7 +652,7 @@ func TestGetAccount_GRPC_ClientError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -689,7 +689,7 @@ func TestGetAccount_GRPC_UnmarshalError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -720,7 +720,7 @@ func TestGetAccount_GRPC_UnmarshalError(t *testing.T) {
 func TestGetAccount_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -764,7 +764,7 @@ func TestGetAccount_RPC(t *testing.T) {
 func TestGetAccount_RPC_RequestFailed(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -808,7 +808,7 @@ func TestGetAccount_RPC_RequestFailed(t *testing.T) {
 func TestGetAccount_RPC_ClientError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -845,7 +845,7 @@ func TestGetAccount_RPC_ClientError(t *testing.T) {
 func TestGetAccount_RPC_ResponseUnmarshalError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -882,7 +882,7 @@ func TestGetAccount_RPC_ResponseUnmarshalError(t *testing.T) {
 func TestGetAccount_RPC_AccountUnmarshalError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 		Bech32Prefix:     "cosmos",
@@ -929,7 +929,7 @@ func TestBroadcastTx_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -962,7 +962,7 @@ func TestBroadcastTx_GRPC_ClientError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -995,7 +995,7 @@ func TestBroadcastTx_GRPC_TxFailed(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1022,7 +1022,7 @@ func TestBroadcastTx_GRPC_TxFailed(t *testing.T) {
 func TestBroadcastTx_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1050,7 +1050,7 @@ func TestBroadcastTx_RPC(t *testing.T) {
 func TestBroadcastTx_RPC_ClientError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1078,7 +1078,7 @@ func TestBroadcastTx_RPC_ClientError(t *testing.T) {
 func TestBroadcastTx_RPC_TxFailed(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1112,7 +1112,7 @@ func TestGetTx_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1146,7 +1146,7 @@ func TestGetTx_GRPC_Error(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1173,7 +1173,7 @@ func TestGetTx_GRPC_Error(t *testing.T) {
 func TestGetTx_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1206,7 +1206,7 @@ func TestGetTx_RPC(t *testing.T) {
 func TestGetTx_RPC_DecodeError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1233,7 +1233,7 @@ func TestGetTx_RPC_DecodeError(t *testing.T) {
 func TestGetTx_RPC_ClientError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1265,7 +1265,7 @@ func TestGetTx_RPC_ClientError(t *testing.T) {
 func TestGetTx_RPC_BlockError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1299,7 +1299,7 @@ func TestGetTx_RPC_BlockError(t *testing.T) {
 func TestGetTx_RPC_FormatError(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1352,7 +1352,7 @@ func TestGetChainID_GRPC(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1389,7 +1389,7 @@ func TestGetChainID_GRPC_Error(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1417,7 +1417,7 @@ func TestGetChainID_GRPC_Error(t *testing.T) {
 func TestGetChainID_RPC(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1446,7 +1446,7 @@ func TestGetChainID_RPC(t *testing.T) {
 func TestGetChainID_RPC_Error(t *testing.T) {
 	mockHTTPClient := mocks.NewMockCosmosHTTPClient(t)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCTimeoutMillis: 5000,
 
@@ -1481,7 +1481,7 @@ func TestValidateNetwork(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 		ChainID:          "TestChainID",
@@ -1516,7 +1516,7 @@ func TestValidateNetwork_ErrorGetChainID(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1553,7 +1553,7 @@ func TestValidateNetwork_InvalidChainID(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1596,7 +1596,7 @@ func TestNewClient(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1629,7 +1629,7 @@ func TestNewClient_ValidateError(t *testing.T) {
 		return mockGRPCClient
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		RPCTimeoutMillis: 5000,
 
@@ -1652,7 +1652,7 @@ func TestNewClient_GRPCERror(t *testing.T) {
 		return nil, errors.New("error")
 	}
 	defer func() { grpcNewClient = originalGRPCNewClient }()
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      true,
 		GRPCHost:         "invalid",
 		RPCTimeoutMillis: 5000,
@@ -1666,7 +1666,7 @@ func TestNewClient_GRPCERror(t *testing.T) {
 }
 
 func TestNewClient_RPCError(t *testing.T) {
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCURL:           "invalid",
 		RPCTimeoutMillis: 5000,
@@ -1686,7 +1686,7 @@ func TestNewClient_RPCNewClientError(t *testing.T) {
 		return nil, errors.New("error")
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		GRPCEnabled:      false,
 		RPCURL:           "invalid",
 		RPCTimeoutMillis: 5000,

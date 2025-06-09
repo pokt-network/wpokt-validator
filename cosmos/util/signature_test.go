@@ -165,7 +165,7 @@ func TestValidateSignature(t *testing.T) {
 	sigV2, _, err := SignWithPrivKey(ctx, signerData, txBuilder, privKey, txConfig, 1)
 	assert.NoError(t, err)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:      "poktroll",
 		Bech32Prefix: "pokt",
 	}
@@ -199,7 +199,7 @@ func TestValidateSignature_VerificationFailure(t *testing.T) {
 	sigV2, _, err := SignWithPrivKey(ctx, signerData, txBuilder, privKey, txConfig, 1)
 	assert.NoError(t, err)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:      "poktroll-different",
 		Bech32Prefix: "pokt",
 	}
@@ -234,7 +234,7 @@ func TestValidateSignature_AnyError(t *testing.T) {
 	sigV2, _, err := SignWithPrivKey(ctx, signerData, txBuilder, privKey, txConfig, 1)
 	assert.NoError(t, err)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:      "poktroll-different",
 		Bech32Prefix: "pokt",
 	}
@@ -264,7 +264,7 @@ func TestValidateSignature_TxError(t *testing.T) {
 		PubKey: privKey.CosmosPublicKey(),
 	}
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:      "poktroll",
 		Bech32Prefix: "pokt",
 	}
@@ -352,7 +352,7 @@ func TestValidateSignature_WithGCPKMS(t *testing.T) {
 	sigV2, _, err := SignWithPrivKey(ctx, signerData, txBuilder, privKey, txConfig, 1)
 	assert.NoError(t, err)
 
-	config := models.PocketConfig{
+	config := models.CosmosConfig{
 		ChainID:      "poktroll",
 		Bech32Prefix: "pokt",
 	}

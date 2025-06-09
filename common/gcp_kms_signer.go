@@ -74,7 +74,7 @@ func NewGcpKmsSigner(keyName string) (Signer, error) {
 	// resolve public key
 	pubKeyBytes, err := resolvePubKeyBytes(client, keyName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve public key: %w", err)
+		return nil, fmt.Errorf("failed to resolve public key bytes: %w", err)
 	}
 
 	ethPublicKey, err := crypto.UnmarshalPubkey(pubKeyBytes)
@@ -147,7 +147,7 @@ func resolvePubKeyBytes(client GCPKeyManagementClient, keyName string) ([]byte, 
 
 	block, _ := pem.Decode([]byte(publicKeyPem))
 	if block == nil {
-		return nil, fmt.Errorf("public key %q PEM empty: %.130q", keyName, publicKeyPem)
+		return nil, fmt.Errorf("public key PEM block empty: %.130q", publicKeyPem)
 	}
 
 	var info struct {
@@ -156,12 +156,11 @@ func resolvePubKeyBytes(client GCPKeyManagementClient, keyName string) ([]byte, 
 	}
 	_, err = asn1.Unmarshal(block.Bytes, &info)
 	if err != nil {
-		return nil, fmt.Errorf("public key %q PEM block %q: %w", keyName, block.Type, err)
+		return nil, fmt.Errorf("could not unmarshal public key PEM block: %w", err)
 	}
 
-	wantAlg := asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
-	if gotAlg := info.AlgID.Algorithm; !gotAlg.Equal(wantAlg) {
-		return nil, fmt.Errorf("public key %q ASN.1 algorithm %s instead of %s", keyName, gotAlg, wantAlg)
+	if gotAlg := info.AlgID.Algorithm; !gotAlg.Equal(oidPublicKeyECDSA) {
+		return nil, fmt.Errorf("public key algorithm is not ecdsa: %s", gotAlg)
 	}
 
 	return info.Key.Bytes, nil
@@ -222,8 +221,8 @@ func ethSignHash(hash common.Hash, client GCPKeyManagementClient, keyName string
 		sig[0] = recoveryID + 27 // BitCoin header
 		btcsig := sig[:65]       // Exclude Ethereum 'v' parameter
 		pubKey, _, err := btcecdsa.RecoverCompact(btcsig, hash[:])
+		recoverErr = err
 		if err != nil {
-			recoverErr = err
 			continue
 		}
 
@@ -331,17 +330,6 @@ func signatureFromBytes(sigStr []byte) (*btcecdsa.Signature, error) {
 	return btcecdsa.NewSignature(&r, &s), nil
 }
 
-// func getCosmosPubKey(pubKeyBytes []byte) (*secp256k1.PubKey, error) {
-// 	pubkeyObject, err := getSecp256k1PubKey(pubKeyBytes)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	pk := pubkeyObject.SerializeCompressed()
-//
-// 	return &secp256k1.PubKey{Key: pk}, nil
-// }
-
 func getSecp256k1PubKey(pubKeyBytes []byte) (*dcrecSecp256k1.PublicKey, error) {
 	pubkeyObject, err := dcrecSecp256k1.ParsePubKey(pubKeyBytes)
 	if err != nil {
@@ -359,7 +347,7 @@ func resolveKeyVersionDetails(client GCPKeyManagementClient, keyName string) (*k
 
 	resp, err := client.GetCryptoKeyVersion(context.Background(), req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get key version details: %w", err)
+		return nil, err
 	}
 
 	return resp, nil

@@ -166,10 +166,10 @@ func (x *MintMonitorRunner) SyncTxs() bool {
 	var success = true
 	for _, txResponse := range txResponses {
 
-		result := utilValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, uint64(x.currentHeight), x.minimumAmount, x.maximumAmount)
+		result := utilValidateTxToCosmosMultisig(txResponse, app.Config.Pocket, x.minimumAmount, x.maximumAmount)
 
-		if result.TxStatus == models.TransactionStatusFailed {
-			log.Info("[MINT MONITOR] Found failed mint tx: ", result.TxHash)
+		if !result.TxValid {
+			log.Info("[MINT MONITOR] Found invalid mint tx: ", result.TxHash)
 			success = x.HandleFailedMint(txResponse, result) && success
 			continue
 		}
@@ -220,7 +220,7 @@ func (x *MintMonitorRunner) UpdateMaxMintLimit() {
 		log.Error("[MINT MONITOR] Error fetching mint controller max mint limit: ", err)
 		return
 	}
-	log.Debug("[MINT MONITOR] Fetched mint controller max mint limit")
+	log.Debug("[MINT MONITOR] Fetched mint controller max mint limit: ", mintLimit)
 	x.maximumAmount = math.NewIntFromBigInt(mintLimit)
 }
 

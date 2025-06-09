@@ -98,9 +98,9 @@ func TestMintMonitorHandleFailedMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionInvalidMints, mock.Anything).Return(primitive.NewObjectID(), nil)
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusFailed,
+			Memo: models.MintMemo{},
+
+			TxValid:       false,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -122,9 +122,9 @@ func TestMintMonitorHandleFailedMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionInvalidMints, mock.Anything).Return(primitive.NewObjectID(), mongo.CommandError{Code: 11000})
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusFailed,
+			Memo: models.MintMemo{},
+
+			TxValid:       false,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -146,9 +146,9 @@ func TestMintMonitorHandleFailedMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionInvalidMints, mock.Anything).Return(primitive.NewObjectID(), errors.New("error"))
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusFailed,
+			Memo: models.MintMemo{},
+
+			TxValid:       false,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -185,9 +185,9 @@ func TestMintMonitorHandleInvalidMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionInvalidMints, mock.Anything).Return(primitive.NewObjectID(), nil)
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -209,9 +209,9 @@ func TestMintMonitorHandleInvalidMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionInvalidMints, mock.Anything).Return(primitive.NewObjectID(), mongo.CommandError{Code: 11000})
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -233,9 +233,9 @@ func TestMintMonitorHandleInvalidMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionInvalidMints, mock.Anything).Return(primitive.NewObjectID(), errors.New("error"))
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -265,9 +265,9 @@ func TestMintMonitorHandleInvalidMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionInvalidMints, mock.Anything).Return(primitive.NewObjectID(), errors.New("error"))
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -295,9 +295,9 @@ func TestMintMonitorHandleInvalidMint(t *testing.T) {
 		mockDB.EXPECT().FindOne(models.CollectionMints, mock.Anything, mock.Anything).Return(nil)
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -336,9 +336,9 @@ func TestMintMonitorHandleValidMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionMints, mock.Anything).Return(primitive.NewObjectID(), nil)
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{ChainID: "31337", Address: "0x1c"},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{ChainID: "31337", Address: "0x1c"},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -362,9 +362,9 @@ func TestMintMonitorHandleValidMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionMints, mock.Anything).Return(primitive.NewObjectID(), mongo.CommandError{Code: 11000})
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{ChainID: "31337", Address: "0x1c"},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{ChainID: "31337", Address: "0x1c"},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -388,9 +388,9 @@ func TestMintMonitorHandleValidMint(t *testing.T) {
 		mockDB.EXPECT().InsertOne(models.CollectionMints, mock.Anything).Return(primitive.NewObjectID(), errors.New("error"))
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{ChainID: "31337", Address: "0x1c"},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{ChainID: "31337", Address: "0x1c"},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -416,9 +416,9 @@ func TestMintMonitorHandleValidMint(t *testing.T) {
 		}()
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{ChainID: "31337", Address: "0x1c"},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{ChainID: "31337", Address: "0x1c"},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -440,9 +440,9 @@ func TestMintMonitorHandleValidMint(t *testing.T) {
 		mockDB.EXPECT().FindOne(models.CollectionInvalidMints, mock.Anything, mock.Anything).Return(nil)
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{ChainID: "31337", Address: "0x1c"},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{ChainID: "31337", Address: "0x1c"},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -565,8 +565,7 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 
 		result := &util.ValidateTxResult{
 			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusFailed,
+			TxValid:       false,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -575,7 +574,7 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
-		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.PocketConfig, currentCosmosBlockHeight uint64, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
 			return result
 		}
 		defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
@@ -603,9 +602,9 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 			{},
 		}
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusFailed,
+			Memo: models.MintMemo{},
+
+			TxValid:       false,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -614,7 +613,7 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
-		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.PocketConfig, currentCosmosBlockHeight uint64, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
 			return result
 		}
 		defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
@@ -642,9 +641,9 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 			{},
 		}
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusFailed,
+			Memo: models.MintMemo{},
+
+			TxValid:       false,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -653,7 +652,7 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
-		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.PocketConfig, currentCosmosBlockHeight uint64, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
 			return result
 		}
 		defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
@@ -680,9 +679,9 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		txs := []*sdk.TxResponse{{}}
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -691,7 +690,7 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
-		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.PocketConfig, currentCosmosBlockHeight uint64, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
 			return result
 		}
 		defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
@@ -720,9 +719,9 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{Body: &tx.TxBody{Memo: "invalid"}},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -731,7 +730,7 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
-		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.PocketConfig, currentCosmosBlockHeight uint64, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
 			return result
 		}
 		defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
@@ -762,9 +761,9 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{ChainID: "31337", Address: "0x1c"},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{ChainID: "31337", Address: "0x1c"},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -773,7 +772,7 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
-		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.PocketConfig, currentCosmosBlockHeight uint64, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
 			return result
 		}
 		defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
@@ -805,9 +804,9 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		result := &util.ValidateTxResult{
-			Memo:          models.MintMemo{ChainID: "31337", Address: "0x1c"},
-			Confirmations: 1,
-			TxStatus:      models.TransactionStatusConfirmed,
+			Memo: models.MintMemo{ChainID: "31337", Address: "0x1c"},
+
+			TxValid:       true,
 			Tx:            &tx.Tx{},
 			TxHash:        "abcd",
 			Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -816,7 +815,7 @@ func TestMintMonitorSyncTxs(t *testing.T) {
 		}
 
 		oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
-		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.PocketConfig, currentCosmosBlockHeight uint64, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
 			return result
 		}
 		defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
@@ -853,9 +852,9 @@ func TestMintMonitorRun(t *testing.T) {
 	}
 
 	result := &util.ValidateTxResult{
-		Memo:          models.MintMemo{ChainID: "31337", Address: "0x1c"},
-		Confirmations: 1,
-		TxStatus:      models.TransactionStatusConfirmed,
+		Memo: models.MintMemo{ChainID: "31337", Address: "0x1c"},
+
+		TxValid:       true,
 		Tx:            &tx.Tx{},
 		TxHash:        "abcd",
 		Amount:        sdk.NewCoin("pokt", math.NewInt(10000)),
@@ -864,7 +863,7 @@ func TestMintMonitorRun(t *testing.T) {
 	}
 
 	oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
-	utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.PocketConfig, currentCosmosBlockHeight uint64, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+	utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
 		return result
 	}
 	defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
