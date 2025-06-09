@@ -15,7 +15,10 @@ type resultMaxSequence struct {
 }
 
 func findMaxSequenceFromInvalidMints() (*uint64, error) {
-	filter := bson.M{"sequence": bson.M{"$ne": nil}}
+	filter := bson.M{
+		"sequence":      bson.M{"$ne": nil},
+		"vault_address": app.Config.Pocket.MultisigAddress,
+	}
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: filter}},
 		{{Key: "$group", Value: bson.D{
@@ -39,7 +42,10 @@ func findMaxSequenceFromInvalidMints() (*uint64, error) {
 }
 
 func findMaxSequenceFromBurns() (*uint64, error) {
-	filter := bson.M{"sequence": bson.M{"$ne": nil}}
+	filter := bson.M{
+		"sequence":      bson.M{"$ne": nil},
+		"vault_address": app.Config.Pocket.MultisigAddress,
+	}
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: filter}},
 		{{Key: "$group", Value: bson.D{
@@ -62,7 +68,7 @@ func findMaxSequenceFromBurns() (*uint64, error) {
 	return &maxSequence, nil
 }
 
-func FindMaxSequence() (*uint64, error) {
+func findMaxSequence() (*uint64, error) {
 	maxSequenceInvalidMints, err := findMaxSequenceFromInvalidMints()
 	if err != nil {
 		return nil, err
@@ -92,9 +98,11 @@ func FindMaxSequence() (*uint64, error) {
 	return maxSequenceBurns, nil
 }
 
+var FindMaxSequence = findMaxSequence
+
 const sequenceResourseID = "comsos_sequence"
 
-func LockReadSequences() (lockID string, err error) {
+func lockReadSequences() (lockID string, err error) {
 	lockID, err = app.DB.SLock(sequenceResourseID)
 	if err != nil {
 		log.WithError(err).Error("Error locking max sequence")
@@ -104,7 +112,9 @@ func LockReadSequences() (lockID string, err error) {
 	return
 }
 
-func LockWriteSequence() (lockID string, err error) {
+var LockReadSequences = lockReadSequences
+
+func lockWriteSequence() (lockID string, err error) {
 	lockID, err = app.DB.SLock(sequenceResourseID)
 	if err != nil {
 		log.WithError(err).Error("Error locking max sequence")
@@ -113,3 +123,5 @@ func LockWriteSequence() (lockID string, err error) {
 	log.WithField("resource_id", sequenceResourseID).Debug("Locked write sequence")
 	return
 }
+
+var LockWriteSequence = lockWriteSequence

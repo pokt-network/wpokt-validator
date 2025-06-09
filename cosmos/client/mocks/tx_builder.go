@@ -3,9 +3,9 @@
 package mocks
 
 import (
-	time "time"
 	proto "github.com/cosmos/gogoproto/proto"
 	mock "github.com/stretchr/testify/mock"
+	time "time"
 
 	signing "github.com/cosmos/cosmos-sdk/x/auth/signing"
 

@@ -60,7 +60,7 @@ func SignWithPrivKey(
 }
 
 func ValidateSignature(
-	config models.PocketConfig,
+	config models.CosmosConfig,
 	sig *signingtypes.SignatureV2,
 	accountNumber uint64,
 	sequence uint64,

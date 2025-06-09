@@ -37,8 +37,8 @@ func TestCreateMint(t *testing.T) {
 					Address: "0x1234567890",
 					ChainID: "0001",
 				},
-				TxStatus:      models.TransactionStatusPending,
-				Confirmations: uint64(0),
+				TxValid: true,
+
 				Tx:            nil,
 				TxHash:        "0x1234567890abcdef",
 				Amount:        sdk.NewCoin("upokt", math.NewInt(100)),
@@ -116,8 +116,8 @@ func TestCreateInvalidMint(t *testing.T) {
 					Address: "0x1234567890",
 					ChainID: "0001",
 				},
-				TxStatus:      models.TransactionStatusPending,
-				Confirmations: uint64(0),
+				TxValid: true,
+
 				Tx: &tx.Tx{
 					Body: &tx.TxBody{
 						Memo: "Invalid mint memo",
@@ -189,8 +189,8 @@ func TestCreateFailedMint(t *testing.T) {
 					Address: "0x1234567890",
 					ChainID: "0001",
 				},
-				TxStatus:      models.TransactionStatusFailed,
-				Confirmations: uint64(0),
+				TxValid: false,
+
 				Tx: &tx.Tx{
 					Body: &tx.TxBody{
 						Memo: "Invalid mint memo",

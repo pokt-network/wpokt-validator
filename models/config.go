@@ -6,7 +6,7 @@ type Config struct {
 	Logger              LoggerConfig              `yaml:"logger" json:"logger"`
 	MongoDB             MongoConfig               `yaml:"mongodb" json:"mongo_db"`
 	Ethereum            EthereumConfig            `yaml:"ethereum" json:"ethereum"`
-	Pocket              PocketConfig              `yaml:"pocket" json:"pocket"`
+	Pocket              CosmosConfig              `yaml:"pocket" json:"pocket"`
 	MintMonitor         ServiceConfig             `yaml:"mint_monitor" json:"mint_monitor"`
 	MintSigner          ServiceConfig             `yaml:"mint_signer" json:"mint_signer"`
 	MintExecutor        ServiceConfig             `yaml:"mint_executor" json:"mint_executor"`
@@ -49,7 +49,7 @@ type EthereumConfig struct {
 	ValidatorAddresses    []string `yaml:"validator_addresses" json:"validator_addresses"`
 }
 
-type PocketConfig struct {
+type CosmosConfig struct {
 	StartHeight        int64    `yaml:"start_height" json:"start_height"`
 	Confirmations      int64    `yaml:"confirmations" json:"confirmations"`
 	Mnemonic           string   `yaml:"mnemonic" json:"mnemonic"`

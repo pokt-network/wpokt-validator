@@ -71,8 +71,6 @@ func (s *MnemonicSigner) EthSign(data []byte) ([]byte, error) {
 	return signature, nil
 }
 
-// sha256.Sum256(txData)
-
 func (s *MnemonicSigner) CosmosSign(data []byte) ([]byte, error) {
 	return s.cosmosPrivKey.Sign(data[:])
 }
