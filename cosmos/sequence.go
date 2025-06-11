@@ -115,7 +115,7 @@ func lockReadSequences() (lockID string, err error) {
 var LockReadSequences = lockReadSequences
 
 func lockWriteSequence() (lockID string, err error) {
-	lockID, err = app.DB.SLock(sequenceResourseID)
+	lockID, err = app.DB.XLock(sequenceResourseID)
 	if err != nil {
 		log.WithError(err).Error("Error locking max sequence")
 		return

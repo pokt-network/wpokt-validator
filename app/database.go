@@ -158,6 +158,18 @@ func (d *MongoDatabase) SetupIndexesAndLocker() error {
 		return err
 	}
 
+	// setup index for unique sequence for invalid mints
+	ctx, cancel = context.WithTimeout(context.Background(), d.timeout)
+	defer cancel()
+	_, err = d.db.Collection(models.CollectionInvalidMints).Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "sequence", Value: 1}},
+		Options: options.Index().SetUnique(true).
+			SetPartialFilterExpression(bson.D{{Key: "sequence", Value: bson.D{{Key: "$exists", Value: true}, {Key: "$type", Value: "long"}}}}),
+	})
+	if err != nil {
+		return err
+	}
+
 	// setup unique index for burns
 	d.logger.Debug("[DB] Setting up indexes for burns")
 	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(Config.MongoDB.TimeoutMillis)*time.Millisecond)
@@ -165,6 +177,18 @@ func (d *MongoDatabase) SetupIndexesAndLocker() error {
 	_, err = d.db.Collection(models.CollectionBurns).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "transaction_hash", Value: 1}, {Key: "d.logger.index", Value: 1}},
 		Options: options.Index().SetUnique(true),
+	})
+	if err != nil {
+		return err
+	}
+
+	// setup index for unique sequence for burns
+	ctx, cancel = context.WithTimeout(context.Background(), d.timeout)
+	defer cancel()
+	_, err = d.db.Collection(models.CollectionBurns).Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "sequence", Value: 1}},
+		Options: options.Index().SetUnique(true).
+			SetPartialFilterExpression(bson.D{{Key: "sequence", Value: bson.D{{Key: "$exists", Value: true}, {Key: "$type", Value: "long"}}}}),
 	})
 	if err != nil {
 		return err

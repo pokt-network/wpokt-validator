@@ -15,6 +15,7 @@ import (
 
 	"context"
 
+	multisigtypes "github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 )
@@ -23,9 +24,13 @@ var ErrAlreadySigned = fmt.Errorf("already signed")
 
 var CosmosSignTx = SignTx
 
+var cosmosNewClient = cosmos.NewClient
 var utilNewSendTx = util.NewSendTx
 var utilWrapTxBuilder = util.WrapTxBuilder
 var utilSignWithPrivKey = util.SignWithPrivKey
+var utilValidateSignature = util.ValidateSignature
+var multisigtypesAddSignatureV2 = multisigtypes.AddSignatureV2
+var utilValidateTxToCosmosMultisig = util.ValidateTxToCosmosMultisig
 
 func isTxSigner(user []byte, signers [][]byte) bool {
 	for _, s := range signers {

@@ -943,13 +943,21 @@ func TestBurnSignerHandleInvalidMint(t *testing.T) {
 		}
 		defer func() { CosmosSignTx = oldCosmosSignTx }()
 
-		mockDB.EXPECT().Unlock("lock-id").Return(nil)
+		mockDB.EXPECT().Unlock(mock.Anything).Return(nil)
 
 		oldLockReadSequences := LockReadSequences
 		LockReadSequences = func() (string, error) {
 			return "lock-id", nil
 		}
 		defer func() { LockReadSequences = oldLockReadSequences }()
+
+		// mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+
+		oldLockWriteSequence := LockWriteSequence
+		LockWriteSequence = func() (string, error) {
+			return "lockId", nil
+		}
+		defer func() { LockWriteSequence = oldLockWriteSequence }()
 
 		oldFindMaxSequence := FindMaxSequence
 		FindMaxSequence = func() (*uint64, error) {
@@ -1323,13 +1331,21 @@ func TestBurnSignerHandleBurn(t *testing.T) {
 		}
 		defer func() { CosmosSignTx = oldCosmosSignTx }()
 
-		mockDB.EXPECT().Unlock("lock-id").Return(nil)
+		mockDB.EXPECT().Unlock(mock.Anything).Return(nil)
 
 		oldLockReadSequences := LockReadSequences
 		LockReadSequences = func() (string, error) {
 			return "lock-id", nil
 		}
 		defer func() { LockReadSequences = oldLockReadSequences }()
+
+		// mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+
+		oldLockWriteSequence := LockWriteSequence
+		LockWriteSequence = func() (string, error) {
+			return "lockId", nil
+		}
+		defer func() { LockWriteSequence = oldLockWriteSequence }()
 
 		oldFindMaxSequence := FindMaxSequence
 		FindMaxSequence = func() (*uint64, error) {
@@ -1658,7 +1674,7 @@ func TestBurnSignerSyncInvalidMints(t *testing.T) {
 
 		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
 
-		mockDB.EXPECT().Unlock("lockId").Return(errors.New("error")).Once()
+		mockDB.EXPECT().Unlock("lockId").Return(errors.New("error"))
 
 		success := x.SyncInvalidMints()
 
@@ -1753,13 +1769,21 @@ func TestBurnSignerSyncInvalidMints(t *testing.T) {
 		}
 		defer func() { CosmosSignTx = oldCosmosSignTx }()
 
-		mockDB.EXPECT().Unlock("lock-id").Return(nil).Once()
+		mockDB.EXPECT().Unlock(mock.Anything).Return(nil)
 
 		oldLockReadSequences := LockReadSequences
 		LockReadSequences = func() (string, error) {
 			return "lock-id", nil
 		}
 		defer func() { LockReadSequences = oldLockReadSequences }()
+
+		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
+
+		oldLockWriteSequence := LockWriteSequence
+		LockWriteSequence = func() (string, error) {
+			return "lockId", nil
+		}
+		defer func() { LockWriteSequence = oldLockWriteSequence }()
 
 		oldFindMaxSequence := FindMaxSequence
 		FindMaxSequence = func() (*uint64, error) {
@@ -1793,10 +1817,6 @@ func TestBurnSignerSyncInvalidMints(t *testing.T) {
 					*invalidMint,
 				}
 			})
-
-		mockDB.EXPECT().XLock(mock.Anything).Return("lockId", nil)
-
-		mockDB.EXPECT().Unlock("lockId").Return(nil)
 
 		success := x.SyncInvalidMints()
 
