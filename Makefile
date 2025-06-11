@@ -42,16 +42,16 @@ open_test_coverage :; bash ./coverage.sh && open ./coverage.html
 build :; go build -o wpokt-validator .
 
 .PHONY: docker_build_beta
-docker_build_beta :; docker buildx build . -t dan13ram/wpokt-validator-beta:v0.2.4 --file ./docker/Dockerfile.beta
+docker_build_beta :; docker buildx build . -t dan13ram/wpokt-validator-beta:v0.2.5 --file ./docker/Dockerfile.beta
 
 .PHONY: docker_push_beta
-docker_push_beta :; docker push dan13ram/wpokt-validator-beta:v0.2.4
+docker_push_beta :; docker push dan13ram/wpokt-validator-beta:v0.2.5
 
 .PHONY: docker_build
-docker_build :; docker buildx build . -t dan13ram/wpokt-validator:v0.2.4 --file ./docker/Dockerfile.mainnet
+docker_build :; docker buildx build . -t dan13ram/wpokt-validator:v0.2.5 --file ./docker/Dockerfile.mainnet
 
 .PHONY: docker_push
-docker_push :; docker push dan13ram/wpokt-validator:v0.2.4
+docker_push :; docker push dan13ram/wpokt-validator:v0.2.5
 
 .PHONY: prompt_user
 prompt_user :
