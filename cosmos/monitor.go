@@ -148,8 +148,6 @@ func (x *MintMonitorRunner) HandleValidMint(tx *sdk.TxResponse, result *util.Val
 	return true
 }
 
-var utilValidateTxToCosmosMultisig = util.ValidateTxToCosmosMultisig
-
 func (x *MintMonitorRunner) SyncTxs() bool {
 
 	if x.currentHeight <= x.startHeight {
@@ -279,5 +277,3 @@ func NewMintMonitor(wg *sync.WaitGroup, lastHealth models.ServiceHealth) app.Ser
 
 	return app.NewRunnerService(MintMonitorName, x, wg, time.Duration(app.Config.MintMonitor.IntervalMillis)*time.Millisecond)
 }
-
-var cosmosNewClient = cosmos.NewClient

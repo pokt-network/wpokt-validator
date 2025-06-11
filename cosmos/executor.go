@@ -11,7 +11,6 @@ import (
 	cosmos "github.com/dan13ram/wpokt-validator/cosmos/client"
 	"github.com/dan13ram/wpokt-validator/models"
 
-	"github.com/dan13ram/wpokt-validator/cosmos/util"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -41,9 +40,6 @@ func (x *BurnExecutorRunner) Run() {
 func (x *BurnExecutorRunner) Status() models.RunnerStatus {
 	return models.RunnerStatus{}
 }
-
-var utilValidateSignature = util.ValidateSignature
-var multisigtypesAddSignatureV2 = multisigtypes.AddSignatureV2
 
 func pubKeyExists(key crypto.PubKey, keys []crypto.PubKey) bool {
 	for _, k := range keys {

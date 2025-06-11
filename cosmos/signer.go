@@ -272,6 +272,18 @@ func (x *BurnSignerRunner) HandleInvalidMint(doc *models.InvalidMint) bool {
 		"_id":    doc.Id,
 		"status": bson.M{"$in": []string{models.StatusPending, models.StatusConfirmed}},
 	}
+
+	// lock only when updating sequence
+	if update["$set"].(bson.M)["sequence"] != nil {
+		if lockID, err := LockWriteSequence(); err != nil {
+			log.WithError(err).Error("[BURN SIGNER] Error locking sequence for invalid mints")
+			return false
+		} else {
+			//nolint:errcheck
+			defer app.DB.Unlock(lockID)
+		}
+	}
+
 	_, err = app.DB.UpdateOne(models.CollectionInvalidMints, filter, update)
 	if err != nil {
 		log.Error("[BURN SIGNER] Error updating invalid mint: ", err)
@@ -406,6 +418,17 @@ func (x *BurnSignerRunner) HandleBurn(doc *models.Burn) bool {
 					"updated_at":    time.Now(),
 				},
 			}
+		}
+	}
+
+	// lock only when updating sequence
+	if update["$set"].(bson.M)["sequence"] != nil {
+		if lockID, err := LockWriteSequence(); err != nil {
+			log.WithError(err).Error("[BURN SIGNER] Error locking sequence for burns")
+			return false
+		} else {
+			//nolint:errcheck
+			defer app.DB.Unlock(lockID)
 		}
 	}
 
