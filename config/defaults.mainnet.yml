@@ -23,7 +23,7 @@ ethereum:
 
 pocket:
   start_height: 113200
-  confirmations: 1
+  confirmations: 32
   mnemonic: ""
   rpc_url: "https://shannon-grove-rpc.mainnet.poktroll.com"
   rpc_timeout_ms: 30000
