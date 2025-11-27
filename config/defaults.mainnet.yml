@@ -23,7 +23,7 @@ ethereum:
 
 pocket:
   start_height: 113200
-  confirmations: 32
+  confirmations: 8
   mnemonic: ""
   rpc_url: "https://shannon-grove-rpc.mainnet.poktroll.com"
   rpc_timeout_ms: 30000
@@ -44,18 +44,18 @@ pocket:
     - "03ebfc4096e52de5035dcc05c296720e81478614f6206f701362780b02504750b7"
     - "039de7046727107f343dbf54458e91b03e7fe391d9f75150119bbabcf7571dc3f5"
   multisig_threshold: 5
-  mint_disabled: true
+  mint_disabled: false
 
 mint_monitor:
   enabled: true
   interval_ms: 30000
 
 mint_signer:
-  enabled: false
+  enabled: true
   interval_ms: 30000
 
 mint_executor:
-  enabled: false
+  enabled: true
   interval_ms: 30000
 
 burn_monitor:
