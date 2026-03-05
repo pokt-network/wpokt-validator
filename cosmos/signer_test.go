@@ -297,6 +297,46 @@ func TestBurnSignerValidateInvalidMint(t *testing.T) {
 
 	})
 
+	t.Run("Missing tx body", func(t *testing.T) {
+
+		mockWPOKT := ethMocks.NewMockWrappedPocketContract(t)
+		mockMintController := ethMocks.NewMockMintControllerContract(t)
+		mockEthClient := ethMocks.NewMockEthereumClient(t)
+		mockCosmosClient := cosmosMocks.NewMockCosmosClient(t)
+		x := NewTestBurnSigner(t, mockWPOKT, mockMintController, mockEthClient, mockCosmosClient)
+
+		mint := &models.InvalidMint{
+			SenderAddress: "abcd",
+			Amount:        "20000",
+			Memo:          "invalid",
+		}
+
+		txResponse := &sdk.TxResponse{}
+		mockCosmosClient.EXPECT().GetTx("").Return(txResponse, nil)
+
+		result := &util.ValidateTxResult{
+			Memo:          models.MintMemo{},
+			TxValid:       true,
+			Tx:            nil,
+			TxHash:        "0xtxhash",
+			Amount:        sdk.NewCoin("upokt", math.NewInt(20000)),
+			SenderAddress: "abcd",
+			NeedsRefund:   true,
+		}
+
+		oldValidateTxToCosmosMultisig := utilValidateTxToCosmosMultisig
+		utilValidateTxToCosmosMultisig = func(txResponse *sdk.TxResponse, config models.CosmosConfig, minAmount math.Int, maxAmount math.Int) *util.ValidateTxResult {
+			return result
+		}
+		defer func() { utilValidateTxToCosmosMultisig = oldValidateTxToCosmosMultisig }()
+
+		valid, err := x.ValidateInvalidMint(mint)
+
+		assert.False(t, valid)
+		assert.Nil(t, err)
+
+	})
+
 	t.Run("Memo is a valid mint memo", func(t *testing.T) {
 
 		mockWPOKT := ethMocks.NewMockWrappedPocketContract(t)
