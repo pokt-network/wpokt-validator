@@ -114,6 +114,11 @@ func (x *BurnSignerRunner) ValidateInvalidMint(doc *models.InvalidMint) (bool, e
 		return false, nil
 	}
 
+	if result.Tx == nil || result.Tx.Body == nil {
+		log.Debug("[BURN SIGNER] Invalid Mint Transaction missing tx body")
+		return false, nil
+	}
+
 	if result.Tx.Body.Memo != doc.Memo {
 		log.Debug("[BURN SIGNER] Invalid Mint Transaction memo does not match")
 		return false, nil

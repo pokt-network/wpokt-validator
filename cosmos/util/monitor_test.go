@@ -168,6 +168,28 @@ func TestCreateInvalidMint(t *testing.T) {
 	}
 }
 
+func TestCreateInvalidMintNilTx(t *testing.T) {
+	app.Config.Pocket.ChainID = "0001"
+
+	txResponse := &sdk.TxResponse{
+		Height: 12345,
+		TxHash: "0x1234567890abcdef",
+	}
+
+	result := &ValidateTxResult{
+		TxValid:       false,
+		Tx:            nil,
+		TxHash:        "0x1234567890abcdef",
+		Amount:        sdk.NewCoin("upokt", math.NewInt(100)),
+		SenderAddress: "0xabcdef",
+		NeedsRefund:   true,
+	}
+
+	invalidMint := CreateInvalidMint(txResponse, result, "0xabc123def")
+
+	assert.Equal(t, "", invalidMint.Memo)
+}
+
 func TestCreateFailedMint(t *testing.T) {
 	testCases := []struct {
 		name                string
@@ -240,4 +262,27 @@ func TestCreateFailedMint(t *testing.T) {
 			assert.Equal(t, tc.expectedInvalidMint, result)
 		})
 	}
+}
+
+func TestCreateFailedMintNilTx(t *testing.T) {
+	app.Config.Pocket.ChainID = "0001"
+
+	txResponse := &sdk.TxResponse{
+		Height: 12345,
+		TxHash: "0x1234567890abcdef",
+	}
+
+	result := &ValidateTxResult{
+		TxValid:       false,
+		Tx:            nil,
+		TxHash:        "0x1234567890abcdef",
+		Amount:        sdk.NewCoin("upokt", math.NewInt(100)),
+		SenderAddress: "0xabcdef",
+		NeedsRefund:   true,
+	}
+
+	failedMint := CreateFailedMint(txResponse, result, "0xabc123def")
+
+	assert.Equal(t, "", failedMint.Memo)
+	assert.Equal(t, models.StatusFailed, failedMint.Status)
 }

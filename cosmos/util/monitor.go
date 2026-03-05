@@ -36,13 +36,18 @@ func CreateMint(tx *sdk.TxResponse, result *ValidateTxResult, wpoktAddress strin
 }
 
 func CreateInvalidMint(tx *sdk.TxResponse, result *ValidateTxResult, vaultAddress string) models.InvalidMint {
+	memo := ""
+	if result.Tx != nil && result.Tx.Body != nil {
+		memo = result.Tx.Body.Memo
+	}
+
 	return models.InvalidMint{
 		Height:                strconv.FormatInt(tx.Height, 10),
 		Confirmations:         "0",
 		TransactionHash:       common.Ensure0xPrefix(tx.TxHash),
 		SenderAddress:         result.SenderAddress,
 		SenderChainID:         app.Config.Pocket.ChainID,
-		Memo:                  result.Tx.Body.Memo,
+		Memo:                  memo,
 		Amount:                result.Amount.Amount.String(),
 		VaultAddress:          strings.ToLower(vaultAddress),
 		CreatedAt:             time.Now(),
@@ -56,13 +61,18 @@ func CreateInvalidMint(tx *sdk.TxResponse, result *ValidateTxResult, vaultAddres
 }
 
 func CreateFailedMint(tx *sdk.TxResponse, result *ValidateTxResult, vaultAddress string) models.InvalidMint {
+	memo := ""
+	if result.Tx != nil && result.Tx.Body != nil {
+		memo = result.Tx.Body.Memo
+	}
+
 	return models.InvalidMint{
 		Height:                strconv.FormatInt(tx.Height, 10),
 		Confirmations:         "0",
 		TransactionHash:       common.Ensure0xPrefix(tx.TxHash),
 		SenderAddress:         result.SenderAddress,
 		SenderChainID:         app.Config.Pocket.ChainID,
-		Memo:                  result.Tx.Body.Memo,
+		Memo:                  memo,
 		Amount:                result.Amount.Amount.String(),
 		VaultAddress:          strings.ToLower(vaultAddress),
 		CreatedAt:             time.Now(),
